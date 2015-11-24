@@ -689,38 +689,12 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         NB: No input validation is made
         """
+
         for key, value in kwargs.items():
+            setattr(self, key, value)
             if key == 'outdir':
                 self.create_outdir()
-                self.outdir = value
-            if key == 'startingpot':
-                self.startingpot = value
-            if key == 'startingwfc':
-                self.startingwfc = value
-            if key == 'ion_positions':
-                self.ion_positions = value
-            if key == 'U_alpha':
-                self.U_alpha = value
-            if key == 'U':
-                self.U = value
-            if key == 'U_projection_type':
-                self.U_projection_type = value
-            if key == 'xc':
-                self.xc = value
-            if key == 'pw':
-                self.pw = value
-            if key == 'dw':
-                self.dw = value
-            if key == 'output':
-                self.output = value
-            if key == 'convergence':
-                self.convergence = value
-            if key == 'kpts':
-                self.kpts = value
-            if key == 'kshift':
-                self.kshift = value
-            if key == 'fft_grid':   #RK
-                self.fft_grid = value
+
         self.input_update()
         self.recalculate = True
 
