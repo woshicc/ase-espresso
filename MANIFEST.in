@@ -1,0 +1,3 @@
+include COPYING
+recursive-include c-src *.c
+recursive-include site-files *
