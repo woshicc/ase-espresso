@@ -3345,3 +3345,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             return self.forces.copy()
         else:
             return self.forces
+
+    def calculation_required(self, atoms, properties):
+        '''
+        This method should check if the calculation is necessary be be performed
+
+        .. note :: now it doesn't check anything but returns True, this is done
+                   to be compatible with ase v3.9.1
+        '''
+
+        return True
