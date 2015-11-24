@@ -7,7 +7,7 @@
 #****************************************************************************
 
 
-from ase.calculators.general import Calculator
+from ase.calculators.calculator import Calculator
 from espresso import espresso
 import numpy as np
 
