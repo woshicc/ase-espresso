@@ -560,6 +560,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.wmass = wmass
         self.press_conv_thr = press_conv_thr
 
+        self.results = {}
 
         #give original espresso style input names
         #preference over ase / dacapo - style names
@@ -604,7 +605,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             print '*** You may use the espsite.py.example.* in the git checkout as templates.'
             raise ImportError
 
-
+    @property
+    def name(self):
+        return self.get_name()
 
     def input_update(self):
         # Run initialization functions, such that this can be called if variables in espresso are
