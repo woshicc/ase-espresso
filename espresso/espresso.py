@@ -1705,7 +1705,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                     if not self.proclist:
                         self.cinp, self.cout = site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw.inp')
                     else:
-                        self.cinp, self.cout, self.cerr = site.do_perSpecProcMpiExec(self.mycpus,self.myncpus,self.scratch,'pw.x '+self.parflags+' -in pw.inp|'+self.mypath+'/espfilter '+str(self.natoms)+' '+self.log+'0')
+                        self.cinp, self.cout, self.cerr = site.do_perSpecProcMpiExec(self.mycpus,
+                                self.myncpus, self.scratch,
+                                'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
                 else:
                     site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
                     os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
