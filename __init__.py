@@ -17,7 +17,7 @@ except ImportError:
     raise ImportError
 site = espsite.config()
 
-from ase.calculators.general import Calculator
+from ase.calculators.calculator import Calculator
 import atexit
 import sys, string
 import numpy as np
@@ -35,6 +35,11 @@ class espresso(Calculator):
     """
     ase interface for Quantum Espresso
     """
+
+    implemented_properties = ['energy', 'forces']
+
+    default_parameters = []
+
     def __init__(self,
                  atoms = None,
                  pw = 350.0,
@@ -1638,8 +1643,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                         self.forces *= rydberg_over_bohr
                 f.close()
 
+            self.results['energy'] = self.energy_zero
+            self.results['free_energy'] = self.energy_free
+            self.results['forces'] = self.forces
             self.checkerror()
-
 
     def initialize(self, atoms):
         """ Create the pw.inp input file and start the calculation.
