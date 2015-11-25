@@ -28,7 +28,7 @@ CLASSIFIERS = ['Development Status :: 3 - Alpha',
                'Topic :: Scientific/Engineering :: Chemistry',
                'Topic :: Scientific/Engineering :: Physics']
 
-SCRIPTS = ['scripts/pwlog2trajectory']
+SCRIPTS = ['scripts/pwlog2traj']
 
 def readme():
     '''Return the contents of the README.rst file.'''

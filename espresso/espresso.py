@@ -8,14 +8,8 @@
 
 gitver = 'GITVERSION'
 import os
-
-try:
-    import espsite
-except ImportError:
-    print '*** ase-espresso requires a site-specific espsite.py in PYTHONPATH.'
-    print '*** You may use the espsite.py.example.* in the git checkout as templates.'
-    raise ImportError
-site = espsite.config()
+from .siteconfig import SiteConfig
+site = SiteConfig('SLURM')
 
 from ase.calculators.calculator import Calculator
 import atexit
@@ -941,7 +935,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 self.nbnd = int(self.nbands)
             else:
             #if self.nbands is negative create -self.nbands extra bands
-                if self.nvalence == None:
+                if self.nvalence is None:
                      self.nvalence, self.nel =  self.get_nvalence()
                 if self.noncollinear:
                     self.nbnd = int(np.sum(self.nvalence)-self.nbands*2.)
@@ -1671,7 +1665,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 while len(espresso_calculators)>0:
                     espresso_calculators.pop().stop()
                 espresso_calculators.append(self)
-            if site.batch:
+            if site.batchmode:
                 cdir = os.getcwd()
                 os.chdir(self.localtmp)
                 os.system(site.perHostMpiExec+' cp '+self.localtmp+'/pw.inp '+self.scratch)
@@ -2146,7 +2140,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             ll = ''
         else:
             ll = ' >>'+self.localtmp+'/'+log
-        if site.batch and parallel:
+        if site.batchmode and parallel:
             cdir = os.getcwd()
             os.chdir(self.localtmp)
             os.system(site.perHostMpiExec+' cp '+self.localtmp+'/'+inp+' '+self.scratch)

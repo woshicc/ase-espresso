@@ -12,7 +12,7 @@
 import os
 
 def mklocaltmp(odir, site):
-    if site.batch:
+    if site.batchmode:
         s = site.submitdir
         job = site.jobid
     else:
@@ -31,7 +31,7 @@ def mklocaltmp(odir, site):
     return tdir
 
 def mkscratch(localtmp, site):
-    if site.batch:
+    if site.batchmode:
         pernodeexec = site.perHostMpiExec
         job = site.jobid
     else:
@@ -52,7 +52,7 @@ def cleanup(tmp, scratch, removewf, removesave, calc, site):
         calc.stop()
     except:
         pass
-    if site.batch:
+    if site.batchmode:
         pernodeexec = site.perHostMpiExec
     else:
         pernodeexec = ''
