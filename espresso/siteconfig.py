@@ -1,5 +1,5 @@
 import os
-from subprocess import check_output, call, Popen
+from subprocess import check_output, call, Popen, CalledProcessError
 
 class SiteConfig(object):
 
@@ -65,6 +65,25 @@ class SiteConfig(object):
             self.perHostMpiExec = 'mpiexec -machinefile '+uniqnodefile+' -np '+nnodes
             self.perProcMpiExec = 'mpiexec -machinefile '+nodefile+' -np '+str(nprocs)+' -wdir %s %s'
             self.perSpecProcMpiExec = 'mpiexec -machinefile %s -np %d -wdir %s %s'
+
+    @classmethod
+    def check_scheduler(cls):
+
+        # check id SLURM is installed and running
+        try:
+            out = check_output('scontrol version', shell=True)
+            scheduler = 'SLURM'
+        except CalledProcessError:
+            pass
+
+        # check if PBS/TORQUE is installed and running
+        try:
+            out = check_output('ps aux | grep pbs | grep -v grep', shell=True)
+            shceduler = 'PBS'
+        except CalledProcessError:
+            pass
+
+        return cls(scheduler)
 
     # methods for running espresso
 

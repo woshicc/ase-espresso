@@ -8,10 +8,6 @@
 
 gitver = 'GITVERSION'
 import os
-from .siteconfig import SiteConfig
-site = SiteConfig('SLURM')
-
-from ase.calculators.calculator import Calculator
 import atexit
 import sys, string
 import numpy as np
@@ -19,6 +15,10 @@ from types import FileType, StringType
 from constants import *
 from utils import *
 from subdirs import *
+from ase.calculators.calculator import Calculator
+
+from .siteconfig import SiteConfig
+site = SiteConfig.check_scheduler()
 
 # ase controlled pw.x's register themselves here, so they can be
 # stopped automatically
