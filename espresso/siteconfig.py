@@ -69,6 +69,8 @@ class SiteConfig(object):
     @classmethod
     def check_scheduler(cls):
 
+        scheduler = None
+
         # check id SLURM is installed and running
         try:
             out = check_output('scontrol version', shell=True)
@@ -79,7 +81,7 @@ class SiteConfig(object):
         # check if PBS/TORQUE is installed and running
         try:
             out = check_output('ps aux | grep pbs | grep -v grep', shell=True)
-            shceduler = 'PBS'
+            scheduler = 'PBS'
         except CalledProcessError:
             pass
 
