@@ -14,12 +14,50 @@
 
 import sys
 import os
-import shlex
+import inspect
+from sphinx import apidoc
+import sphinx_rtd_theme
+
+if sys.version_info.major == 3:
+    from unittest.mock import MagicMock    # if python ver >= 3.3
+else:
+    from mock import Mock as MagicMock     # if python ver 2.7
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
+MOCK_MODULES = ['argparse', 'numpy', 'numpy.ma',
+                'seaborn',
+                'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors',
+                'matplotlib.cm',
+                'scipy', 'scipy.optimize', 'scipy.interpolate', 'pandas',
+]
+
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+__location__ = os.path.join(os.getcwd(), os.path.dirname(
+    inspect.getfile(inspect.currentframe())))
+
+output_dir = os.path.join(__location__, "_reference")
+module_dir = os.path.join(__location__, "../../espresso")
+
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+if on_rtd:
+    html_theme = 'default'
+else:
+    sys.path.append(os.path.dirname(os.path.normpath(module_dir)))
+
+cmd_line_template = "sphinx-apidoc -f --separate -o {outputdir} {moduledir}"
+cmd_line = cmd_line_template.format(outputdir=output_dir, moduledir=module_dir)
+apidoc.main(cmd_line.split(" "))
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+
 
 # -- General configuration ------------------------------------------------
 
@@ -33,6 +71,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -112,7 +151,7 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -121,10 +160,17 @@ html_theme = 'alabaster'
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
 #html_title = None
+try:
+    from espresso import __version__ as version
+except ImportError:
+    pass
+else:
+    release = version
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None

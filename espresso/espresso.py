@@ -2224,19 +2224,20 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         get_overlap_integrals=False):
         """
         Calculate (projected) density of states.
-        - Emin,Emax,DeltaE define the energy window.
-        - nscf=True will cause a non-selfconsistent calculation to be performed
-          on top of a previous converged scf calculation, with the advantage
-          that more kpts and more nbands can be defined improving the quality/
-          increasing the energy range of the DOS.
-        - tetrahedra=True (in addition to nscf=True) means use tetrahedron
-          (i.e. smearing-free) method for DOS
-        - slab=True: use triangle method insead of tetrahedron method
-          (for 2D system perp. to z-direction)
-        - sigma != None sets/overrides the smearing to calculate the DOS
-          (also overrides tetrahedron/triangle settings)
-        - get_overlap_integrals=True: also return k-point- and band-resolved
-          projections (which are summed up and smeared to obtain the PDOS)
+
+          - Emin,Emax,DeltaE define the energy window.
+          - nscf=True will cause a non-selfconsistent calculation to be performed
+            on top of a previous converged scf calculation, with the advantage
+            that more kpts and more nbands can be defined improving the quality/
+            increasing the energy range of the DOS.
+          - tetrahedra=True (in addition to nscf=True) means use tetrahedron
+            (i.e. smearing-free) method for DOS
+          - slab=True: use triangle method insead of tetrahedron method
+            (for 2D system perp. to z-direction)
+          - sigma != None sets/overrides the smearing to calculate the DOS
+            (also overrides tetrahedron/triangle settings)
+          - get_overlap_integrals=True: also return k-point- and band-resolved
+            projections (which are summed up and smeared to obtain the PDOS)
 
         Returns an array containing the energy window,
         the DOS over the same range,
@@ -2248,9 +2249,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         In case of spin-polarization, total up is followed by total down, by
         first m with spin up, etc...
 
-        Quantum Espresso with the tetrahedron method for PDOS can be
-        obtained here:
-svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
+        Quantum Espresso with the tetrahedron method for PDOS can be obtained here:
+
+            svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
+
         """
 
         efermi = self.get_fermi_level()
