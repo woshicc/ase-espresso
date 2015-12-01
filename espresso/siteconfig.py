@@ -1,5 +1,5 @@
 import os
-from subprocess import check_output, call, Popen
+from subprocess import check_output, call, Popen, CalledProcessError
 
 class SiteConfig(object):
 
@@ -18,6 +18,7 @@ class SiteConfig(object):
             raise NotImplemented('{} support not implemented yet'.format(self.scheduler))
 
     def get_slurm_env(self):
+        'Get enviromental variables associated with SLURM scheduler'
 
         self.jobid = os.getenv('SLURM_JOB_ID')
         self.batchmode = self.jobid is not None
@@ -38,8 +39,53 @@ class SiteConfig(object):
             self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     def get_pbs_env(self):
+        'Get enviromental variables associated with PBS/TORQUE scheduler'
 
-        raise NotImplemented('PBS support not implemented yet')
+        self.jobid = os.getenv('PBS_JOBID')
+        self.batchmode = self.jobid is not None
+
+        if self.batchmode:
+            self.scratch = os.getenv('SCRATCH')
+            if not os.path.exists(self.scratch):
+                self.scratch = os.path.join('/tmp', os.getenv('USER'))
+
+            nodefile = os.getenv('PBS_NODEFILE')
+            f = open(nodefile, 'r')
+            self.procs = [x.strip() for x in f.readlines()]
+            f.close()
+
+            self.nprocs = len(nprocs)
+
+            uniqnodefile = self.scratch+'/uniqnodefile'
+            os.system('uniq $PBS_NODEFILE >' + uniqnodefile)
+            p = os.popen('wc -l <'+uniqnodefile, 'r')
+            nnodes = p.readline().strip()
+            p.close()
+
+            self.perHostMpiExec = 'mpiexec -machinefile '+uniqnodefile+' -np '+nnodes
+            self.perProcMpiExec = 'mpiexec -machinefile '+nodefile+' -np '+str(nprocs)+' -wdir %s %s'
+            self.perSpecProcMpiExec = 'mpiexec -machinefile %s -np %d -wdir %s %s'
+
+    @classmethod
+    def check_scheduler(cls):
+
+        scheduler = None
+
+        # check id SLURM is installed and running
+        try:
+            out = check_output('scontrol version', shell=True)
+            scheduler = 'SLURM'
+        except CalledProcessError:
+            pass
+
+        # check if PBS/TORQUE is installed and running
+        try:
+            out = check_output('ps aux | grep pbs | grep -v grep', shell=True)
+            scheduler = 'PBS'
+        except CalledProcessError:
+            pass
+
+        return cls(scheduler)
 
     # methods for running espresso
 
