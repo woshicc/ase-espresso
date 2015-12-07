@@ -27,14 +27,17 @@ class vibespresso(Calculator):
         outdirprefix (default: 'out') can be specified, which will be the
         prefix of the output of the calculations for different displacements
         """
-        
+
+        #super(vibespresso, self).__init__(**kwargs)
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
         self.equilibriumdensity = outdirprefix+'_equi.tgz'
         self.firststep = True
         self.ready = False
-    
+
+        self.atoms = None
+
     def update(self, atoms):
         if self.atoms is not None:
             x = atoms.positions-self.atoms.positions
