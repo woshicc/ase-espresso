@@ -28,7 +28,7 @@ class vibespresso(Calculator):
         prefix of the output of the calculations for different displacements
         """
 
-        #super(vibespresso, self).__init__(**kwargs)
+        super(vibespresso, self).__init__(**kwargs)
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
@@ -36,7 +36,7 @@ class vibespresso(Calculator):
         self.firststep = True
         self.ready = False
 
-        self.atoms = None
+        #self.atoms = None
 
     def update(self, atoms):
         if self.atoms is not None:

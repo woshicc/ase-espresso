@@ -10,14 +10,19 @@ class SiteConfig(object):
 
     def set_variables(self):
 
-        if self.scheduler.lower() == 'slurm':
-            self.get_slurm_env()
+        if self.scheduler is None:
+            self.set_interactive()
+        elif self.scheduler.lower() == 'slurm':
+            self.set_slurm_env()
         elif self.scheduler.lower() in ['pbs', 'torque']:
-            self.get_pbs_env()
-        else:
-            raise NotImplemented('{} support not implemented yet'.format(self.scheduler))
+            self.set_pbs_env()
 
-    def get_slurm_env(self):
+    def set_interactive(self):
+        'Set the variables necessary for interactive runs'
+
+        pass
+
+    def set_slurm_env(self):
         'Get enviromental variables associated with SLURM scheduler'
 
         self.jobid = os.getenv('SLURM_JOB_ID')
@@ -38,7 +43,7 @@ class SiteConfig(object):
             self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
             self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
-    def get_pbs_env(self):
+    def set_pbs_env(self):
         'Get enviromental variables associated with PBS/TORQUE scheduler'
 
         self.jobid = os.getenv('PBS_JOBID')
