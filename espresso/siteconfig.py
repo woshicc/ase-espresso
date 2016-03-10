@@ -59,7 +59,7 @@ class SiteConfig(object):
             self.procs = [x.strip() for x in f.readlines()]
             f.close()
 
-            self.nprocs = len(nprocs)
+            self.nprocs = len(self.procs)
 
             uniqnodefile = self.scratch+'/uniqnodefile'
             os.system('uniq $PBS_NODEFILE >' + uniqnodefile)
@@ -68,7 +68,7 @@ class SiteConfig(object):
             p.close()
 
             self.perHostMpiExec = 'mpiexec -machinefile '+uniqnodefile+' -np '+nnodes
-            self.perProcMpiExec = 'mpiexec -machinefile '+nodefile+' -np '+str(nprocs)+' -wdir %s %s'
+            self.perProcMpiExec = 'mpiexec -machinefile '+nodefile+' -np '+str(self.nprocs)+' -wdir %s %s'
             self.perSpecProcMpiExec = 'mpiexec -machinefile %s -np %d -wdir %s %s'
 
     @classmethod
