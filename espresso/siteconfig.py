@@ -54,6 +54,8 @@ class SiteConfig(object):
             if not os.path.exists(self.scratch):
                 self.scratch = os.path.join('/tmp', os.getenv('USER'))
 
+            self.submitdir = os.getenv('PBS_O_WORKDIR')
+
             nodefile = os.getenv('PBS_NODEFILE')
             f = open(nodefile, 'r')
             self.procs = [x.strip() for x in f.readlines()]
