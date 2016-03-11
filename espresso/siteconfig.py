@@ -39,7 +39,7 @@ class SiteConfig(object):
             self.procs = [nodeslist[i//self.tpn] for i in range(len(nodeslist)*self.tpn)]
             self.nprocs = len(self.procs)
 
-            self.perHostMpiExec = 'mpirun -host '+','.join(nodeslist)+' -np {0:d}'.format(self.nnodes)
+            self.perHostMpiExec = 'mpirun -host ' + ','.join(nodeslist)+' -np {0:d}'.format(self.nnodes)
             self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
             self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
@@ -69,9 +69,9 @@ class SiteConfig(object):
             nnodes = p.readline().strip()
             p.close()
 
-            self.perHostMpiExec = 'mpiexec -machinefile '+uniqnodefile+' -np '+nnodes
-            self.perProcMpiExec = 'mpiexec -machinefile '+nodefile+' -np '+str(self.nprocs)+' -wdir %s %s'
-            self.perSpecProcMpiExec = 'mpiexec -machinefile %s -np %d -wdir %s %s'
+            self.perHostMpiExec = 'mpiexec -machinefile {unf:s} -np {nn:s}'.format(unf=uniqnodefile, nn=nnodes)
+            self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
+            self.perSpecProcMpiExec = 'mpiexec -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     @classmethod
     def check_scheduler(cls):

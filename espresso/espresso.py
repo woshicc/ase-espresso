@@ -2136,6 +2136,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
     #log will be created in self.localtmp
     def run_espressox(self, binary, inp, log=None, piperead=False,
         parallel=True):
+        # lmm
+        print 'in <run_esprsso>, piperead: ', piperead
         if log is None:
             ll = ''
         else:
