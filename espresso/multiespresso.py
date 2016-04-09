@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #****************************************************************************
 # Copyright (C) 2013 SUNCAT
 # This file is distributed under the terms of the
@@ -6,6 +8,7 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
+__version__ = '0.1.1'
 
 from espresso import espresso
 from sys import stderr
@@ -31,11 +34,11 @@ class multiespresso:
         should be specified. outdirprefix (default 'out') and
         mtxt (default 'multilog.txt') are optional.
         """
-        
+
         #stop old espresso calculators
-        while len(espressos)>0:
+        while len(espressos) > 0:
             espressos.pop().stop()
-        
+
         arg = kwargs.copy()
         arg['single_calculator'] = False
         arg['numcalcs'] = ncalc
@@ -43,7 +46,7 @@ class multiespresso:
         self.outdirprefix = outdirprefix
         self.mtxt = mtxt
         self.done = [False]*self.ncalc
-        
+
         self.calculators = []
         for i in range(ncalc):
             arg['outdir'] = outdirprefix+'_%04d' % i
@@ -66,9 +69,9 @@ class multiespresso:
                         a = self.calculators[i].cerr.readline()
                         notdone |= (a!='' and a[:17]!='!    total energy')
                         if a[:13]=='     stopping':
-                            raise RuntimeError, 'problem with calculator #%d' % i
+                            raise RuntimeError('problem with calculator #{}'.format(i))
                         elif a[:20]=='     convergence NOT':
-                            raise RuntimeError, 'calculator #%d did not converge' % i
+                            raise RuntimeError('calculator #{} did not converge'.format(i))
                         elif a[1:17]!='    total energy':
                             stderr.write(a)
                         else:
@@ -81,11 +84,10 @@ class multiespresso:
                             s.flush()
         print >>s, ''
         s.close()
-                
 
     def set_images(self, images):
-        if len(images)!=self.ncalc:
-            raise ValueError, 'number of images (%d) doesn\'t match number of calculators (%d)' % (len(images),self.ncalc)
+        if len(images) != self.ncalc:
+            raise ValueError("number of images ({0}) doesn't match number of calculators ({1})".format(len(images), self.ncalc))
         for i in range(self.ncalc):
             images[i].set_calculator(self.calculators[i])
         self.images = images
@@ -99,6 +101,6 @@ class multiespresso:
     def nebforce(self):
         self.wait_for_total_energies()
         return self.neb.neb_orig_forces()
-    
+
     def get_world(self):
         return self.calculators[0].get_world()

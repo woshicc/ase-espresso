@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+__version__ = '0.1.1'
+
 import os
 from subprocess import check_output, call, Popen, CalledProcessError
 
@@ -20,7 +24,8 @@ class SiteConfig(object):
     def set_interactive(self):
         'Set the variables necessary for interactive runs'
 
-        pass
+        self.batchmode = False
+        self.submitdir = None
 
     def set_slurm_env(self):
         'Get enviromental variables associated with SLURM scheduler'

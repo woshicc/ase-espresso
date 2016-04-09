@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #****************************************************************************
 # Copyright (C) 2013 SUNCAT
 # This file is distributed under the terms of the
@@ -6,8 +8,9 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
+'subroutines for creation of subdirectories & clean-up'
 
-### subroutines for creation of subdirectories & clean-up
+__version__ = '0.1.1'
 
 import os
 
@@ -64,13 +67,13 @@ def cleanup(tmp, scratch, removewf, removesave, calc, site):
     os.chdir(tmp)
     os.system(pernodeexec + ' rm -r '+scratch+' 2>/dev/null')
     os.chdir(cdir)
-    if hasattr(site, 'mpdshutdown') and not os.environ.has_key('QEASE_MPD_ISSHUTDOWN'):
+    if hasattr(site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in os.environ.keys():
         os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
         os.system(site.mpdshutdown)
 
 def getsubmitorcurrentdir(site):
     s = site.submitdir
-    if s!=None:
+    if s is not None:
         return s
     else:
         return os.getcwd()

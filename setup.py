@@ -31,19 +31,12 @@ CLASSIFIERS = ['Development Status :: 3 - Alpha',
 SCRIPTS = ['scripts/pwlog2traj']
 
 def readme():
-    '''Return the contents of the README.rst file.'''
+    '''Return the contents of the README.md file.'''
     with open('README.md') as freadme:
         return freadme.read()
 
-cc = ccompiler.new_compiler()
 extensions = [Extension('espfilter', sources=['c-src/espfilter.c']),
               Extension('cubecutperiodic', sources=['c-src/cubecutperiodic.c'])]
-
-for ext in extensions:
-    outfiles = cc.compile(ext.sources)
-    cc.link_executable(outfiles, ext.name)
-    shutil.move(ext.name, os.path.join('scripts', ext.name))
-    SCRIPTS.append(os.path.join('scripts', ext.name))
 
 def setup_package():
 
@@ -58,6 +51,7 @@ def setup_package():
           classifiers=CLASSIFIERS,
           packages=['espresso'],
           scripts=SCRIPTS,
+          ext_modules=extensions,
     )
 
 if __name__ == "__main__":

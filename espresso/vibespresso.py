@@ -6,10 +6,10 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
+import numpy as np
 
 from ase.calculators.calculator import Calculator
 from espresso import espresso
-import numpy as np
 
 class vibespresso(Calculator):
     """
@@ -41,14 +41,14 @@ class vibespresso(Calculator):
     def update(self, atoms):
         if self.atoms is not None:
             x = atoms.positions-self.atoms.positions
-            if np.max(x)>1E-13 or np.min(x)<-1E-13:
+            if np.max(x) > 1.0e-13 or np.min(x) < -1.0e-13:
                 self.ready = False
         else:
             self.atoms = atoms.copy()
         self.runcalc(atoms)
         if atoms is not None:
             self.atoms = atoms.copy()
-    
+
     def runcalc(self, atoms):
         if not self.ready:
             self.arg['outdir'] = self.outdirprefix+'_%04d' % self.counter
