@@ -19,23 +19,16 @@ from sphinx import apidoc
 import sphinx_rtd_theme
 
 if sys.version_info.major == 3:
-    from unittest.mock import MagicMock    # if python ver >= 3.3
+    from unittest.mock import Mock
 else:
-    from mock import Mock as MagicMock     # if python ver 2.7
+    from mock import Mock
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-            return Mock()
+MOCK_MODULES = ['argparse', 'seaborn',
+                'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors', 'matplotlib.cm',
+                'scipy', 'scipy.optimize', 'scipy.interpolate', 'pandas']
 
-MOCK_MODULES = ['argparse', 'numpy', 'numpy.ma',
-                'seaborn',
-                'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors',
-                'matplotlib.cm',
-                'scipy', 'scipy.optimize', 'scipy.interpolate', 'pandas',
-]
-
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = Mock()
 
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
@@ -58,6 +51,7 @@ apidoc.main(cmd_line.split(" "))
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+sys.path.insert(0, os.path.abspath(os.path.basename(module_dir)))
 
 # -- General configuration ------------------------------------------------
 
