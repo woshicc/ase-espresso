@@ -1,10 +1,14 @@
+# -*- coding: utf-8 -*-
+
 #****************************************************************************
-# Copyright (C) 2013 SUNCAT
+# Copyright (C) 2013-2015 SUNCAT
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `COPYING'
 # in the root directory of the present distribution,
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
+
+__version__ = '0.1.1'
 
 import numpy as np
 
@@ -83,5 +87,5 @@ class vibespresso(Calculator):
         return 'VibEspresso'
 
     def get_version(self):
-        return '0.1'
+        return __version__
 
