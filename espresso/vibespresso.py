@@ -8,7 +8,7 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 import numpy as np
 
