@@ -10,8 +10,8 @@ Installation
 
 > **Warning**
 >
->   The instructions below are only valid for the branch lmmfixes_. For
->   instructions regarding the version from vossjo_ please refer to the wiki_.
+>   The instructions below are only valid for the branch [lmmfixes]. For
+>   instructions regarding the version from [vossjo] please refer to the [wiki].
 
 The recommended installation method is with [pip]. The current
 branch ([lmmfixes]) can be installed directly from [github]:
