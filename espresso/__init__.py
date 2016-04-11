@@ -2,8 +2,8 @@
 
 from __future__ import absolute_import
 
-from .espresso import espresso
-from .vibespresso import vibespresso
-from .multiespresso import multiespresso
+from .espresso import Espresso
+from .vibespresso import Vibespresso
+from .multiespresso import Multiespresso
 
 __version__ = '0.1.2'

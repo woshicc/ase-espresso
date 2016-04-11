@@ -8,14 +8,16 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
+from __future__ import print_function, absolute_import
+
 __version__ = '0.1.2'
 
 import numpy as np
 
 from ase.calculators.calculator import Calculator
-from .espresso import espresso
+from .espresso import Espresso
 
-class vibespresso(Calculator):
+class Vibespresso(Calculator):
     """
     Special espresso calculator, which expects the first calculation to
     be performed for a structure without displacements. All subsequent
@@ -32,7 +34,7 @@ class vibespresso(Calculator):
         prefix of the output of the calculations for different displacements
         """
 
-        super(vibespresso, self).__init__(**kwargs)
+        super(Vibespresso, self).__init__(**kwargs)
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
@@ -58,14 +60,14 @@ class vibespresso(Calculator):
             self.arg['outdir'] = self.outdirprefix+'_%04d' % self.counter
             self.counter += 1
             if self.firststep:
-                self.esp = espresso(**self.arg)
+                self.esp = Espresso(**self.arg)
                 self.esp.set_atoms(atoms)
                 self.esp.get_potential_energy(atoms)
                 self.esp.save_chg(self.equilibriumdensity)
                 self.firststep = False
             else:
                 self.arg['startingpot'] = 'file'
-                self.esp = espresso(**self.arg)
+                self.esp = Espresso(**self.arg)
                 self.esp.set_atoms(atoms)
                 self.esp.load_chg(self.equilibriumdensity)
                 self.esp.get_potential_energy(atoms)
