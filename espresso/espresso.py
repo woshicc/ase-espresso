@@ -8,7 +8,7 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 __version__ = '0.1.2'
 
@@ -17,8 +17,8 @@ import atexit
 import sys
 import numpy as np
 
-from .espresso.utils import specobj, num2str, bool2str, convert_constraints
-from .espresso.subdirs import *
+from .utils import specobj, num2str, bool2str, convert_constraints
+from .subdirs import *
 from .siteconfig import SiteConfig
 
 from ase.calculators.calculator import Calculator
@@ -31,7 +31,7 @@ gitver = 'GITVERSION'
 # stopped automatically
 espresso_calculators = []
 
-class espresso(Calculator):
+class Espresso(Calculator):
     """
     ase interface for Quantum Espresso
     """

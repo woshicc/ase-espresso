@@ -8,18 +8,18 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 __version__ = '0.1.2'
 
-from .espresso import espresso
+from .espresso import Espresso
 from sys import stderr
 
 #keep track of ourselves so we can automatically stop us
 #when a new multi-espresso object is created
 espressos = []
 
-class multiespresso:
+class Multiespresso:
     """
     Special calculator running multiple espresso calculators in parallel.
     Useful for e.g. nudged elastic band calculations.
@@ -53,7 +53,7 @@ class multiespresso:
         for i in range(ncalc):
             arg['outdir'] = outdirprefix+'_%04d' % i
             arg['procrange'] = i
-            esp = espresso(**arg)
+            esp = Espresso(**arg)
             self.calculators.append(esp)
             espressos.append(esp)
 
