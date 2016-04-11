@@ -13,7 +13,7 @@ __version__ = '0.1.2'
 import numpy as np
 
 from ase.calculators.calculator import Calculator
-from espresso import espresso
+from .espresso import espresso
 
 class vibespresso(Calculator):
     """
