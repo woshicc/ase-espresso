@@ -8,7 +8,7 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 #****************************************************************************
 
-from __future__ import print_function, division
+from __future__ import print_function, division, absolute_import
 
 __version__ = '0.1.2'
 
@@ -568,7 +568,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if nbnd is not None:
             self.nbands = nbnd
 
-        self.site = site
+        if site is None:
+            self.site = SiteConfig.check_scheduler()
+        else:
+            self.site = site
 
         # Variables that cannot be set by inputs
         self.nvalence=None
@@ -595,17 +598,19 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if atoms is not None:
             atoms.set_calculator(self)
 
-    @property
-    def site(self):
-        return self._site
-
-    @site.setter
-    def site(self, value):
-
-        if value is None:
-            self._site = SiteConfig.check_scheduler()
-        else:
-            self._site = value
+#    @property
+#    def site(self):
+#        return self._site
+#
+#    @site.setter
+#    def site(self, value):
+#        print('setting site')
+#        if value is None:
+#            print('setting site to default')
+#            self._site = SiteConfig.check_scheduler()
+#        else:
+#            print('setting site to value')
+#            self._site = value
 
     @property
     def name(self):
