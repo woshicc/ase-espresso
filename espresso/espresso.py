@@ -1224,12 +1224,11 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             print('  tqr='+bool2str(self.tqr)+',', file=finp)
 
 
-
         ### &IONS ###
         if self.opt_algorithm == 'ase3' or not ionssec:
-            simpleconstr,otherconstr = [], []
+            simpleconstr, otherconstr = [], []
         else:
-            simpleconstr,otherconstr = convert_constraints(self.atoms)
+            simpleconstr, otherconstr = convert_constraints(self.atoms)
 
         if self.opt_algorithm is None:
             self.optdamp = False
@@ -1288,7 +1287,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             if self.cell_dofree is not None:
                 print('  cell_dofree=\''+self.cell_dofree+'\',', file=finp)
 
-# automatically generated parameters
+        # automatically generated parameters
         if self.wmass is not None:
             print('  wmass='+num2str(self.wmass)+',', file=finp)
         if self.press_conv_thr is not None:
@@ -1308,7 +1307,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         print('ATOMIC_POSITIONS {crystal}', file=finp)
         if len(simpleconstr) == 0:
             for species, pos in self.specprops:
-                print('%-4s %21.15fd0 %21.15fd0 %21.15fd0' % (species,pos[0],pos[1],pos[2]), file=finp)
+                print('%-4s %21.15fd0 %21.15fd0 %21.15fd0' % (species, pos[0], pos[1], pos[2]), file=finp)
         else:
             for i, (species, pos) in enumerate(self.specprops):
                 print('%-4s %21.15fd0 %21.15fd0 %21.15fd0   %d  %d  %d' % (species,pos[0],pos[1],pos[2],simpleconstr[i][0],simpleconstr[i][1],simpleconstr[i][2]), file=finp)
@@ -1418,9 +1417,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 if self.opt_algorithm == 'ase3':
                     p = atoms.positions
                     self.atoms = atoms.copy()
-                    print >>self.cinp, 'G'
+                    self.cinp, 'G'
                     for x in p:
-                        print >>self.cinp, ('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d')
+                        print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
                 self.cinp.flush()
 
     def read(self, atoms):
@@ -1444,9 +1443,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 if self.opt_algorithm == 'ase3':
                     p = atoms.positions
                     self.atoms = atoms.copy()
-                    print >>self.cinp, 'G'
+                    print('G', file=self.cinp)
                     for x in p:
-                        print >>self.cinp, ('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d')
+                        print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
                 self.cinp.flush()
             self.only_init = False
             s = open(self.log,'a')
@@ -1454,27 +1453,27 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             s.write(a)
             atom_occ = {}
             magmoms = np.zeros(len(atoms))
-            while a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT':
+            while a != '' and a[:17] != '!    total energy' and a[:13] != '     stopping' and a[:20] != '     convergence NOT':
                 a = self.cout.readline()
                 s.write(a)
                 s.flush()
 
-                if a[:19]=='     iteration #  1':
+                if a[:19] == '     iteration #  1':
                     while (a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT' and
                            a[:22]!=' --- exit write_ns ---' ) :
                         a = self.cout.readline()
                         s.write(a)
                         s.flush()
-                        if a[:5]=='atom ':
+                        if a[:5] == 'atom ':
                             atomnum = int(a[8:10])
-                            if a[12:25]=='Tr[ns(na)] = ':#'atom    1   Tr[ns(na)] =   1.00000'
+                            if a[12:25] == 'Tr[ns(na)] = ':#'atom    1   Tr[ns(na)] =   1.00000'
                                 N0 = float(a[27:35])/2.
-                            elif a[12:42]=='Tr[ns(na)] (up, down, total) =':
+                            elif a[12:42] == 'Tr[ns(na)] (up, down, total) =':
                                 #'   4.20435  1.27943  5.48377'
                                 N0 = [float(a[42:52]), float(a[53:62]), float(a[63:71])]
-                                N0=N0[-1] # only taking the total occupation
-                            atom_occ[atomnum-1]={}
-                            atom_occ[atomnum-1][0]=N0
+                                N0 = N0[-1] # only taking the total occupation
+                            atom_occ[atomnum-1] = {}
+                            atom_occ[atomnum-1][0] = N0
                 if a[:39]=='     End of self-consistent calculation':
                     while a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT':
                         a = self.cout.readline()
@@ -1501,7 +1500,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 #if checkerror shouldn't find an error here,
                 #throw this generic error
                 raise RuntimeError('SCF calculation failed')
-            elif a=='' and self.calcmode in ('ase3','relax','scf','vc-relax','vc-md','md'):
+            elif a=='' and self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
                 self.checkerror()
                 #if checkerror shouldn't find an error here,
                 #throw this generic error
@@ -1509,17 +1508,17 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             self.atom_occ = atom_occ
             self.results['magmoms'] = magmoms
             self.results['magmom'] = np.sum(magmoms)
-            if self.calcmode in ('ase3','relax','scf','vc-relax','vc-md','md','hund'):
+            if self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md', 'hund'):
                 self.energy_free = float(a.split()[-2])*Rydberg
                 # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-                if self.occupations=='smearing' and self.calcmode!='hund' and self.smearing[0].upper()!='M' and self.smearing[0].upper()!='C' and not self.optdamp:
+                if self.occupations == 'smearing' and self.calcmode != 'hund' and self.smearing[0].upper() != 'M' and self.smearing[0].upper() != 'C' and not self.optdamp:
                     a = self.cout.readline()
                     s.write(a)
                     exx = False
-                    while a[:13]!='     smearing':
+                    while a[:13] != '     smearing':
                         a = self.cout.readline()
                         s.write(a)
-                        if a.find('EXX')>-1:
+                        if a.find('EXX') > -1:
                             exx = True
                             break
                     if exx:
@@ -1541,14 +1540,14 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             s.write(a)
             s.flush()
 
-            if self.calcmode in ('ase3','relax','scf','vc-relax','vc-md','md'):
+            if self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
                 if self.opt_algorithm == 'ase3' and self.calcmode != 'scf':
                     sys.stdout.flush()
-                    while a[:5]!=' !ASE':
+                    while a[:5] != ' !ASE':
                         a = self.cout.readline()
                         s.write(a)
                         s.flush()
-                    self.forces = np.empty((self.natoms,3), np.float)
+                    self.forces = np.empty((self.natoms, 3), np.float)
                     for i in range(self.natoms):
                         self.cout.readline()
                     for i in range(self.natoms):
@@ -1564,10 +1563,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                             s.flush()
                         a = self.cout.readline()
                         s.write(a)
-                        self.forces = np.empty((self.natoms,3), np.float)
+                        self.forces = np.empty((self.natoms, 3), np.float)
                         for i in range(self.natoms):
                             a = self.cout.readline()
-                            while a.find('force')<0:
+                            while a.find('force') < 0:
                                 s.write(a)
                                 a = self.cout.readline()
                             s.write(a)
@@ -1598,9 +1597,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 if self.occupations=='smearing' and self.calcmode!='hund' and self.smearing[0].upper()!='M' and self.smearing[0].upper()!='C' and not self.optdamp:
                     a = f.readline()
                     exx = False
-                    while a[:13]!='     smearing':
+                    while a[:13] != '     smearing':
                         a = f.readline()
-                        if a.find('EXX')>-1:
+                        if a.find('EXX') > -1:
                             exx = True
                             break
                     if exx:
@@ -1615,13 +1614,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
                 if self.U_projection_type == 'atomic' and not self.dontcalcforces:
                         a = f.readline()
-                        while a[:11]!='     Forces':
+                        while a[:11] != '     Forces':
                             a = f.readline()
                         f.readline()
                         self.forces = np.empty((self.natoms,3), np.float)
                         for i in range(self.natoms):
                             a = f.readline()
-                            while a.find('force')<0:
+                            while a.find('force') < 0:
                                 a = f.readline()
                             forceinp = a.split()
                             self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
@@ -1712,7 +1711,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if self.started:
             if self.opt_algorithm == 'ase3':
                 #sending 'Q' to espresso tells it to quit cleanly
-                print >>self.cinp, 'Q'
+                print('Q', file=self.cinp)
                 try:
                     self.cinp.flush()
                 except IOError:
@@ -1723,7 +1722,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             s = open(self.log,'a')
             a = self.cout.readline()
             s.write(a)
-            while a!='':
+            while a != '':
                 a = self.cout.readline()
                 s.write(a)
                 s.flush()
@@ -1770,9 +1769,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.update(self.atoms)
 
         ef = self.get_fermi_level()
-        f = open(self.scratch+'/calc.save/fermilevel.txt', 'w')
-        print >>f, '%.15e\n#Fermi level in eV' % ef
-        f.close()
+        with open(self.scratch+'/calc.save/fermilevel.txt', 'w') as ftxt:
+            ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save `find . -name "calc.occup*";find . -name "calc.paw"`')
 
@@ -1788,9 +1786,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         os.system('tar xzf '+filename+' --directory='+self.scratch)
 
         self.fermi_input = True
-        f = open(self.scratch+'/calc.save/fermilevel.txt', 'r')
-        self.inputfermilevel = float(f.readline())
-        f.close()
+        with open(self.scratch + '/calc.save/fermilevel.txt', 'r') as ftxt:
+            self.inputfermilevel = float(ftxt.readline())
 
 
     def save_chg(self, filename='chg.tgz'):
@@ -1845,9 +1842,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.update(self.atoms)
 
         ef = self.get_fermi_level()
-        f = open(self.scratch+'/calc.save/fermilevel.txt', 'w')
-        print >>f, '%.15e\n#Fermi level in eV' % ef
-        f.close()
+        with open(self.scratch+'/calc.save/fermilevel.txt', 'w') as ftxt:
+            ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
+
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"` calc.save/fermilevel.txt')
 
 
@@ -2179,8 +2176,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             if self.output['disk_io'] == 'none':
                 print("run_ppx requires output['disk_io'] to be at least 'low' and avoidio=False")
         self.stop()
-        f = open(self.localtmp+'/'+inp, 'w')
-        print >>f, '&INPUTPP\n  prefix=\'calc\',\n  outdir=\'.\','
+        finp = open(self.localtmp+'/'+inp, 'w')
+        print('&INPUTPP\n  prefix=\'calc\',\n  outdir=\'.\',', file=finp)
         for a,b in inputpp:
             if type(b)==float:
                 c = num2str(b)
@@ -2188,9 +2185,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 c = "'"+b+"'"
             else:
                 c = str(b)
-            print >>f, '  '+a+'='+c+','
-        print >>f, '/'
-        print >>f, '&PLOT\n  iflag=%d,\n  output_format=%d,' % (iflag,output_format)
+            print('  '+a+'='+c+',', file=finp)
+        print('/', file=finp)
+        print('&PLOT\n  iflag=%d,\n  output_format=%d,' % (iflag,output_format), file=finp)
         for a,b in plot:
             if type(b)==float:
                 c = num2str(b)
@@ -2198,9 +2195,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 c = "'"+b+"'"
             else:
                 c = str(b)
-            print >>f, '  '+a+'='+c+','
-        print >>f, '/'
-        f.close()
+            print('  '+a+'='+c+',', file=finp)
+        print('/', file=finp)
+        finp.close()
 
         if piperead:
             return self.run_espressox('pp.x', inp, log=log,
@@ -2290,28 +2287,28 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         # remove old wave function projections
         os.system('rm -f '+self.scratch+'/*_wfc*')
         # create input for projwfc.x
-        f = open(self.localtmp+'/pdos.inp', 'w')
-        print >>f, '&PROJWFC\n  prefix=\'calc\',\n  outdir=\'.\','
+        fpdos = open(self.localtmp+'/pdos.inp', 'w')
+        print('&PROJWFC\n  prefix=\'calc\',\n  outdir=\'.\',', file=fpdos)
         if Emin is not None:
-            print >>f, '  Emin = '+num2str(Emin+efermi)+','
+            print('  Emin = '+num2str(Emin+efermi)+',', file=fpdos)
         if Emax is not None:
-            print >>f, '  Emax = '+num2str(Emax+efermi)+','
+            print('  Emax = '+num2str(Emax+efermi)+',', file=fpdos)
         if DeltaE is not None:
-            print >>f, '  DeltaE = '+num2str(DeltaE)+','
+            print('  DeltaE = '+num2str(DeltaE)+',', file=fpdos)
         if slab:
-            print >>f, '  lslab = .true.,'
+            print('  lslab = .true.,', file=fpdos)
         if ngauss is not None:
-            print >>f, '  ngauss = '+str(ngauss)+','
+            print('  ngauss = '+str(ngauss)+',', file=fpdos)
         if sigma is not None:
-            print >>f, '  degauss = '+num2str(sigma/Rydberg)+','
-        print >>f, '/'
-        f.close()
+            print('  degauss = '+num2str(sigma/Rydberg)+',', file=fpdos)
+        print('/', file=fpdos)
+        fpdos.close()
         # run projwfc.x
         self.run_espressox('projwfc.x', 'pdos.inp', 'pdos.log')
 
         # read in total density of states
         dos = np.loadtxt(self.scratch+'/calc.pdos_tot')
-        if len(dos[0])>3:
+        if len(dos[0]) > 3:
             nspin = 2
             self.dos_total = [dos[:,1],dos[:,2]]
         else:
@@ -2396,14 +2393,14 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             #to trigger calculation of atomic_proj.xml
 
             # create input for projwfc.x
-            f = open(self.localtmp+'/pdos.inp', 'w')
-            print >>f, '&PROJWFC\n  prefix=\'calc\',\n  outdir=\'.\','
-            print >>f, '  filpdos = \'projtmp\','
-            print >>f, '  Emin = '+num2str(-0.3+efermi)+','
-            print >>f, '  Emax = '+num2str(-0.2+efermi)+','
-            print >>f, '  DeltaE = 0.1d0,'
-            print >>f, '/'
-            f.close()
+            fpdos = open(self.localtmp+'/pdos.inp', 'w')
+            print('&PROJWFC\n  prefix=\'calc\',\n  outdir=\'.\',', file=fpdos)
+            print('  filpdos = \'projtmp\',', file=fpdos)
+            print('  Emin = '+num2str(-0.3+efermi)+',', file=fpdos)
+            print('  Emax = '+num2str(-0.2+efermi)+',', file=fpdos)
+            print('  DeltaE = 0.1d0,', file=fpdos)
+            print('/', file=fpdos)
+            fpdos.close()
             # run projwfc.x
             self.run_espressox('projwfc.x', 'pdos.inp', 'pdos.log')
             #remove unneeded pdos files containing only a tiny E-range of two points
@@ -2447,7 +2444,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         a = f.readline()
         while a.find('<NUMBER_OF_S')<0:
             a = f.readline()
-        spinpol = int(f.readline().strip())==2
+        spinpol = int(f.readline().strip()) == 2
 
         if spinpol:
             proj1 = []
@@ -2456,20 +2453,20 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         else:
             proj = []
 
-        while a.find('<ATM')<0 and a!='':
+        while a.find('<ATM') < 0 and a != '':
             a = f.readline()
-        if a=='':
+        if a == '':
             raise RuntimeError('no projections found')
 
         while True:
-            while a.find('<ATM')<0 and a!='':
-                if spinpol and a.find('<SP')>=0:
-                    if a.find('N.1')>0:
+            while a.find('<ATM') < 0 and a!= '':
+                if spinpol and a.find('<SP') >= 0:
+                    if a.find('N.1') > 0:
                         proj = proj1
                     else:
                         proj = proj2
                 a = f.readline()
-            if a=='':
+            if a == '':
                 break
             pr = np.empty(nbnd, np.complex)
             for i in range(nbnd):
@@ -2481,11 +2478,11 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         f.close()
 
         if spinpol:
-            projections = np.array([proj1,proj2])
-            return states, np.reshape(projections, (2,nkp,len(proj1)/nkp,nbnd))
+            projections = np.array([proj1, proj2])
+            return states, np.reshape(projections, (2, nkp, len(proj1)/nkp, nbnd))
         else:
             projections = np.array(proj)
-            return states, np.reshape(projections, (nkp,len(proj)/nkp,nbnd))
+            return states, np.reshape(projections, (nkp, len(proj)/nkp, nbnd))
 
 
     def get_eigenvalues(self, kpt=None, spin=None, efermi=None):
@@ -2510,9 +2507,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         nkp2 = len(kptdirs)/2
         if kpt is None: #get eigenvalues at all k-points
             if self.spinpol:
-                if spin=='up' or spin==0:
+                if spin == 'up' or spin == 0:
                     kp = kptdirs[:nkp2]
-                if spin=='down' or spin==1:
+                if spin == 'down' or spin == 1:
                     kp = kptdirs[nkp2:]
                 else:
                     kp = kptdirs
@@ -2520,12 +2517,12 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 kp = kptdirs
         else:           #get eigenvalues at specific k-point
             if self.spinpol:
-                if spin=='up' or spin==0:
+                if spin == 'up' or spin == 0:
                     kp = [kptdirs[kpt]]
-                if spin=='down' or spin==1:
+                if spin == 'down' or spin == 1:
                     kp = [kptdirs[kpt+nkp2]]
                 else:
-                    kp = [kptdirs[kpt],kptdirs[kpt+nkp]]
+                    kp = [kptdirs[kpt], kptdirs[kpt + nkp]]
             else:
                 kp = [kptdirs[kpt]]
 
@@ -2536,31 +2533,30 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         eig = []
         for k in kp:
-            f = open(self.scratch+'/calc.save/'+k, 'r')
+            f = open(self.scratch + '/calc.save/' + k, 'r')
             a = f.readline()
-            while a.upper().find('<EIG')<0:
+            while a.upper().find('<EIG') < 0:
                 a = f.readline()
             nbnd = int(a.split('"')[-2])
             eig.append(Hartree*np.fromfile(f, dtype=float, count=nbnd, sep=' ') - ef)
             f.close()
 
-        spinall = spin not in ('up','down',0,1)
+        spinall = spin not in ('up','down', 0, 1)
         if kpt is not None and spinall:
             return np.array(eig[0])
         elif kpt is None and spinall and self.spinpol:
-            return np.reshape(np.array(eig), (2,nkp2,nbnd))
+            return np.reshape(np.array(eig), (2, nkp2, nbnd))
         else:
             return np.array(eig)
-
 
 
     def read_3d_grid(self, stream, log):
         f = open(self.localtmp+'/'+log, 'a')
         x = stream.readline()
-        while x!='' and x[:11]!='DATAGRID_3D':
+        while x != '' and x[:11] != 'DATAGRID_3D':
             f.write(x)
             x = stream.readline()
-        if x=='':
+        if x == '':
             raise RuntimeError('error reading 3D data grid')
         f.write(x)
         nx, ny, nz = [int(y) for y in stream.readline().split()]
@@ -2572,21 +2568,21 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             (nx,ny,nz), order='F')
 
         x = stream.readline()
-        while x!='':
+        while x != '':
             f.write(x)
             x = stream.readline()
 
         f.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
 
     def read_2d_grid(self, stream, log):
-        f = open(self.localtmp+'/'+log, 'a')
+        f = open(self.localtmp+'/' + log, 'a')
         x = stream.readline()
-        while x!='' and x[:11]!='DATAGRID_2D':
+        while x != '' and x[:11] != 'DATAGRID_2D':
             f.write(x)
             x = stream.readline()
-        if x=='':
+        if x == '':
             raise RuntimeError('error reading 2D data grid')
         f.write(x)
         nx, ny = [int(y) for y in stream.readline().split()]
@@ -2598,27 +2594,32 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             (nx,ny), order='F')
 
         x = stream.readline()
-        while x!='':
+        while x != '':
             f.write(x)
             x = stream.readline()
 
         f.close()
         return (origin,cell,data)
 
+    def get_spin_component(self, spin='both'):
+        'Get the spin component as interger'
+
+        if spin == 'both' or spin == 0:
+            s = 0
+        elif spin == 'up' or spin == 1:
+            s = 1
+        elif spin == 'down' or spin == 2:
+            s = 2
+        else:
+            raise ValueError('unknown spin component {}'.format(spin))
 
     def extract_charge_density(self, spin='both'):
         """
         Obtains the charge density as a numpy array after a DFT calculation.
         Returns (origin,cell,density).
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         p = self.run_ppx('charge.inp',
             inputpp=[['plot_num',0],['spin_component',s]],
@@ -2632,14 +2633,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Writes the charge density from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         self.run_ppx('charge.inp',
             inputpp=[['plot_num',0],['spin_component',s]],
@@ -2652,14 +2647,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Obtains the total potential as a numpy array after a DFT calculation.
         Returns (origin,cell,potential).
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         p = self.run_ppx('totalpot.inp',
             inputpp=[['plot_num',1],['spin_component',s]],
@@ -2673,20 +2662,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Writes the total potential from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         self.run_ppx('totalpot.inp',
             inputpp=[['plot_num',1],['spin_component',s]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='totalpot.log')
-
 
     def extract_local_ionic_potential(self):
         """
@@ -2732,7 +2714,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             inputpp=[['plot_num',3]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='ldosef.log')
-
 
     def extract_local_entropy_density(self):
         """
@@ -2809,17 +2790,17 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Obtains the amplitude of a given wave function as a numpy array after a DFT calculation.
         Returns (origin,cell,amplitude).
         """
-        if spin=='up' or spin==1:
+        if spin == 'up' or spin == 1:
             s = 0
-        elif spin=='down' or spin==2:
+        elif spin == 'down' or spin == 2:
             s = 1
-        elif spin=='charge' or spin==0:
+        elif spin == 'charge' or spin == 0:
             s = 0
-        elif spin=='x':
+        elif spin == 'x':
             s = 1
-        elif spin=='y':
+        elif spin == 'y':
             s = 2
-        elif spin=='z':
+        elif spin == 'z':
             s = 3
         else:
             raise ValueError('unknown spin component')
@@ -2848,17 +2829,17 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Writes the amplitude of a given wave function from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin=='up' or spin==1:
+        if spin == 'up' or spin == 1:
             s = 0
-        elif spin=='down' or spin==2:
+        elif spin == 'down' or spin == 2:
             s = 1
-        elif spin=='charge' or spin==0:
+        elif spin == 'charge' or spin == 0:
             s = 0
-        elif spin=='x':
+        elif spin == 'x':
             s = 1
-        elif spin=='y':
+        elif spin == 'y':
             s = 2
-        elif spin=='z':
+        elif spin == 'z':
             s = 3
         else:
             raise ValueError('unknown spin component')
@@ -2931,14 +2912,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Obtains the integrated ldos as a numpy array after a DFT calculation.
         Returns (origin,cell,ldos).
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         inputpp=[['plot_num',10],['spin_component',s]]
         efermi = self.get_fermi_level()
@@ -2959,14 +2934,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Writes the integrated ldos from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         inputpp=[['plot_num',10],['spin_component',s]]
         efermi = self.get_fermi_level()
@@ -3075,14 +3044,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Obtains the all-electron (PAW) charge density as a numpy array after a DFT calculation.
         Returns (origin,cell,density)
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         p = self.run_ppx('aecharge.inp',
             inputpp=[['plot_num',17],['spin_component',s]],
@@ -3096,14 +3059,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Writes the all-electron (PAW) charge density from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin=='both' or spin==0:
-            s = 0
-        elif spin=='up' or spin==1:
-            s = 1
-        elif spin=='down' or spin==2:
-            s = 2
-        else:
-            raise ValueError('unknown spin component')
+
+        s = self.get_spin_component(spin=spin)
 
         self.run_ppx('aecharge.inp',
             inputpp=[['plot_num',17],['spin_component',s]],
@@ -3215,15 +3172,15 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             inputpp=[('plot_num', 11), ('filplot', self.topath('pot.xsf'))],
             output_format=3, iflag=3, piperead=False, parallel=False)
 
-        f = open(self.localtmp + '/avg.in', 'w')
-        print >>f, '1'
-        print >>f, self.sdir + "/" + pot_filename
-        print >>f, '1.D0'
-        print >>f, '1440'
-        print >>f, str(edir)
-        print >>f, '3.835000000'
-        print >>f, ''
-        f.close()
+        favg = open(self.localtmp + '/avg.in', 'w')
+        print('1', file=favg)
+        print(self.sdir + "/" + pot_filename, file=favg)
+        print('1.D0', file=favg)
+        print('1440', file=favg)
+        print(str(edir), file=favg)
+        print('3.835000000', file=favg)
+        print('', file=favg)
+        favg.close()
         os.system('cp ' + self.localtmp + '/avg.in ' + self.scratch)
         os.system('cd ' + self.scratch + ' ; ' + 'average.x < avg.in >>' + self.localtmp + '/avg.out')
 
