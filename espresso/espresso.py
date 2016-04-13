@@ -1083,8 +1083,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         sys_float_attrs = ['exx_fraction', 'screening_parameter', 'ecutvcut', 'ecutfock',
                            'degauss', 'ecfixed', 'qcutz', 'q2sigma', 'emaxpos', 'eopreg', 'eamp',
-                           'lambda', 'esm_w', 'esm_efield', 'london_s6', 'london_rcut', 'xdm_a1',
-                           'xdm_a2']
+                           'esm_w', 'esm_efield', 'london_s6', 'london_rcut', 'xdm_a1', 'xdm_a2']
         for attr in sys_float_attrs:
             value = getattr(self, attr)
             if value is not None:
@@ -1104,10 +1103,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             if value is not None:
                 print('  {0:s}={1:s},'.format(attr, bool2str(value)), file=finp)
 
+        if self.clambda is not None:
+            print('  lambda={0:s},'.format(num2str(self.clambda)), file=finp)
+
         if self.fft_grid is not None:  #RK
-            print('  nr1=%d,' % self.fft_grid[0], file=finp)
-            print('  nr2=%d,' % self.fft_grid[1], file=finp)
-            print('  nr3=%d,' % self.fft_grid[2], file=finp)
+            print('  nr1={0:d},'.format(self.fft_grid[0]), file=finp)
+            print('  nr2={0:d},'.format(self.fft_grid[1]), file=finp)
+            print('  nr3={0:d},'.format(self.fft_grid[2]), file=finp)
 
         ### &ELECTRONS ###
         print('/\n&ELECTRONS', file=finp)
