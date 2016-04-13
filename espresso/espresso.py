@@ -10,10 +10,10 @@
 
 from __future__ import print_function, absolute_import
 
-__version__ = '0.1.2'
-
 import os
 import atexit
+import shutil
+import subprocess
 import sys
 import numpy as np
 
@@ -23,6 +23,9 @@ from .siteconfig import SiteConfig
 
 from ase.calculators.calculator import Calculator
 from ase.units import Hartree, Rydberg, Bohr
+
+__version__ = '0.1.2'
+
 rydberg_over_bohr = Rydberg / Bohr
 
 gitver = 'GITVERSION'
@@ -574,7 +577,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             self.site = site
 
         # Variables that cannot be set by inputs
-        self.nvalence=None
+        self.nvalence = None
         self.nel = None
         self.fermi_input = False
         # Auto create variables from input
@@ -1332,9 +1335,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if self.atoms is None:
             self.set_atoms(atoms)
         x = atoms.positions-self.atoms.positions
-        if np.max(x)>1E-13 or np.min(x)<-1E-13 or (not self.started and not self.got_energy) or self.recalculate:
+        if np.max(x) > 1e-13 or np.min(x) < -1e-13 or (not self.started and not self.got_energy) or self.recalculate:
             self.recalculate = True
-            if self.opt_algorithm!='ase3':
+            if self.opt_algorithm != 'ase3':
                 self.stop()
 
             if not self.started:
@@ -1345,7 +1348,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 if self.opt_algorithm == 'ase3':
                     p = atoms.positions
                     self.atoms = atoms.copy()
-                    self.cinp, 'G'
+                    print('G', file=self.cinp)
                     for x in p:
                         print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
                 self.cinp.flush()
@@ -1376,7 +1379,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                         print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
                 self.cinp.flush()
             self.only_init = False
-            s = open(self.log,'a')
+            s = open(self.log, 'a')
             a = self.cout.readline()
             s.write(a)
             atom_occ = {}
@@ -1541,18 +1544,18 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                     self.energy_zero = self.energy_free
 
                 if self.U_projection_type == 'atomic' and not self.dontcalcforces:
+                    a = f.readline()
+                    while a[:11] != '     Forces':
                         a = f.readline()
-                        while a[:11] != '     Forces':
+                    f.readline()
+                    self.forces = np.empty((self.natoms, 3), np.float)
+                    for i in range(self.natoms):
+                        a = f.readline()
+                        while a.find('force') < 0:
                             a = f.readline()
-                        f.readline()
-                        self.forces = np.empty((self.natoms, 3), np.float)
-                        for i in range(self.natoms):
-                            a = f.readline()
-                            while a.find('force') < 0:
-                                a = f.readline()
-                            forceinp = a.split()
-                            self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
-                        self.forces *= rydberg_over_bohr
+                        forceinp = a.split()
+                        self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
+                    self.forces *= rydberg_over_bohr
                 f.close()
 
             self.results['energy'] = self.energy_zero
@@ -1610,7 +1613,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 cdir = os.getcwd()
                 os.chdir(self.localtmp)
                 os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw.inp '+self.scratch)
-                if self.calcmode!='hund':
+                if self.calcmode != 'hund':
                     if not self.proclist:
                         self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw.inp')
                     else:
@@ -1626,12 +1629,16 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             else:
                 os.system('cp '+self.localtmp+'/pw.inp '+self.scratch)
                 if self.calcmode != 'hund':
-                    self.cinp, self.cout = os.popen2('cd '+self.scratch+' ; '+'pw.x -in pw.inp')
+                    os.chdir(self.scratch)
+                    self.cinp, self.cout = os.popen2('pw.x -in pw.inp')
                 else:
-                    os.system('cd '+self.scratch+' ; '+' pw.x -in pw.inp >>'+self.log)
+                    os.chdir(self.scratch)
+                    subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
+                    
                     os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                    os.system('cp '+self.localtmp+'/pw2.inp '+self.scratch)
-                    self.cinp, self.cout = os.popen2('cd '+self.scratch+' ; '+'pw.x -in pw2.inp')
+                    shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
+                    os.chdir(self.scratch)
+                    self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
 
             self.started = True
 
