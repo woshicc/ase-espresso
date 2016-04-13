@@ -28,7 +28,7 @@ __version__ = '0.1.2'
 
 rydberg_over_bohr = Rydberg / Bohr
 
-gitver = 'GITVERSION'
+GITREVISION = '$Id$'
 
 # ase controlled pw.x's register themselves here, so they can be
 # stopped automatically
@@ -1363,7 +1363,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             exedir = os.path.dirname(os.popen('which pw.x').readline())
             s.write('  espresso dir        : '+exedir+'\n')
             s.write('  pseudo dir          : '+self.psppath+'\n')
-            s.write('  ase-espresso py git : '+gitver+'\n\n\n')
+            s.write('  ase-espresso py git : '+GITREVISION+'\n\n\n')
             s.close()
 
         if not self.started and not self.only_init:
