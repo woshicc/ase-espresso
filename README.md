@@ -8,28 +8,22 @@ ase-espresso
 Installation
 ============
 
-> **Warning**
->
->   The instructions below are only valid for the branch [lmmfixes]. For
->   instructions regarding the version from [vossjo] please refer to the [wiki].
-
 The recommended installation method is with [pip]. The current
-branch ([lmmfixes]) can be installed directly from [github]:
+version can be installed directly from [github]:
 
 ```bash
-pip install https://github.com/lmmentel/ase-espresso/archive/lmmfixes.zip
+pip install https://github.com/lmmentel/ase-espresso/archive/master.zip
 ```
 or cloned first
 ```bash
-git clone https://github.com/lmmentel/ase-espresso.git -b lmmfixes
+git clone https://github.com/lmmentel/ase-espresso.git
 ```
 and installed via
 ```bash
 pip install ./ase-espresso
 ```
 
-[github]: https:github.com
-[lmmfixes]: https://github.com/lmmentel/ase-espresso/tree/lmmfixes
+[github]: https://github.com/lmmentel/ase-espresso
 [pip]: https://pip.pypa.io/en/stable/
 [vossjo]: https://github.com/vossjo/ase-espresso
 [wiki]: https://github.com/vossjo/ase-espresso/wiki
