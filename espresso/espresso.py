@@ -1358,13 +1358,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
     def read(self, atoms):
         if self.writeversion:
             self.writeversion = False
-            s = open(self.log,'a')
-            s.write('  python dir          : '+self.mypath+'\n')
-            exedir = os.path.dirname(os.popen('which pw.x').readline())
-            s.write('  espresso dir        : '+exedir+'\n')
-            s.write('  pseudo dir          : '+self.psppath+'\n')
-            s.write('  ase-espresso py git : '+GITREVISION+'\n\n\n')
-            s.close()
+            with open(self.log, 'a') as flog:
+                flog.write('  python dir           : {}\n'.format(self.mypath))
+                exedir = os.path.dirname(os.popen('which pw.x').readline())
+                flog.write('  espresso dir         : {}\n'.format(exedir))
+                flog.write('  pseudo dir           : {}\n'.format(self.psppath))
+                flog.write('  ase-espresso version : {}\n'.format(self.get_version()))
+                flog.write('  ase-espresso git rev : {}\n\n\n'.format(GITREVISION))
 
         if not self.started and not self.only_init:
             fresh = True
