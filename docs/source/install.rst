@@ -26,8 +26,35 @@ and installed via
    pip install ./ase-espresso
 
 
+You can verify that your installation was successful by opening a python console
+and trying to import :py:class:`Espresso <espresso.espresso.Espresso>`::
+
+   >>> from espresso import Espresso
+
+
+Configuration
+=============
+
+To run properly `ase-espresso`_ requires that the `Quantum Espresso`_ code is
+properly compiled and the executables are available to the shell. You can to that
+by extending the ``PATH`` variable with the location of your `Quantum Espresso`_ 
+
+.. code-block:: bash
+
+   export PATH=$PATH:/path/to/your/quantum-espresso/executables
+
+Another thing that is required is setting the environmental vaiable with the path
+to the directory containing pseudopotentials
+
+.. code-block:: bash
+
+   export ESP_PSP_PATH=/path/to/pseudo/pseudopotentials
+
+
 .. _github: https:github.com
 .. _lmmfixes: https://github.com/lmmentel/ase-espresso/tree/lmmfixes
 .. _pip: https://pip.pypa.io/en/stable/
 .. _vossjo: https://github.com/vossjo/ase-espresso
 .. _wiki: https://github.com/vossjo/ase-espresso/wiki
+.. _ase-espresso: https://github.com/vossjo/ase-espresso
+.. _Quantum Espresso: http://www.quantum-espresso.org/

@@ -663,9 +663,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if self.site.batchmode:
             self.localtmp = mklocaltmp(self.outdir, self.site)
             if not self.txt:
-                self.log = self.localtmp+'/log'
-            elif self.txt[0]!='/':
-                self.log = self.sdir+'/log'
+                self.log = self.localtmp + '/log'
+            elif self.txt[0] != '/':
+                self.log = self.sdir + '/log'
             else:
                 self.log = self.txt
             self.scratch = mkscratch(self.localtmp, self.site)
