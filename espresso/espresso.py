@@ -21,7 +21,7 @@ from .utils import specobj, num2str, bool2str, convert_constraints
 from .subdirs import *
 from .siteconfig import SiteConfig
 
-from ase.calculators.calculator import Calculator
+from ase.calculators.calculator import FileIOCalculator
 from ase.units import Hartree, Rydberg, Bohr
 
 __version__ = '0.1.2'
@@ -34,9 +34,200 @@ GITREVISION = '$Id$'
 # stopped automatically
 espresso_calculators = []
 
-class Espresso(Calculator):
+all_changes = ['positions', 'numbers', 'cell', 'pbc',
+               'initial_charges', 'initial_magmoms']
+
+class Espresso(FileIOCalculator):
     """
-    ase interface for Quantum Espresso
+    ASE interface for Quantum Espresso
+
+    Parameters (with defaults in parentheses):
+        atoms (None)
+            list of atoms object to be attached to calculator
+            atoms.set_calculator can be used instead
+        pw (350.0)
+            plane-wave cut-off in eV
+        dw (10*pw)
+            charge-density cut-off in eV
+        fw (None)
+            plane-wave cutoff for evaluation of EXX in eV
+        nbands (-10)
+            number of bands, if negative: -n extra bands
+        kpts ( (1,1,1) )
+            k-point grid sub-divisions, k-point grid density,
+            explicit list of k-points, or simply 'gamma' for gamma-point only.
+        kptshift ( (0,0,0) )
+            shift of k-point grid
+        fft_grid ( None )
+            specify tuple of fft grid points (nr1,nr2,nr3) for q.e.
+            useful for series of calculations with changing cell size (e.g. lattice constant optimization)
+            uses q.e. default if not specified. [RK]
+        calculation ( 'relax' )
+            relaxation mode:
+            - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
+        ion_dynamics ( 'ase3' )
+            - 'ase3':
+                only possible with dynamic communication between Quantum Espresso and python
+                in this case ASE updates coordinates during relaxation
+            - 'relax' and other Quantum Espresso standard relaxation modes:
+                  Quantum Espresso own algorithms for structural optimization
+                  are used
+            Obtaining Quantum Espresso with the ase3 relaxation extensions is
+            highly recommended, since it allows for using ase's optimizers without
+            loosing efficiency:
+                svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
+        fmax (0.05)
+            max force limit for Espresso-internal relaxation (eV/Angstrom)
+        constr_tol (None)
+            constraint tolerance for Espresso-internal relaxation
+        cell_dynamics (None)
+            algorithm (e.g. 'BFGS') to be used for Espresso-internal unit-cell optimization
+        press (None)
+            target pressure for such an optimization
+        dpress (None)
+            convergence limit towards target pressure
+        cell_factor (None)
+            should be >>1 if unit-cell volume is expected to shrink a lot during
+            relaxation (would be more efficient to start with a better guess)
+        cell_dofree (None)
+            partially fix lattice vectors
+        nosym (False)
+        noinv (False)
+        nosym_evc (False)
+     no_t_rev (False)
+        turn off corresp. symmetries
+     xc ('PBE')
+        xc-functional to be used
+     beefensemble (False)
+        calculate basis energies for ensemble error estimates based on
+        the BEEF-vdW functional
+     printensemble (False)
+        let Espresso itself calculate 2000 ensemble energies
+     psppath (None)
+        Directory containing the pseudo-potentials or paw-setups to be used.
+        The ase-espresso interface expects all pot. files to be of the type
+        element.UPF (e.g. H.UPF).
+        If None, the directory pointed to be ESP_PSP_PATH is used.
+     spinpol (False)
+        If True, calculation is spin-polarized
+     noncollinear (False)
+        Non-collinear magnetism.
+     spinorbit (False)
+        If True, spin-orbit coupling is considered.
+        Make sure to provide j-dependent pseudo-potentials in psppath
+        for those elements where spin-orbit coupling is important
+     outdir (None)
+        directory where Espresso's output is collected,
+        default: qe<random>
+     txt (None)
+        If not None, direct Espresso's output to a different file than
+        outdir/log
+     calcstress (False)
+        If True, calculate stress
+     occupations ('smearing')
+        Controls how Kohn-Sham states are occupied.
+        Possible values: 'smearing', 'fixed' (molecule or insulator),
+        or 'tetrahedra'.
+     smearing ('fd')
+        method for Fermi surface smearing
+        - 'fd','Fermi-Dirac': Fermi-Dirac
+        - 'mv','Marzari-Vanderbilt': Marzari-Vanderbilt cold smearing
+        - 'gauss','gaussian': Gaussian smearing
+        - 'mp','Methfessel-Paxton': Methfessel-Paxton
+     sigma (0.1)
+        smearing width in eV
+     tot_charge (None)
+        charge the unit cell,
+        +1 means 1 e missing, -1 means 1 extra e
+     charge (None)
+        overrides tot_charge (ase 3.7+ compatibility)
+     tot_magnetization (-1)
+        Fix total magnetization,
+        -1 means unspecified/free,
+        'hund' means Hund's rule for each atom
+     fix_magmom (False)
+        If True, fix total magnetization to current value.
+     isolated (None)
+        invoke an 'assume_isolated' method for screening long-range interactions
+        across 3D supercells, particularly electrostatics.
+        Very useful for charged molecules and charged surfaces,
+        but also improves convergence wrt. vacuum space for neutral molecules.
+        - 'makov-payne', 'mp': only cubic systems.
+        - 'dcc': don't use.
+        - 'martyna-tuckerman', 'mt': method of choice for molecules, works for any supercell geometry.
+        - 'esm': Effective Screening Medium Method for surfaces and interfaces.
+     U (None)
+        specify Hubbard U values (in eV)
+        U can be list: specify U for each atom
+        U can be a dictionary ( e.g. U={'Fe':3.5} )
+        U values are assigned to angular momentum channels
+        according to Espresso's hard-coded defaults
+        (i.e. l=2 for transition metals, l=1 for oxygen, etc.)
+     J (None)
+        specify exchange J values (in eV)
+        can be list or dictionary (see U parameter above)
+     U_alpha
+        U_alpha (in eV)
+        can be list or dictionary (see U parameter above)
+     U_projection_type ('atomic')
+        type of projectors for calculating density matrices in DFT+U schemes
+     nqx1, nqx2, nqx3 (all None)
+        3D mesh for q=k1-k2 sampling of Fock operator. Can be smaller
+        than number of k-points.
+     exx_fraction (None)
+        Default depends on hybrid functional chosen.
+     screening_parameter (0.106)
+        Screening parameter for HSE-like functionals.
+     exxdiv_treatment (gygi-baldereschi)
+        Method to treat Coulomb potential divergence for small q.
+     ecutvcut (0)
+        Cut-off for above.
+     dipole ( {'status':False} )
+        If 'status':True, turn on dipole correction; then by default, the
+        dipole correction is applied along the z-direction, and the dipole is
+        put in the center of the vacuum region (taking periodic boundary
+        conditions into account).
+        This can be overridden with:
+        - 'edir':1, 2, or 3 for x-, y-, or z-direction
+        - 'emaxpos':float percentage wrt. unit cell where dip. correction
+          potential will be max.
+        - 'eopreg':float percentage wrt. unit cell where potential decreases
+        - 'eamp':0 (by default) if non-zero overcompensate dipole: i.e. apply
+          a field
+     output ( {'disk_io':'default',  # how often espresso writes wavefunctions to disk
+               'avoidio':False,  # will overwrite disk_io parameter if True
+               'removewf':True,
+               'removesave':False,
+               'wf_collect':False} )
+        control how much io is used by espresso;
+        'removewf':True means wave functions are deleted in scratch area before
+        job is done and data is copied back to submission directory
+        'removesave':True means whole .save directory is deleted in scratch area
+     convergence ( {'energy':1e-6,
+                    'mixing':0.7,
+                    'maxsteps':100,
+                    'diag':'david'} )
+        Electronic convergence criteria and diag. and mixing algorithms.
+        Additionally, a preconditioner for the mixing algoritms can be
+        specified, e.g. 'mixing_mode':'local-TF' or 'mixing_mode':'TF'.
+     startingpot (None)
+        By default: 'atomic' (use superposition of atomic orbitals for
+        initial guess)
+        'file': construct potential from charge-density.dat
+        Can be used with load_chg and save_chg methods.
+     startingwfc (None)
+        By default: 'atomic'.
+        Other options: 'atomic+random' or 'random'.
+        'file': reload wave functions from other calculations.
+        See load_wf and save_wf methods.
+     parflags (None)
+        Parallelization flags for Quantum Espresso.
+        E.g. parflags='-npool 2' will distribute k-points (and spin if
+        spin-polarized) over two nodes.
+     verbose ('low')
+        Can be 'high' or 'low'
+     site (None)
+        Site configuration deifinig how to execute pw.x in batch environment
     """
 
     implemented_properties = ['energy', 'forces', 'free_energy', 'magmom', 'magmoms', 'stress']
@@ -52,8 +243,8 @@ class Espresso(Calculator):
                  kpts = (1,1,1),
                  kptshift = (0,0,0),
                  fft_grid = None,   #if specified, set the keywrds nr1, nr2, nr3 in q.e. input [RK]
-                 mode = 'ase3',
-                 opt_algorithm = 'ase3',
+                 calculation = 'relax',
+                 ion_dynamics = 'ase3',
                  nstep = None,
                  constr_tol = None,
                  fmax = 0.05,
@@ -199,201 +390,17 @@ class Espresso(Calculator):
                  press_conv_thr = None,
                  site = None,
                  ):
-        """
-    Construct an ase-espresso calculator.
-    Parameters (with defaults in parentheses):
-     atoms (None)
-        list of atoms object to be attached to calculator
-        atoms.set_calculator can be used instead
-     pw (350.0)
-        plane-wave cut-off in eV
-     dw (10*pw)
-        charge-density cut-off in eV
-     fw (None)
-        plane-wave cutoff for evaluation of EXX in eV
-     nbands (-10)
-        number of bands, if negative: -n extra bands
-     kpts ( (1,1,1) )
-        k-point grid sub-divisions, k-point grid density,
-        explicit list of k-points, or simply 'gamma' for gamma-point only.
-     kptshift ( (0,0,0) )
-        shift of k-point grid
-     fft_grid ( None )
-        specify tuple of fft grid points (nr1,nr2,nr3) for q.e.
-        useful for series of calculations with changing cell size (e.g. lattice constant optimization)
-        uses q.e. default if not specified. [RK]
-     mode ( 'ase3' )
-        relaxation mode:
-        - 'ase3': dynamic communication between Quantum Espresso and python
-        - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
-     opt_algorithm ( 'ase3' )
-        - 'ase3': ase updates coordinates during relaxation
-        - 'relax' and other Quantum Espresso standard relaxation modes:
-                  Quantum Espresso own algorithms for structural optimization
-                  are used
-        Obtaining Quantum Espresso with the ase3 relaxation extensions is
-        highly recommended, since it allows for using ase's optimizers without
-        loosing efficiency:
-svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
-     fmax (0.05)
-        max force limit for Espresso-internal relaxation (eV/Angstrom)
-     constr_tol (None)
-        constraint tolerance for Espresso-internal relaxation
-     cell_dynamics (None)
-        algorithm (e.g. 'BFGS') to be used for Espresso-internal
-        unit-cell optimization
-     press (None)
-        target pressure for such an optimization
-     dpress (None)
-        convergence limit towards target pressure
-     cell_factor (None)
-        should be >>1 if unit-cell volume is expected to shrink a lot during
-        relaxation (would be more efficient to start with a better guess)
-     cell_dofree (None)
-        partially fix lattice vectors
-     nosym (False)
-     noinv (False)
-     nosym_evc (False)
-     no_t_rev (False)
-        turn off corresp. symmetries
-     xc ('PBE')
-        xc-functional to be used
-     beefensemble (False)
-        calculate basis energies for ensemble error estimates based on
-        the BEEF-vdW functional
-     printensemble (False)
-        let Espresso itself calculate 2000 ensemble energies
-     psppath (None)
-        Directory containing the pseudo-potentials or paw-setups to be used.
-        The ase-espresso interface expects all pot. files to be of the type
-        element.UPF (e.g. H.UPF).
-        If None, the directory pointed to be ESP_PSP_PATH is used.
-     spinpol (False)
-        If True, calculation is spin-polarized
-     noncollinear (False)
-        Non-collinear magnetism.
-     spinorbit (False)
-        If True, spin-orbit coupling is considered.
-        Make sure to provide j-dependent pseudo-potentials in psppath
-        for those elements where spin-orbit coupling is important
-     outdir (None)
-        directory where Espresso's output is collected,
-        default: qe<random>
-     txt (None)
-        If not None, direct Espresso's output to a different file than
-        outdir/log
-     calcstress (False)
-        If True, calculate stress
-     occupations ('smearing')
-        Controls how Kohn-Sham states are occupied.
-        Possible values: 'smearing', 'fixed' (molecule or insulator),
-        or 'tetrahedra'.
-     smearing ('fd')
-        method for Fermi surface smearing
-        - 'fd','Fermi-Dirac': Fermi-Dirac
-        - 'mv','Marzari-Vanderbilt': Marzari-Vanderbilt cold smearing
-        - 'gauss','gaussian': Gaussian smearing
-        - 'mp','Methfessel-Paxton': Methfessel-Paxton
-     sigma (0.1)
-        smearing width in eV
-     tot_charge (None)
-        charge the unit cell,
-        +1 means 1 e missing, -1 means 1 extra e
-     charge (None)
-        overrides tot_charge (ase 3.7+ compatibility)
-     tot_magnetization (-1)
-        Fix total magnetization,
-        -1 means unspecified/free,
-        'hund' means Hund's rule for each atom
-     fix_magmom (False)
-        If True, fix total magnetization to current value.
-     isolated (None)
-        invoke an 'assume_isolated' method for screening long-range interactions
-        across 3D supercells, particularly electrostatics.
-        Very useful for charged molecules and charged surfaces,
-        but also improves convergence wrt. vacuum space for neutral molecules.
-        - 'makov-payne', 'mp': only cubic systems.
-        - 'dcc': don't use.
-        - 'martyna-tuckerman', 'mt': method of choice for molecules, works for any supercell geometry.
-        - 'esm': Effective Screening Medium Method for surfaces and interfaces.
-     U (None)
-        specify Hubbard U values (in eV)
-        U can be list: specify U for each atom
-        U can be a dictionary ( e.g. U={'Fe':3.5} )
-        U values are assigned to angular momentum channels
-        according to Espresso's hard-coded defaults
-        (i.e. l=2 for transition metals, l=1 for oxygen, etc.)
-     J (None)
-        specify exchange J values (in eV)
-        can be list or dictionary (see U parameter above)
-     U_alpha
-        U_alpha (in eV)
-        can be list or dictionary (see U parameter above)
-     U_projection_type ('atomic')
-        type of projectors for calculating density matrices in DFT+U schemes
-     nqx1, nqx2, nqx3 (all None)
-        3D mesh for q=k1-k2 sampling of Fock operator. Can be smaller
-        than number of k-points.
-     exx_fraction (None)
-        Default depends on hybrid functional chosen.
-     screening_parameter (0.106)
-        Screening parameter for HSE-like functionals.
-     exxdiv_treatment (gygi-baldereschi)
-        Method to treat Coulomb potential divergence for small q.
-     ecutvcut (0)
-        Cut-off for above.
-     dipole ( {'status':False} )
-        If 'status':True, turn on dipole correction; then by default, the
-        dipole correction is applied along the z-direction, and the dipole is
-        put in the center of the vacuum region (taking periodic boundary
-        conditions into account).
-        This can be overridden with:
-        - 'edir':1, 2, or 3 for x-, y-, or z-direction
-        - 'emaxpos':float percentage wrt. unit cell where dip. correction
-          potential will be max.
-        - 'eopreg':float percentage wrt. unit cell where potential decreases
-        - 'eamp':0 (by default) if non-zero overcompensate dipole: i.e. apply
-          a field
-     output ( {'disk_io':'default',  # how often espresso writes wavefunctions to disk
-               'avoidio':False,  # will overwrite disk_io parameter if True
-               'removewf':True,
-               'removesave':False,
-               'wf_collect':False} )
-        control how much io is used by espresso;
-        'removewf':True means wave functions are deleted in scratch area before
-        job is done and data is copied back to submission directory
-        'removesave':True means whole .save directory is deleted in scratch area
-     convergence ( {'energy':1e-6,
-                    'mixing':0.7,
-                    'maxsteps':100,
-                    'diag':'david'} )
-        Electronic convergence criteria and diag. and mixing algorithms.
-        Additionally, a preconditioner for the mixing algoritms can be
-        specified, e.g. 'mixing_mode':'local-TF' or 'mixing_mode':'TF'.
-     startingpot (None)
-        By default: 'atomic' (use superposition of atomic orbitals for
-        initial guess)
-        'file': construct potential from charge-density.dat
-        Can be used with load_chg and save_chg methods.
-     startingwfc (None)
-        By default: 'atomic'.
-        Other options: 'atomic+random' or 'random'.
-        'file': reload wave functions from other calculations.
-        See load_wf and save_wf methods.
-     parflags (None)
-        Parallelization flags for Quantum Espresso.
-        E.g. parflags='-npool 2' will distribute k-points (and spin if
-        spin-polarized) over two nodes.
-     verbose ('low')
-        Can be 'high' or 'low'
-     site (None)
-        Site configuration deifinig how to execute pw.x in batch environment
-        """
+
 
         self.outdir = outdir
+
         self.pw = pw
-        self.dw = dw
-        self.fw = fw
+
+        if dw is None:
+            self.dw = 10.0 * self.pw
+        if self.dw < self.pw:
+            raise ValueError('<dw> smaller than <pw>: {0:.2f} < {1:.2f}'.format(self.dw, self.pw))
+
         self.nbands = nbands
         if type(kpts) == float or type(kpts) == int:
             from ase.calculators.calculator import kptdensity2monkhorstpack
@@ -405,8 +412,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.kpts = kpts
         self.kptshift = kptshift
         self.fft_grid = fft_grid #RK
-        self.calcmode = mode
-        self.opt_algorithm = opt_algorithm
+        self.calculation = calculation
+        self.ion_dynamics = ion_dynamics
         self.nstep = nstep
         self.constr_tol = constr_tol
         self.fmax = fmax
@@ -619,26 +626,37 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
     def name(self):
         return self.get_name()
 
+    def get_name(self):
+        return 'QE-ASE3 interface'
+
+    def get_version(self):
+        return __version__
+
+    def calculate(self, atoms=None, properties=['energy'], system_changes=all_changes):
+
+        if atoms is not None:
+            self.atoms = atoms.copy()
+
+        # initialize
+
+        # write input
+        self.writeinputfile()
+
+        # run
+        self.run()
+
+
+        # check for errors
+
+        # parse results
+
+
     def input_update(self):
         # Run initialization functions, such that this can be called if variables in espresso are
         #changes using set or directly.
 
-        self.create_outdir() # Create the tmp output folder
 
-        #sdir is the directory the script is run or submitted from
-        self.sdir = getsubmitorcurrentdir(self.site)
 
-        if self.dw is None:
-            self.dw = 10. * self.pw
-        else:
-            assert self.dw >= self.pw
-
-        if self.psppath is None:
-            try:
-                self.psppath = os.environ['ESP_PSP_PATH']
-            except:
-                print('Unable to find pseudopotential path.  Consider setting ESP_PSP_PATH environment variable')
-                raise
         if self.dipole is None:
             self.dipole = {'status':False}
         if self.field is None:
@@ -808,7 +826,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             nvalence[i] = nel[self.specdict[x[0]].s]
         return nvalence, nel
 
-    def writeinputfile(self, filename='pw.inp', mode=None,
+    def writeinputfile(self, filename='pw.inp', calculation=None,
         overridekpts=None, overridekptshift=None, overridenbands=None,
         suppressforcecalc=False, usetetrahedra=False):
 
@@ -822,17 +840,15 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         finp = open(fname, 'w')
 
         ### &CONTROL ###
-        if mode is None:
-            if self.calcmode=='ase3':
-                print('&CONTROL\n  calculation=\'relax\',\n  prefix=\'calc\',', file=finp)
-            elif self.calcmode=='hund':
+        if calculation is None:
+            if self.calculation.lower() == 'hund':
                 print('&CONTROL\n  calculation=\'scf\',\n  prefix=\'calc\',', file=finp)
             else:
-                print('&CONTROL\n  calculation=\''+self.calcmode+'\',\n  prefix=\'calc\',', file=finp)
-            ionssec = self.calcmode not in ('scf','nscf','bands','hund')
+                print('&CONTROL\n  calculation=\''+self.calculation+'\',\n  prefix=\'calc\',', file=finp)
+            ionssec = self.calculation not in ('scf','nscf','bands','hund')
         else:
-            print('&CONTROL\n  calculation=\''+mode+'\',\n  prefix=\'calc\',', file=finp)
-            ionssec = mode not in ('scf','nscf','bands','hund')
+            print('&CONTROL\n  calculation=\'' + calculation + '\',\n  prefix=\'calc\',', file=finp)
+            ionssec = calculation not in ('scf','nscf','bands','hund')
 
         if self.nstep != None:
             print('  nstep='+str(self.nstep)+',', file=finp)
@@ -863,7 +879,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 if 'wf_collect' in list(self.output.keys()):
                     if self.output['wf_collect']:
                         print('  wf_collect=.true.,', file=finp)
-        if self.opt_algorithm!='ase3' or not self.cancalc:
+        if self.ion_dynamics != 'ase3' or not self.cancalc:
             # we basically ignore convergence of total energy differences between
             # ionic steps and only consider fmax as in ase
             print('  etot_conv_thr=1d0,', file=finp)
@@ -916,7 +932,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         print('  ntyp='+str(self.nspecies)+',', file=finp)
         if self.tot_charge is not None:
             print('  tot_charge='+num2str(self.tot_charge)+',', file=finp)
-        if self.calcmode!='hund':
+        if self.calculation!='hund':
             inimagscale = 1.0
         else:
             inimagscale = 0.9
@@ -1116,7 +1132,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if 'diag' in list(self.convergence.keys()):
             print("  diagonalization='{0:s}',".format(self.convergence['diag']), file=finp)
 
-        if self.calcmode != 'hund':
+        if self.calculation != 'hund':
             print('  conv_thr='+num2str(self.conv_thr)+',', file=finp)
         else:
             print('  conv_thr='+num2str(self.conv_thr*500.)+',', file=finp)
@@ -1131,9 +1147,9 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 print('  mixing_mode=\''+self.convergence[x]+'\',', file=finp)
             elif x == 'diago_cg_maxiter':
                 print('  diago_cg_maxiter='+str(self.convergence[x])+',', file=finp)
-        if self.startingpot is not None and self.calcmode != 'hund':
+        if self.startingpot is not None and self.calculation != 'hund':
             print('  startingpot=\''+self.startingpot+'\',', file=finp)
-        if self.startingwfc is not None and self.calcmode != 'hund':
+        if self.startingwfc is not None and self.calculation != 'hund':
             print('  startingwfc=\''+self.startingwfc+'\',', file=finp)
 
         # automatically generated parameters
@@ -1158,21 +1174,22 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 print('  {0:s}={1:s},'.format(attr, bool2str(value)), file=finp)
 
         ### &IONS ###
-        if self.opt_algorithm == 'ase3' or not ionssec:
+        if self.ion_dynamics == 'ase3' or not ionssec:
             simpleconstr, otherconstr = [], []
         else:
             simpleconstr, otherconstr = convert_constraints(self.atoms)
 
-        if self.opt_algorithm is None:
+        if self.ion_dynamics is None:
             self.optdamp = False
         else:
-            self.optdamp = (self.opt_algorithm.upper() == 'DAMP')
-        if self.opt_algorithm is not None and ionssec:
+            self.optdamp = (self.ion_dynamics.upper() == 'DAMP')
+
+        if self.ion_dynamics is not None and ionssec:
             if len(otherconstr) != 0:
                 print('/\n&IONS\n  ion_dynamics=\'damp\',', file=finp)
                 self.optdamp = True
             elif self.cancalc:
-                print('/\n&IONS\n  ion_dynamics=\''+self.opt_algorithm+'\',', file=finp)
+                print('/\n&IONS\n  ion_dynamics=\''+self.ion_dynamics+'\',', file=finp)
             else:
                 print('/\n&IONS\n  ion_dynamics=\'bfgs\',', file=finp)
             if self.ion_positions is not None:
@@ -1318,7 +1335,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if np.max(x)>1E-13 or np.min(x)<-1E-13 or morethanposchange \
             or (not self.started and not self.got_energy) or self.recalculate:
             self.recalculate = True
-            if self.opt_algorithm != 'ase3' or self.calcmode in ('scf','nscf') or \
+            if self.ion_dynamics != 'ase3' or self.calculation in ('scf','nscf') or \
                 morethanposchange:
                 self.stop()
             self.read(atoms)
@@ -1327,19 +1344,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         else:
             self.atoms = atoms.copy()
 
-    def get_name(self):
-        return 'QE-ASE3 interface'
-
-    def get_version(self):
-        return __version__
-
     def init_only(self, atoms):
         if self.atoms is None:
             self.set_atoms(atoms)
         x = atoms.positions-self.atoms.positions
         if np.max(x) > 1e-13 or np.min(x) < -1e-13 or (not self.started and not self.got_energy) or self.recalculate:
             self.recalculate = True
-            if self.opt_algorithm != 'ase3':
+            if self.ion_dynamics != 'ase3':
                 self.stop()
 
             if not self.started:
@@ -1347,7 +1358,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 self.only_init = True
             elif self.recalculate:
                 self.only_init = True
-                if self.opt_algorithm == 'ase3':
+                if self.ion_dynamics == 'ase3':
                     p = atoms.positions
                     self.atoms = atoms.copy()
                     print('G', file=self.cinp)
@@ -1373,7 +1384,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             fresh = False
         if self.recalculate:
             if not fresh and not self.only_init:
-                if self.opt_algorithm == 'ase3':
+                if self.ion_dynamics == 'ase3':
                     p = atoms.positions
                     self.atoms = atoms.copy()
                     print('G', file=self.cinp)
@@ -1433,7 +1444,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 #if checkerror shouldn't find an error here,
                 #throw this generic error
                 raise RuntimeError('SCF calculation failed')
-            elif a=='' and self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
+            elif a=='' and self.calculation in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
                 self.checkerror()
                 #if checkerror shouldn't find an error here,
                 #throw this generic error
@@ -1441,10 +1452,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             self.atom_occ = atom_occ
             self.results['magmoms'] = magmoms
             self.results['magmom'] = np.sum(magmoms)
-            if self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md', 'hund'):
+            if self.calculation in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md', 'hund'):
                 self.energy_free = float(a.split()[-2])*Rydberg
                 # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-                if self.occupations == 'smearing' and self.calcmode != 'hund' and self.smearing[0].upper() != 'M' and self.smearing[0].upper() != 'C' and not self.optdamp:
+                if self.occupations == 'smearing' and self.calculation != 'hund' and self.smearing[0].upper() != 'M' and self.smearing[0].upper() != 'C' and not self.optdamp:
                     a = self.cout.readline()
                     s.write(a)
                     exx = False
@@ -1473,8 +1484,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             s.write(a)
             s.flush()
 
-            if self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
-                if self.opt_algorithm == 'ase3' and self.calcmode != 'scf':
+            if self.calculation in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
+                if self.ion_dynamics == 'ase3' and self.calculation != 'scf':
                     sys.stdout.flush()
                     while a[:5] != ' !ASE':
                         a = self.cout.readline()
@@ -1512,12 +1523,12 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 self.forces = None
             self.recalculate = False
             s.close()
-            if self.opt_algorithm != 'ase3':
+            if self.ion_dynamics != 'ase3':
                 self.stop()
 
             #get final energy and forces for internal QE relaxation run
-            if self.calcmode in ('relax','vc-relax','vc-md','md'):
-                if self.opt_algorithm == 'ase3':
+            if self.calculation in ('relax','vc-relax','vc-md','md'):
+                if self.ion_dynamics == 'ase3':
                     self.stop()
                 p = os.popen('grep -n "!    total" '+self.log+' | tail -1','r')
                 n = int(p.readline().split(':')[0])-1
@@ -1527,7 +1538,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                     f.readline()
                 self.energy_free = float(f.readline().split()[-2])*Rydberg
                 # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-                if self.occupations=='smearing' and self.calcmode!='hund' and self.smearing[0].upper()!='M' and self.smearing[0].upper()!='C' and not self.optdamp:
+                if self.occupations=='smearing' and self.calculation!='hund' and self.smearing[0].upper()!='M' and self.smearing[0].upper()!='C' and not self.optdamp:
                     a = f.readline()
                     exx = False
                     while a[:13] != '     smearing':
@@ -1570,25 +1581,31 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         If ``self.site.batchmode=False`` only the input file will
         be written for manual submission.
         """
+
+        self.create_outdir() # Create the tmp output folder
+
+        #sdir is the directory the script is run or submitted from
+        self.sdir = getsubmitorcurrentdir(self.site)
+
+        if self.psppath is None:
+            if os.environ['ESP_PSP_PATH'] is not None:
+                self.psppath = os.environ['ESP_PSP_PATH']
+            else:
+                raise ValueError('Unable to find pseudopotential path.'
+                    'Consider setting <ESP_PSP_PATH> environment variable')
+
+
         if not self.started:
             self.atoms = atoms.copy()
 
             self.atoms2species()
-            #s = a.get_chemical_symbols()
-            #m = a.get_masses()
-            #sd = {}
-            #for x in zip(s, m):
-            #    sd[x[0]] = x[1]
-            #k = sd.keys()
-            #k.sort()
-            #self.species = [(x,sd[x]) for x in k] # UPDATE: NOT COMPATIBLE WITH MAGNETIC PARTS
-            #self.nspec = len(self.species)
+
             self.natoms = len(self.atoms)
-            #self.spos = zip(s, a.get_scaled_positions()) # UPDATE to have species indices
+
             self.check_spinpol()
-            self.writeinputfile()
-        if self.cancalc:
-            self.start()
+            #self.writeinputfile() move to self.calculate()
+        #if self.cancalc:
+        #    self.start()
 
     def check_spinpol(self):
         mm = self.atoms.get_initial_magnetic_moments()
@@ -1615,7 +1632,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 cdir = os.getcwd()
                 os.chdir(self.localtmp)
                 os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw.inp '+self.scratch)
-                if self.calcmode != 'hund':
+                if self.calculation != 'hund':
                     if not self.proclist:
                         self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw.inp')
                     else:
@@ -1630,7 +1647,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 os.chdir(cdir)
             else:
                 os.system('cp '+self.localtmp+'/pw.inp '+self.scratch)
-                if self.calcmode != 'hund':
+                if self.calculation != 'hund':
                     os.chdir(self.scratch)
                     self.cinp, self.cout = os.popen2('pw.x -in pw.inp')
                 else:
@@ -1646,7 +1663,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
     def stop(self):
         if self.started:
-            if self.opt_algorithm == 'ase3':
+            if self.ion_dynamics == 'ase3':
                 #sending 'Q' to espresso tells it to quit cleanly
                 print('Q', file=self.cinp)
                 try:
@@ -1999,7 +2016,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
     def relax_cell_and_atoms(self,
             cell_dynamics='bfgs', # {'none', 'sd', 'damp-pr', 'damp-w', 'bfgs'}
-            opt_algorithm='bfgs', # {'bfgs', 'damp'}
+            ion_dynamics='bfgs', # {'bfgs', 'damp'}
             cell_factor=1.2,
             cell_dofree=None,
             fmax=None,
@@ -2018,13 +2035,13 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         relaxed_atoms.set_calculator(some_espresso_calculator)
         """
         self.stop()
-        oldmode = self.calcmode
-        oldalgo = self.opt_algorithm
+        oldcalculation = self.calculation
+        oldalgo = self.ion_dynamics
         oldcell = self.cell_dynamics
         oldfactor = self.cell_factor
         oldfree = self.cell_dofree
         self.cell_dynamics=cell_dynamics
-        self.opt_algorithm=opt_algorithm
+        self.ion_dynamics=ion_dynamics
         self.cell_factor=cell_factor
         self.cell_dofree = cell_dofree
         oldfmax = self.fmax
@@ -2037,11 +2054,11 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             self.press = press
         if dpress is not None:
             self.dpress = dpress
-        self.calcmode = 'vc-relax'
+        self.calculation = 'vc-relax'
         self.recalculate = True
         self.read(self.atoms)
-        self.calcmode = oldmode
-        self.opt_algorithm = oldalgo
+        self.calculation = oldcalculation
+        self.ion_dynamics = oldalgo
         self.cell_dynamics = oldcell
         self.cell_factor = oldfactor
         self.cell_dofree = oldfree
@@ -2050,7 +2067,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.dpress = olddpress
 
     def relax_atoms(self,
-            opt_algorithm='bfgs', # {'bfgs', 'damp'}
+            ion_dynamics='bfgs', # {'bfgs', 'damp'}
             fmax=None
             ):
         """
@@ -2063,18 +2080,18 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         relaxed_atoms.set_calculator(some_espresso_calculator)
         """
         self.stop()
-        oldmode = self.calcmode
-        oldalgo = self.opt_algorithm
-        self.opt_algorithm=opt_algorithm
+        oldcalculation = self.calculation
+        oldalgo = self.ion_dynamics
+        self.ion_dynamics=ion_dynamics
         oldfmax = self.fmax
 
-        self.calcmode='relax'
+        self.calculation='relax'
         if fmax is not None:
             self.fmax = fmax
         self.recalculate=True
         self.read(self.atoms)
-        self.calcmode = oldmode
-        self.opt_algorithm = oldalgo
+        self.calculation = oldcalculation
+        self.ion_dynamics = oldalgo
         self.fmax = oldfmax
 
 
@@ -2210,7 +2227,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 self.atoms2species()
                 self.natoms = len(self.atoms)
             self.writeinputfile(filename='pwnscf.inp',
-                mode='nscf', usetetrahedra=tetrahedra, overridekpts=kpts,
+                calculation='nscf', usetetrahedra=tetrahedra, overridekpts=kpts,
                 overridekptshift=kptshift, overridenbands=nbands,
                 suppressforcecalc=True)
             self.run_espressox('pw.x', 'pwnscf.inp', 'pwnscf.log')
@@ -2313,7 +2330,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.noinv = True
         self.nosym = True
         self.writeinputfile(filename='pwnscf.inp',
-            mode='nscf', overridekpts=kptpath,
+            calculation='nscf', overridekpts=kptpath,
             overridenbands=nbands, suppressforcecalc=True)
         self.noinv = oldnoinv
         self.nosym = oldnosym
@@ -3179,7 +3196,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             self.atoms2species()
             self.natoms = len(self.atoms)
         self.writeinputfile(filename='nonsense.inp',
-                            mode='nscf', overridekpts=(1,1,1),
+                            calculation='nscf', overridekpts=(1,1,1),
                             overridekptshift=(0,0,0), overridenbands=1,
                             suppressforcecalc=True)
         self.run_espressox('pw.x', 'nonsense.inp', 'nonsense.log', parallel=False)
