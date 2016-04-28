@@ -10,70 +10,49 @@
 
 'subroutines for creation of subdirectories & clean-up'
 
+from __future__ import print_function
+
 __version__ = '0.1.2'
 
 import os
+import tempfile
+import string
+import random
+import subprocess
+from path import Path
 
-def mklocaltmp(odir, site):
-    if site.batchmode:
-        s = site.submitdir
-        job = site.jobid
+def mklocaltmp(workdir, site):
+    '''
+    Create a temporary local directory for the job
+
+    Args:
+        workdir : str
+        site : espresso.siteconfig.SiteConfig
+    '''
+
+    if workdir is None or len(workdir) == 0:
+        suffix = '_' + ''.join(random.choice(string.uppercase + string.digits) for _ in range(6))
+        tempdir = Path(tempfile.mkdtemp(prefix='qe' + site.jobid, suffix=suffix, dir=site.submitdir))
     else:
-        s = os.getcwd()
-        job = ''
-    if odir is None or len(odir)==0:
-        p = os.popen('mktemp -d '+s+'/qe'+job+'_XXXXX', 'r')
-        tdir = p.readline().strip()
-        p.close()
-    else:
-        if odir[0]=='/':
-            tdir = odir
-        else:
-            tdir = s+'/'+odir
-        os.system('mkdir -p '+tdir)
-    return tdir
+        tempdir = Path(os.path.join(site.submitdir, workdir))
+        tempdir.makedirs_p()
+    return tempdir.abspath()
 
 def mkscratch(localtmp, site):
-    if site.batchmode:
-        pernodeexec = site.perHostMpiExec
-        job = site.jobid
-    else:
-        pernodeexec = ''
-        job = ''
-    p = os.popen('mktemp -d '+site.scratch+'/qe'+job+'_XXXXX', 'r')
-    tdir = p.readline().strip()
-    p.close()
-    if pernodeexec!='':
-        cdir = os.getcwd()
-        os.chdir(localtmp)
-        os.system(pernodeexec + ' mkdir -p '+tdir)
-        os.chdir(cdir)
-    return tdir
+    '''
+    Create a scratch dir on each node
 
-def cleanup(tmp, scratch, removewf, removesave, calc, site):
-    try:
-        calc.stop()
-    except:
-        pass
-    if site.batchmode:
-        pernodeexec = site.perHostMpiExec
-    else:
-        pernodeexec = ''
-    if removewf:
-        os.system('rm -r '+scratch+'/*.wfc* '+scratch+'/*.hub* 2>/dev/null')
-    if not removesave:
-        os.system('cp -r '+scratch+' '+tmp)
-    cdir = os.getcwd()
-    os.chdir(tmp)
-    os.system(pernodeexec + ' rm -r '+scratch+' 2>/dev/null')
-    os.chdir(cdir)
-    if hasattr(site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
-        os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
-        os.system(site.mpdshutdown)
+    Args:
+        localtmp : str
+        site : espresso.siteconfig.SiteConfig
+    '''
 
-def getsubmitorcurrentdir(site):
-    s = site.submitdir
-    if s is not None:
-        return s
-    else:
-        return os.getcwd()
+    suffix = '_' + ''.join(random.choice(string.uppercase + string.digits) for _ in range(6))
+    tempdir = Path(tempfile.mkdtemp(prefix='qe' + site.jobid, suffix=suffix, dir=site.scratch))
+
+    if site.batchmode:
+        cwd = os.getcwd()
+        localtmp.chdir()
+        subprocess.call(site.perHostMpiExec + ['mkdir', '-p', str(tempdir)])
+        os.chdir(cwd)
+    return tempdir.abspath()

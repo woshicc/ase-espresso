@@ -2,8 +2,8 @@
 
 __version__ = '0.1.2'
 
-import os
-from subprocess import check_output, call, Popen, CalledProcessError
+import os, sys
+from subprocess import check_output, call, CalledProcessError
 
 class SiteConfig(object):
 
@@ -25,7 +25,14 @@ class SiteConfig(object):
         'Set the variables necessary for interactive runs'
 
         self.batchmode = False
-        self.submitdir = None
+        self.submitdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        self.jobid = os.gepid()
+        if os.getenv('SCRATCH') is not None:
+            self.scratch = os.getenv('SCRATCH')
+        elif os.getenv('TMPDIR') is not None:
+            self.scratch = os.getenv('TMPDIR')
+        else:
+            self.scratch = os.path.join(self.submitdir, 'tmp')
 
     def set_slurm_env(self):
         'Get enviromental variables associated with SLURM scheduler'
@@ -62,19 +69,18 @@ class SiteConfig(object):
             self.submitdir = os.getenv('PBS_O_WORKDIR')
 
             nodefile = os.getenv('PBS_NODEFILE')
-            f = open(nodefile, 'r')
-            self.procs = [x.strip() for x in f.readlines()]
-            f.close()
+            with open(nodefile, 'r') as nf:
+                self.procs = [x.strip() for x in nf.readlines()]
 
             self.nprocs = len(self.procs)
+            uniqnodes = sorted(set(self.procs))
 
-            uniqnodefile = self.scratch+'/uniqnodefile'
-            os.system('uniq $PBS_NODEFILE >' + uniqnodefile)
-            p = os.popen('wc -l <'+uniqnodefile, 'r')
-            nnodes = p.readline().strip()
-            p.close()
+            uniqnodefile = os.path.realpath(os.path.join(self.scratch, 'uniqnodefile'))
+            with open(uniqnodefile, 'w') as unf:
+                for node in uniqnodes:
+                    unf.write(node)
 
-            self.perHostMpiExec = 'mpiexec -machinefile {unf:s} -np {nn:s}'.format(unf=uniqnodefile, nn=nnodes)
+            self.perHostMpiExec = ['mpiexec', '-machinefile',  uniqnodefile, '-np', str(len(uniqnodes))]
             self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
             self.perSpecProcMpiExec = 'mpiexec -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
