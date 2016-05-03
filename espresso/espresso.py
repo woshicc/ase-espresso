@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-#****************************************************************************
+# ****************************************************************************
 # Copyright (C) 2013-2015 SUNCAT
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `COPYING'
 # in the root directory of the present distribution,
 # or http://www.gnu.org/copyleft/gpl.txt .
-#****************************************************************************
+# ****************************************************************************
 
 from __future__ import print_function, absolute_import
 
@@ -21,7 +21,7 @@ from .utils import specobj, num2str, bool2str, convert_constraints
 from .subdirs import *
 from .siteconfig import SiteConfig
 
-from ase.calculators.calculator import Calculator
+from ase.calculators.calculator import FileIOCalculator
 from ase.units import Hartree, Rydberg, Bohr
 
 __version__ = '0.1.2'
@@ -34,7 +34,7 @@ GITREVISION = '$Id$'
 # stopped automatically
 espresso_calculators = []
 
-class Espresso(Calculator):
+class Espresso(FileIOCalculator, object):
     """
     ase interface for Quantum Espresso
     """

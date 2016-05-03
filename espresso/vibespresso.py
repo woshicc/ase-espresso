@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 
-#****************************************************************************
+# ****************************************************************************
 # Copyright (C) 2013-2015 SUNCAT
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `COPYING'
 # in the root directory of the present distribution,
 # or http://www.gnu.org/copyleft/gpl.txt .
-#****************************************************************************
+# ****************************************************************************
 
 from __future__ import print_function, absolute_import
 
-__version__ = '0.1.2'
-
 import numpy as np
 
-from ase.calculators.calculator import Calculator
+from ase.calculators.calculator import FileIOCalculator
 from .espresso import Espresso
 
-class Vibespresso(Calculator):
+__version__ = '0.1.2'
+
+
+class Vibespresso(FileIOCalculator, object):
     """
     Special espresso calculator, which expects the first calculation to
     be performed for a structure without displacements. All subsequent
@@ -34,11 +35,11 @@ class Vibespresso(Calculator):
         prefix of the output of the calculations for different displacements
         """
 
-        super(Vibespresso, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
-        self.equilibriumdensity = outdirprefix+'_equi.tgz'
+        self.equilibriumdensity = outdirprefix + '_equi.tgz'
         self.firststep = True
         self.ready = False
 
