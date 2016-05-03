@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import os
+from subprocess import check_output, call, CalledProcessError
+
 __version__ = '0.1.2'
 
-import os
-from subprocess import check_output, call, Popen, CalledProcessError
 
 class SiteConfig(object):
 
@@ -68,7 +69,7 @@ class SiteConfig(object):
 
             self.nprocs = len(self.procs)
 
-            uniqnodefile = self.scratch+'/uniqnodefile'
+            uniqnodefile = os.path.join(self.scratch, 'uniqnodefile_{}'.format(self.jobid))
             os.system('uniq $PBS_NODEFILE >' + uniqnodefile)
             p = os.popen('wc -l <'+uniqnodefile, 'r')
             nnodes = p.readline().strip()

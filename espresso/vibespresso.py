@@ -10,9 +10,7 @@
 
 from __future__ import print_function, absolute_import
 
-from builtins import (bytes, dict, int, list, object, range, str,
-                      ascii, chr, hex, input, next, oct, open,
-                      pow, round, super, filter, map, zip)
+from builtins import super, object
 
 import numpy as np
 
