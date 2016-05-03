@@ -10,6 +10,10 @@
 
 from __future__ import print_function, absolute_import
 
+from builtins import (bytes, dict, int, list, object, range, str,
+                      ascii, chr, hex, input, next, oct, open,
+                      pow, round, super, filter, map, zip)
+
 import numpy as np
 
 from ase.calculators.calculator import FileIOCalculator
