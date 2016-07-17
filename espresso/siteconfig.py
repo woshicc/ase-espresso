@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import os
+import sys
+from subprocess import check_output, call, CalledProcessError
+
 __version__ = '0.1.2'
 
-import os, sys
-from subprocess import check_output, call, CalledProcessError
 
 class SiteConfig(object):
 
@@ -26,7 +28,7 @@ class SiteConfig(object):
 
         self.batchmode = False
         self.submitdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-        self.jobid = os.gepid()
+        self.jobid = os.getpid()
         if os.getenv('SCRATCH') is not None:
             self.scratch = os.getenv('SCRATCH')
         elif os.getenv('TMPDIR') is not None:
