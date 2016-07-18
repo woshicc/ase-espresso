@@ -10,6 +10,9 @@
 
 from __future__ import print_function, absolute_import
 
+from builtins import (bytes, super, range,
+                      zip, round, int, pow, object)
+
 import os
 import atexit
 import shutil
@@ -20,12 +23,12 @@ from path import Path
 
 import pexpect
 
+from ase.calculators.calculator import FileIOCalculator
+from ase.units import Hartree, Rydberg, Bohr
+
 from .utils import specobj, num2str, bool2str, convert_constraints
 from .subdirs import mklocaltmp, mkscratch
 from .siteconfig import SiteConfig
-
-from ase.calculators.calculator import FileIOCalculator
-from ase.units import Hartree, Rydberg, Bohr
 
 __version__ = '0.1.2'
 
@@ -40,7 +43,16 @@ espresso_calculators = []
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']
 
-class Espresso(FileIOCalculator):
+
+class SCFConvergenceError(Exception):
+    pass
+
+
+class SCFMaxIterationsError(Exception):
+    pass
+
+
+class Espresso(FileIOCalculator, object):
     """
     ASE interface for Quantum Espresso
 
@@ -62,9 +74,9 @@ class Espresso(FileIOCalculator):
         kptshift ( (0,0,0) )
             shift of k-point grid
         fft_grid ( None )
-            specify tuple of fft grid points (nr1,nr2,nr3) for q.e.
-            useful for series of calculations with changing cell size (e.g. lattice constant optimization)
-            uses q.e. default if not specified. [RK]
+            specify tuple of fft grid points (nr1, nr2, nr3) for q.e.
+            useful for series of calculations with changing cell size
+            (e.g. lattice constant optimization) uses q.e. default if not specified. [RK]
         calculation ( 'relax' )
             relaxation mode:
             - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
@@ -405,7 +417,7 @@ class Espresso(FileIOCalculator):
             raise ValueError('<dw> smaller than <pw>: {0:.2f} < {1:.2f}'.format(self.dw, self.pw))
 
         self.nbands = nbands
-        if type(kpts) == float or type(kpts) == int:
+        if isinstance(kpts, (float, int)):
             from ase.calculators.calculator import kptdensity2monkhorstpack
             kpts = kptdensity2monkhorstpack(atoms, kpts)
         elif isinstance(kpts, str):
@@ -414,7 +426,7 @@ class Espresso(FileIOCalculator):
             assert len(kpts) == 3
         self.kpts = kpts
         self.kptshift = kptshift
-        self.fft_grid = fft_grid #RK
+        self.fft_grid = fft_grid # RK
         self.calculation = calculation
         self.ion_dynamics = ion_dynamics
         self.nstep = nstep
@@ -433,7 +445,7 @@ class Espresso(FileIOCalculator):
         self.xc = xc
         self.beefensemble = beefensemble
         self.printensemble = printensemble
-        if type(smearing)==str:
+        if isinstance(smearing, str):
             self.smearing = smearing
             self.sigma = sigma
         else:
@@ -488,7 +500,7 @@ class Espresso(FileIOCalculator):
         self.got_energy = False
         self.only_init = False
 
-        #automatically generated list
+        # automatically generated list
         self.iprint = iprint
         self.tstress = tstress
         self.tprnfor = tprnfor
@@ -569,10 +581,16 @@ class Espresso(FileIOCalculator):
         self.wmass = wmass
         self.press_conv_thr = press_conv_thr
 
+        # internal attributes
+
+        self._initialized = False
+        #self._run_counts = 0
+        self._running = False
+
         self.results = {}
 
-        #give original espresso style input names
-        #preference over ase / dacapo - style names
+        # give original espresso style input names
+        # preference over ase / dacapo - style names
         if ecutwfc is not None:
             self.pw = ecutwfc
         if ecutrho is not None:
@@ -580,10 +598,7 @@ class Espresso(FileIOCalculator):
         if nbnd is not None:
             self.nbands = nbnd
 
-        if site is None:
-            self.site = SiteConfig.check_scheduler()
-        else:
-            self.site = site
+        self.site = site
 
         # Variables that cannot be set by inputs
         self.nvalence = None
@@ -610,41 +625,61 @@ class Espresso(FileIOCalculator):
         if atoms is not None:
             atoms.set_calculator(self)
 
-#    @property
-#    def site(self):
-#        return self._site
-#
-#    @site.setter
-#    def site(self, value):
-#        print('setting site')
-#        if value is None:
-#            print('setting site to default')
-#            self._site = SiteConfig.check_scheduler()
-#        else:
-#            print('setting site to value')
-#            self._site = value
+    @property
+    def site(self):
+        return self._site
+
+    @site.setter
+    def site(self, value):
+        if value is None:
+            self._site = SiteConfig.check_scheduler()
+        else:
+            self._site = value
 
     @property
     def name(self):
         return self.get_name()
 
     def get_name(self):
-        return 'QE-ASE3 interface'
+        return 'QE-ASE interface'
 
     def get_version(self):
         return __version__
 
-    def calculation_required(self, atoms, properties):
+    def initialize(self, atoms):
         '''
-        This method should check if the calculation is necessary be be performed
-
-        .. note :: now it doesn't check anything but returns True, this is done
-                   to be compatible with ase v3.9.1
+        Create the scratch directories and pw.inp input file and
+        prepare for writing the input file
         '''
 
-        return True
+        if not self._initialized:
+            self.create_outdir()  # Create the tmp output folder
+
+        #sdir is the directory the script is run or submitted from
+        #self.sdir = self.site.submitdir
+
+        if self.psppath is None:
+            if os.environ['ESP_PSP_PATH'] is not None:
+                self.psppath = os.environ['ESP_PSP_PATH']
+            else:
+                raise ValueError('Unable to find pseudopotential path.'
+                    'Consider setting <ESP_PSP_PATH> environment variable')
+
+        #if not self.started:
+        self.atoms = atoms.copy()
+
+        self.atoms2species()
+
+        self.natoms = len(self.atoms)
+
+        self.check_spinpol()
+
+        self._initialized = True
 
     def calculate(self, atoms, properties=['energy'], system_changes=all_changes):
+        '''
+        Run the calculation and retrieve the results
+        '''
 
         if atoms is not None:
             self.atoms = atoms.copy()
@@ -653,9 +688,8 @@ class Espresso(FileIOCalculator):
         self.initialize(atoms)
 
         # write input
-        self.writeinputfile()
+        self.write_input()
 
-        #sys.exit('bye now')
         # run
         self.run()
 
@@ -663,34 +697,90 @@ class Espresso(FileIOCalculator):
         # check for errors
 
         # parse results
-        self.read(atoms)
+        self.read_output()
 
         self.set_results(atoms)
 
+    def set_atoms(self, atoms):
+
+        if self.atoms is None or not self.started:
+            self.atoms = atoms.copy()
+        else:
+            if len(atoms) != len(self.atoms):
+                self.stop()
+                self.nvalence = None
+                self.nel = None
+                self.recalculate = True
+
+            x = atoms.cell - self.atoms.cell
+            if np.max(x) > 1E-13 or np.min(x) < -1E-13:
+                self.stop()
+                self.recalculate = True
+            if (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any():
+                self.stop()
+                self.nvalence = None
+                self.nel = None
+                self.recalculate = True
+            x = atoms.positions - self.atoms.positions
+            if np.max(x) > 1E-13 or np.min(x) < -1E-13 or (not self.started and not self.got_energy):
+                self.recalculate = True
+        self.atoms = atoms.copy()
+
+    def update(self, atoms):
+        '''
+        Check if the atoms object has changes and perform a calcualtion
+        when it does
+        '''
+
+        if self.atoms is None:
+            self.set_atoms(atoms)
+
+        if self.calculation_required(atoms, ['energy']):
+            self.calculate(atoms)
+            self.recalculate = False
+
     def set_results(self, atoms):
-        pass
+        '''
+        Read the results from the file and populate the `results` dictionary
+        '''
+        self.results = {'energy': self.read_energies()[0],
+                        'forces': self.read_forces(),
+                        #'stress': self.get_stress(),
+                        #'dipole': self.get_dipole(),
+                        #'charges': self.get_charges(),
+                        #'magmom': 0.0,
+                        #'magmoms': np.zeros(len(atoms))
+                        }
+
+    def read_output(self):
+
+        self.energy_zero, self.energy_free = self.read_energies()
+        self.forces = self.read_forces()
+
+        positions = self.read_positions()
+        cell = self.read_cell()
 
     def input_update(self):
         '''
-        Run initialization functions, such that this can be called if variables in espresso are
-        changes using set or directly.
+        Run initialization functions, such that this can be called if variables
+        in espresso are changes using set or directly.
         '''
 
         if self.dipole is None:
-            self.dipole = {'status':False}
+            self.dipole = {'status': False}
         if self.field is None:
-            self.field = {'status':False}
+            self.field = {'status': False}
 
         if self.convergence is None:
-            self.conv_thr = 1e-6/Rydberg
+            self.conv_thr = 1.0e-6 / Rydberg
         else:
             if 'energy' in list(self.convergence.keys()):
-                self.conv_thr = self.convergence['energy']/Rydberg
+                self.conv_thr = self.convergence['energy'] / Rydberg
             else:
-                self.conv_thr = 1e-6/Rydberg
+                self.conv_thr = 1.0e-6 / Rydberg
 
         if self.beefensemble:
-            if self.xc.upper().find('BEEF')<0:
+            if self.xc.upper().find('BEEF') < 0:
                 raise KeyError("ensemble-energies only work with xc=BEEF or variants of it!")
 
         self.started = False
@@ -702,16 +792,16 @@ class Espresso(FileIOCalculator):
         assign file names
         '''
 
-        if self.site.batchmode:
-            self.localtmp = mklocaltmp(self.outdir, self.site)
+        self.localtmp = mklocaltmp(self.outdir, self.site)
 
+        if self.site.batchmode:
             if self.txt is None:
                 self.log = self.localtmp.joinpath('log')
             else:
                 self.log = self.localtmp.joinpath(self.txt)
 
             self.scratch = mkscratch(self.localtmp, self.site)
-            print('self.scratch: ', self.scratch)
+
             if self.output is not None:
                 if 'removewf' in list(self.output.keys()):
                     removewf = self.output['removewf']
@@ -728,20 +818,22 @@ class Espresso(FileIOCalculator):
             self.cancalc = True
         else:
             self.pwinp = not self.site.batchmode
-            self.localtmp=''
             self.cancalc = False
 
-
-    def set(self,  **kwargs):
-        """ Define settings for the Quantum Espresso calculator object after it has been initialized.
-        This is done in the following way:
+    def set(self, **kwargs):
+        '''
+        Define settings for the Quantum Espresso calculator object after it
+        has been initialized. This is done in the following way::
 
         >> calc = Espresso(...)
         >> atoms = set.calculator(calc)
         >> calc.set(xc='BEEF')
 
-        NB: No input validation is made
-        """
+        .. warning::
+
+           No input validation is done
+
+        '''
 
         for key, value in list(kwargs.items()):
             setattr(self, key, value)
@@ -758,9 +850,12 @@ class Espresso(FileIOCalculator):
             pass
 
     def atoms2species(self):
-        # Define several properties of the quantum espresso species from the ase atoms object.
-        # Takes into account that different spins (or different U etc.) on same kind of
-        # chemical elements are considered different species in quantum espresso
+        '''
+        Define several properties of the quantum espresso species from the ase
+        atoms object. Takes into account that different spins (or different U
+        etc.) on same kind of chemical elements are considered different
+        species in quantum espresso
+        '''
 
         symbols = self.atoms.get_chemical_symbols()
         masses = self.atoms.get_masses()
@@ -828,7 +923,7 @@ class Espresso(FileIOCalculator):
         self.nspecies = len(self.species)
         self.specdict = {}
         for i,s in list(dic.values()):
-            self.specdict[s] = specobj(s = s.strip('0123456789'), #chemical symbol w/o index
+            self.specdict[s] = specobj(s = s.strip('0123456789'),  # chemical symbol w/o index
                                        mass = masses[i],
                                        magmom = magmoms[i],
                                        U = Ulist[i],
@@ -850,7 +945,6 @@ class Espresso(FileIOCalculator):
         for i,x in enumerate(self.specprops):
             nvalence[i] = nel[self.specdict[x[0]].s]
         return nvalence, nel
-
 
     def get_number_of_scf_steps(self, all=False):
         """Get number of steps for convered scf. Returns an array.
@@ -893,9 +987,10 @@ class Espresso(FileIOCalculator):
         else:
             return self.forces
 
-    def writeinputfile(self, inputname='pw.inp', calculation=None,
-        overridekpts=None, overridekptshift=None, overridenbands=None,
-        suppressforcecalc=False, usetetrahedra=False):
+    def write_input(self, inputname='pw.inp', calculation=None,
+                    overridekpts=None, overridekptshift=None,
+                    overridenbands=None, suppressforcecalc=False,
+                    usetetrahedra=False):
 
         if self.atoms is None:
             raise ValueError('no atoms defined')
@@ -906,27 +1001,27 @@ class Espresso(FileIOCalculator):
 
         finp = open(fname, 'w')
 
-        ### &CONTROL ###
+        # &CONTROL
         if calculation is None:
             if self.calculation.lower() == 'hund':
                 print('&CONTROL\n  calculation=\'scf\',\n  prefix=\'calc\',', file=finp)
             else:
                 print('&CONTROL\n  calculation=\''+self.calculation+'\',\n  prefix=\'calc\',', file=finp)
-            ionssec = self.calculation not in ('scf','nscf','bands','hund')
+            ionssec = self.calculation not in ('scf', 'nscf', 'bands', 'hund')
         else:
             print('&CONTROL\n  calculation=\'' + calculation + '\',\n  prefix=\'calc\',', file=finp)
-            ionssec = calculation not in ('scf','nscf','bands','hund')
+            ionssec = calculation not in ('scf', 'nscf', 'bands', 'hund')
 
-        if self.nstep != None:
-            print('  nstep='+str(self.nstep)+',', file=finp)
+        if self.nstep is not None:
+            print('  nstep=' + str(self.nstep) + ',', file=finp)
 
-        if self.verbose!='low':
-            print('  verbosity=\''+self.verbose+'\',', file=finp)
+        if self.verbose != 'low':
+            print('  verbosity=\'' + self.verbose + '\',', file=finp)
 
-        print('  pseudo_dir=\''+self.psppath+'\',', file=finp)
+        print('  pseudo_dir=\'' + self.psppath + '\',', file=finp)
         print('  outdir=\'.\',', file=finp)
-        efield = (self.field['status'] == True)
-        dipfield = (self.dipole['status'] == True)
+        efield = (self.field['status'] is True)
+        dipfield = (self.dipole['status'] is True)
         if efield or dipfield:
             print('  tefield=.true.,', file=finp)
             if dipfield:
@@ -941,7 +1036,7 @@ class Espresso(FileIOCalculator):
                         self.output['disk_io'] = 'none'
                 if 'disk_io' in list(self.output.keys()):
                     if self.output['disk_io'] in ['high', 'low', 'none']:
-                        print('  disk_io=\''+self.output['disk_io']+'\',', file=finp)
+                        print('  disk_io=\'' + self.output['disk_io'] + '\',', file=finp)
 
                 if 'wf_collect' in list(self.output.keys()):
                     if self.output['wf_collect']:
@@ -1368,110 +1463,6 @@ class Espresso(FileIOCalculator):
         if self.verbose == 'high':
             print('\nPWscf input file {} written\n'.format(fname))
 
-    def set_atoms(self, atoms):
-        if self.atoms is None or not self.started:
-            self.atoms = atoms.copy()
-        else:
-            if len(atoms) != len(self.atoms):
-                self.stop()
-                self.nvalence = None
-                self.nel = None
-                self.recalculate = True
-
-            x = atoms.cell - self.atoms.cell
-            if np.max(x) > 1E-13 or np.min(x) < -1E-13:
-                self.stop()
-                self.recalculate = True
-            if (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any():
-                self.stop()
-                self.nvalence = None
-                self.nel = None
-                self.recalculate = True
-            x = atoms.positions - self.atoms.positions
-            if np.max(x) > 1E-13 or np.min(x) < -1E-13 or (not self.started and not self.got_energy):
-                self.recalculate = True
-        self.atoms = atoms.copy()
-
-    def update(self, atoms):
-
-        if self.atoms is None:
-            self.set_atoms(atoms)
-
-        if self.calculation_required(atoms, ['energy']):
-
-            self.calculate(atoms)
-            self.recalculate = False
-
-        x = atoms.cell-self.atoms.cell
-        morethanposchange = np.max(x)>1E-13 or np.min(x)<-1E-13 or len(atoms)!=len(self.atoms) \
-            or (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any()
-        x = atoms.positions-self.atoms.positions
-        if np.max(x)>1E-13 or np.min(x)<-1E-13 or morethanposchange \
-            or (not self.started and not self.got_energy) or self.recalculate:
-            self.recalculate = True
-            if self.ion_dynamics != 'ase3' or self.calculation in ('scf','nscf') or \
-                morethanposchange:
-                self.stop()
-            self.read(atoms)
-        elif self.only_init:
-            self.read(atoms)
-        else:
-            self.atoms = atoms.copy()
-
-    def init_only(self, atoms):
-        if self.atoms is None:
-            self.set_atoms(atoms)
-        x = atoms.positions-self.atoms.positions
-        if np.max(x) > 1e-13 or np.min(x) < -1e-13 or (not self.started and not self.got_energy) or self.recalculate:
-            self.recalculate = True
-            if self.ion_dynamics != 'ase3':
-                self.stop()
-
-            if not self.started:
-                self.initialize(atoms)
-                self.only_init = True
-            elif self.recalculate:
-                self.only_init = True
-                if self.ion_dynamics == 'ase3':
-                    p = atoms.positions
-                    self.atoms = atoms.copy()
-                    print('G', file=self.cinp)
-                    for x in p:
-                        print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
-                self.cinp.flush()
-
-
-    def initialize(self, atoms):
-        """ Create the pw.inp input file and start the calculation.
-        If ``self.site.batchmode=False`` only the input file will
-        be written for manual submission.
-        """
-
-        self.create_outdir() # Create the tmp output folder
-
-        #sdir is the directory the script is run or submitted from
-        #self.sdir = self.site.submitdir
-
-        if self.psppath is None:
-            if os.environ['ESP_PSP_PATH'] is not None:
-                self.psppath = os.environ['ESP_PSP_PATH']
-            else:
-                raise ValueError('Unable to find pseudopotential path.'
-                    'Consider setting <ESP_PSP_PATH> environment variable')
-
-
-        if not self.started:
-            self.atoms = atoms.copy()
-
-            self.atoms2species()
-
-            self.natoms = len(self.atoms)
-
-            self.check_spinpol()
-
-        #if self.cancalc:
-        #    self.start()
-
     def check_spinpol(self):
         mm = self.atoms.get_initial_magnetic_moments()
         sp = mm.any()
@@ -1488,89 +1479,61 @@ class Espresso(FileIOCalculator):
             self.occupations = 'fixed'
 
     def run(self):
-        if not self.started:
-            if self.single_calculator:
-                while len(espresso_calculators)>0:
-                    espresso_calculators.pop().stop()
-                espresso_calculators.append(self)
 
-            if self.site.batchmode:
-                cdir = os.getcwd()
-                self.localtmp.chdir()
+        if self.single_calculator:
+            while len(espresso_calculators)>0:
+                espresso_calculators.pop().stop()
+            espresso_calculators.append(self)
 
-                subprocess.call(self.site.perHostMpiExec + ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+        if self.site.batchmode:
+            cdir = os.getcwd()
+            self.localtmp.chdir()
 
-                if self.calculation != 'hund':
-                    if not self.proclist:
-                        command = self.site.perProcMpiExec.format(self.scratch, 'pw.x ' + self.parflags + ' -in pw.inp')
-                        if self.ion_dynamics == 'ase3':
-                            raise NotImplementedError
-                        else:
-                            print('command: ', command)
-                            #(output, exit_status) = pexpect.run(command, withexitstatus=True)
-                            with open(self.log, 'a') as flog:
-                                flog.write('  python dir           : {}\n'.format(self.mypath))
-                                exedir = os.path.dirname(os.popen('which pw.x').readline())
-                                flog.write('  espresso dir         : {}\n'.format(exedir))
-                                flog.write('  pseudo dir           : {}\n'.format(self.psppath))
-                                flog.write('  ase-espresso version : {}\n'.format(self.get_version()))
-                                flog.write('  ase-espresso git rev : {}\n\n\n'.format(GITREVISION))
-                                output = pexpect.run(command, logfile=flog)
-                                print('O: ', output)
-                            #self.child = pexpect.spawn(command)
-                            #self.child.logfile = sys.stdout
+            subprocess.call(self.site.perHostMpiExec + ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+
+            if self.calculation != 'hund':
+                if not self.proclist:
+                    command = self.site.perProcMpiExec.format(self.scratch,
+                                'pw.x ' + self.parflags + ' -in pw.inp')
+                    if self.ion_dynamics == 'ase3':
+                        raise NotImplementedError
                     else:
-                        self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
-                                self.myncpus, self.scratch,
-                                'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
 
-                else:  # calculation == 'hund'
-                    self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
-                    os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                    os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
-                    self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
-                os.chdir(cdir)
-
-            else:  # not in batchmode
-                os.system('cp '+self.localtmp+'/pw.inp '+self.scratch)
-                if self.calculation != 'hund':
-                    os.chdir(self.scratch)
-                    self.cinp, self.cout = os.popen2('pw.x -in pw.inp')
+                        with open(self.log, 'a') as flog:
+                            flog.write(self.get_output_header())
+                            output = pexpect.run(command, logfile=flog, timeout=None)
                 else:
-                    os.chdir(self.scratch)
-                    subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
+                    self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
+                            self.myncpus, self.scratch,
+                            'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
 
-                    os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                    shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
-                    os.chdir(self.scratch)
-                    self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
+            else:  # calculation == 'hund'
+                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
+                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+            os.chdir(cdir)
 
-            self.started = True
+        else:  # not in batchmode
+            os.system('cp '+self.localtmp+'/pw.inp '+self.scratch)
+            if self.calculation != 'hund':
+                os.chdir(self.scratch)
+                self.cinp, self.cout = os.popen2('pw.x -in pw.inp')
+            else:
+                os.chdir(self.scratch)
+                subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
+
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
+                os.chdir(self.scratch)
+                self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
+
+            self._running = True
 
     def stop(self):
-        if self.started:
-            if self.ion_dynamics == 'ase3':
-                #sending 'Q' to espresso tells it to quit cleanly
-                print('Q', file=self.cinp)
-                try:
-                    self.cinp.flush()
-                except IOError:
-                    #espresso may have already shut down, so flush may fail
-                    pass
-            else:
-                self.cinp.flush()
-            s = open(self.log,'a')
-            a = self.cout.readline()
-            s.write(a)
-            while a != '':
-                a = self.cout.readline()
-                s.write(a)
-                s.flush()
-            s.close()
-            self.cinp.close()
-            self.cout.close()
-            self.started = False
+        if self._running:
 
+            self._running = False
 
     def clean(self, tmp, scratch, removewf, removesave):
 
@@ -1818,7 +1781,7 @@ class Espresso(FileIOCalculator):
 
         forceslist = []
 
-        with open(self.output, 'rU') as fout:
+        with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
         forcestr = '     Forces acting on atoms (Ry/au):'
@@ -1860,7 +1823,7 @@ class Espresso(FileIOCalculator):
             energylist : tuple or list of tuples
         '''
 
-        with open(self.output, 'rU') as fout:
+        with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
         energylinenos = [no for no, line in enumerate(lines) if
@@ -1898,7 +1861,7 @@ class Espresso(FileIOCalculator):
 
         celllist = []
 
-        with open(self.output, 'rU') as fout:
+        with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
         # additional unit cell information
@@ -1945,11 +1908,11 @@ class Espresso(FileIOCalculator):
 
         positionslist = []
 
-        with open(self.output, 'rU') as fout:
+        with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
         carteslinenos = [no for no, line in enumerate(lines) if 'Cartesian axes' in line]
-        crystallinenos =[no for no, line in enumerate(lines) if 'ATOMIC_POSITIONS (crystal)' in line]
+        crystallinenos = [no for no, line in enumerate(lines) if 'ATOMIC_POSITIONS (crystal)' in line]
 
         for no in carteslinenos:
             positions = np.zeros((self.natoms, 3), dtype=float)
@@ -2209,7 +2172,7 @@ class Espresso(FileIOCalculator):
 
         self.stop()
 
-        p = os.popen('grep -3 "total   stress" '+self.log+' | tail -3', 'r')
+        p = os.popen('grep -3 "total   stress" ' + self.log + ' | tail -3', 'r')
         s = p.readlines()
         p.close()
 
@@ -2220,7 +2183,7 @@ class Espresso(FileIOCalculator):
         for i in range(3):
             stress[i][:] = [float(x) for x in s[i].split()[:3]]
 
-        return stress * Rydberg/Bohr**3
+        return stress * Rydberg / Bohr**3
 
 
     def get_stress(self, dummyself=None):
@@ -2510,7 +2473,7 @@ class Espresso(FileIOCalculator):
             if not hasattr(self, 'natoms'):
                 self.atoms2species()
                 self.natoms = len(self.atoms)
-            self.writeinputfile(filename='pwnscf.inp',
+            self.write_input(filename='pwnscf.inp',
                 calculation='nscf', usetetrahedra=tetrahedra, overridekpts=kpts,
                 overridekptshift=kptshift, overridenbands=nbands,
                 suppressforcecalc=True)
@@ -2613,7 +2576,7 @@ class Espresso(FileIOCalculator):
         oldnosym = self.nosym
         self.noinv = True
         self.nosym = True
-        self.writeinputfile(filename='pwnscf.inp',
+        self.write_input(filename='pwnscf.inp',
             calculation='nscf', overridekpts=kptpath,
             overridenbands=nbands, suppressforcecalc=True)
         self.noinv = oldnoinv
@@ -3479,7 +3442,7 @@ class Espresso(FileIOCalculator):
         if not hasattr(self, 'natoms'):
             self.atoms2species()
             self.natoms = len(self.atoms)
-        self.writeinputfile(filename='nonsense.inp',
+        self.write_input(filename='nonsense.inp',
                             calculation='nscf', overridekpts=(1,1,1),
                             overridekptshift=(0,0,0), overridenbands=1,
                             suppressforcecalc=True)
@@ -3492,3 +3455,108 @@ class Espresso(FileIOCalculator):
     def get_world(self):
         from .worldstub import world
         return world(self.site.nprocs)
+
+    def get_output_header(self):
+        '''
+        Return a string with information about the execution environment
+        '''
+
+        exedir = os.path.dirname(os.popen('which pw.x').readline())
+
+        out = '\n'.join(['# python dir           : {}'.format(self.mypath),
+                         '# espresso dir         : {}'.format(exedir),
+                         '# pseudo dir           : {}'.format(self.psppath),
+                         '# ase-espresso version : {}'.format(self.get_version()),
+                         '# ase-espresso git rev : {}'.format(GITREVISION),
+                         ])
+        return out + '\n\n\n'
+
+
+class iEspresso(Espresso):
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self._spawned = False
+
+    def calculate(self, atoms, properties=['energy'], system_changes=all_changes):
+        '''
+        Run the calculation
+        '''
+
+        if atoms is not None:
+            self.atoms = atoms.copy()
+
+        # initialize
+        self.initialize(atoms)
+
+        # write input
+        self.write_input()
+
+        if not self._spawned:
+            self.logfile = open(self.log, 'a')
+        # run
+        self.run()
+
+        self.recalculate = True
+        # check for errors
+
+        # parse results
+        self.read_output()
+
+        self.set_results(atoms)
+
+    def calculation_required(self, atoms, properties):
+        system_changes = self.check_state(atoms)
+
+        if system_changes:
+            return True
+        for name in properties:
+            if name not in self.results:
+                return True
+        return False
+
+    def run(self):
+
+        if self.site.batchmode:
+            cdir = os.getcwd()
+            self.localtmp.chdir()
+
+            subprocess.call(self.site.perHostMpiExec +
+                            ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+
+            if self.calculation != 'hund':
+                if not self.proclist:
+                    command = self.site.perProcMpiExec.format(self.scratch,
+                                'pw.x ' + self.parflags + ' -in pw.inp')
+
+                    if not self._spawned:
+
+                        self.child = pexpect.spawn(command)
+                        self._spawned = True
+                        self.child.logfile = self.logfile
+                        self.child.logfile.write(self.get_output_header())
+                        self.child.expect('!ASE\s*\n(.*\n){4}', timeout=None)
+
+                    else:  # QE process is already spawned 
+
+                        self.child.send('C\n')
+                        for atom in self.atoms:
+                            self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
+                        self.child.expect('!ASE\s*\n(.*\n){4}', timeout=None)
+                        self.child.logfile.flush()
+
+            else:  # calculation == 'hund'
+                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
+                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+            os.chdir(cdir)
+
+    def stop(self):
+
+        if self._spawned:
+            self.child.send('Q\n')
+
+        self.logfile.close()
