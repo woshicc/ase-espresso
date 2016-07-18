@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 
-#****************************************************************************
+# ****************************************************************************
 # Copyright (C) 2013 SUNCAT
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `COPYING'
 # in the root directory of the present distribution,
 # or http://www.gnu.org/copyleft/gpl.txt .
-#****************************************************************************
+# ****************************************************************************
 
 from __future__ import print_function, absolute_import
 
+from sys import stderr
+from .espresso import Espresso
+
 __version__ = '0.1.2'
 
-from .espresso import Espresso
-from sys import stderr
-
-#keep track of ourselves so we can automatically stop us
-#when a new multi-espresso object is created
+# keep track of ourselves so we can automatically stop us
+# when a new multi-espresso object is created
 espressos = []
+
 
 class Multiespresso:
     """
