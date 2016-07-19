@@ -4,6 +4,8 @@ import os
 import sys
 from subprocess import check_output, call, CalledProcessError
 
+from path import Path
+
 __version__ = '0.1.2'
 
 
@@ -27,14 +29,14 @@ class SiteConfig(object):
         'Set the variables necessary for interactive runs'
 
         self.batchmode = False
-        self.submitdir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        self.submitdir = Path(os.path.dirname(os.path.realpath(sys.argv[0])))
         self.jobid = os.getpid()
         if os.getenv('SCRATCH') is not None:
-            self.scratch = os.getenv('SCRATCH')
+            self.scratch = Path(os.getenv('SCRATCH'))
         elif os.getenv('TMPDIR') is not None:
-            self.scratch = os.getenv('TMPDIR')
+            self.scratch = Path(os.getenv('TMPDIR'))
         else:
-            self.scratch = os.path.join(self.submitdir, 'tmp')
+            self.scratch = Path(os.path.join(self.submitdir, 'tmp'))
 
     def set_slurm_env(self):
         'Get enviromental variables associated with SLURM scheduler'
