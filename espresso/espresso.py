@@ -1548,7 +1548,7 @@ class Espresso(FileIOCalculator, object):
 
             pwinp = self.localtmp.joinpath('pw.inp')
             Path.copy(pwinp, self.site.scratch)
-            command = 'pw.x -in pw.in'
+            command = 'pw.x -in pw.inp'
             if self.calculation != 'hund':
                 self.site.scratch.chdir()
 
