@@ -10,8 +10,7 @@
 
 from __future__ import print_function, absolute_import
 
-from builtins import (bytes, super, range,
-                      zip, round, int, pow, object)
+from builtins import (super, range, zip, round, int, object)
 
 import os
 import atexit
@@ -417,13 +416,6 @@ class Espresso(FileIOCalculator, object):
             raise ValueError('<dw> smaller than <pw>: {0:.2f} < {1:.2f}'.format(self.dw, self.pw))
 
         self.nbands = nbands
-        if isinstance(kpts, (float, int)):
-            from ase.calculators.calculator import kptdensity2monkhorstpack
-            kpts = kptdensity2monkhorstpack(atoms, kpts)
-        elif isinstance(kpts, str):
-            assert kpts == 'gamma'
-        else:
-            assert len(kpts) == 3
         self.kpts = kpts
         self.kptshift = kptshift
         self.fft_grid = fft_grid # RK
@@ -643,6 +635,42 @@ class Espresso(FileIOCalculator, object):
     def get_name(self):
         return 'QE-ASE interface'
 
+    @property
+    def kpts(self):
+        return self._kpts
+
+    @kpts.setter
+    def kpts(self, value):
+        '''
+        Resolve the `kpts` and store as an attribute
+        '''
+
+        if isinstance(value, str):
+
+            if value.lower() == 'gamma':
+                self._kpts = value.lower()
+            else:
+                raise ValueError('wrong <kpts>: {}'.format(value))
+
+        elif isinstance(value, (float, int)):
+
+            if self.atoms is not None:
+                from ase.calculators.calculator import kptdensity2monkhorstpack
+                self._kpts = kptdensity2monkhorstpack(self.atoms, value)
+            else:
+                raise ValueError('cannot calculate the Monkhorst-Pack grid '
+                                 'without the <atoms> object specified')
+        elif isinstance(value, (list, tuple)):
+
+            self._kpts = np.asarray(value)
+
+        elif type(value).__module__ == np.__name__:
+
+            self._kpts = value
+
+        else:
+            raise ValueError('unknown <kpts> type: {}'.format(type(value)))
+
     def get_version(self):
         return __version__
 
@@ -794,11 +822,12 @@ class Espresso(FileIOCalculator, object):
 
         self.localtmp = mklocaltmp(self.outdir, self.site)
 
+        if self.txt is None:
+            self.log = self.localtmp.joinpath('log')
+        else:
+            self.log = self.localtmp.joinpath(self.txt)
+
         if self.site.batchmode:
-            if self.txt is None:
-                self.log = self.localtmp.joinpath('log')
-            else:
-                self.log = self.localtmp.joinpath(self.txt)
 
             self.scratch = mkscratch(self.localtmp, self.site)
 
@@ -817,7 +846,6 @@ class Espresso(FileIOCalculator, object):
             atexit.register(self.clean, self.localtmp, self.scratch, removewf, removesave)
             self.cancalc = True
         else:
-            self.pwinp = not self.site.batchmode
             self.cancalc = False
 
     def set(self, **kwargs):
@@ -994,10 +1022,8 @@ class Espresso(FileIOCalculator, object):
 
         if self.atoms is None:
             raise ValueError('no atoms defined')
-        if self.cancalc:
-            fname = self.localtmp.joinpath(inputname)
-        else:
-            fname = self.pwinp
+        #if self.cancalc:
+        fname = self.localtmp.joinpath(inputname)
 
         finp = open(fname, 'w')
 
@@ -1440,25 +1466,29 @@ class Espresso(FileIOCalculator, object):
         if kp == 'gamma':
             print('K_POINTS Gamma', file=finp)
         else:
-            x = np.shape(kp)
-            if len(x)==1:
+            if kp.ndim == 1:
                 print('K_POINTS automatic', file=finp)
                 print(kp[0], kp[1], kp[2], file=finp)
                 if overridekptshift is None:
-                    print(self.kptshift[0],self.kptshift[1],self.kptshift[2], file=finp)
+                    print(self.kptshift[0], self.kptshift[1],
+                          self.kptshift[2], file=finp)
                 else:
-                    print(overridekptshift[0],overridekptshift[1],overridekptshift[2], file=finp)
+                    print(overridekptshift[0], overridekptshift[1],
+                          overridekptshift[2], file=finp)
             else:
                 print('K_POINTS crystal', file=finp)
-                print(x[0], file=finp)
-                w = 1./x[0]
-                for k in kp:
-                    if len(k) == 3:
-                        print('%24.15e %24.15e %24.15e %24.15e' % (k[0],k[1],k[2],w), file=finp)
+                nrows, ncols = kp.shape
+                print(nrows, file=finp)
+                w = 1.0 / nrows
+                for row in kp:
+                    if ncols == 3:
+                        print('{0:24.15e} {1:24.15e} {2:24.15e} {w:24.15e}'.format(
+                            *row, w=w), file=finp)
                     else:
-                        print('%24.15e %24.15e %24.15e %24.15e' % (k[0],k[1],k[2],k[3]), file=finp)
+                        print('{0:24.15e} {1:24.15e} {2:24.15e} {3:24.15e}'.format(
+                            *row), file=finp)
 
-        ### closing PWscf input file ###
+        # closing PWscf input file
         finp.close()
         if self.verbose == 'high':
             print('\nPWscf input file {} written\n'.format(fname))
@@ -1515,17 +1545,22 @@ class Espresso(FileIOCalculator, object):
             os.chdir(cdir)
 
         else:  # not in batchmode
-            os.system('cp '+self.localtmp+'/pw.inp '+self.scratch)
+
+            pwinp = self.localtmp.joinpath('pw.inp')
+            Path.copy(pwinp, self.site.scratch)
+            command = 'pw.x -in pw.in'
             if self.calculation != 'hund':
-                os.chdir(self.scratch)
-                self.cinp, self.cout = os.popen2('pw.x -in pw.inp')
+                self.site.scratch.chdir()
+
+                with open(self.log, 'a') as flog:
+                    output = pexpect.run(command, logfile=flog, timeout=None)
             else:
-                os.chdir(self.scratch)
+                self.site.scratch.chdir()
                 subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
 
                 os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
                 shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
-                os.chdir(self.scratch)
+                self.site.scratch.chdir()
                 self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
 
             self._running = True
