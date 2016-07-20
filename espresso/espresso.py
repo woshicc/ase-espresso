@@ -706,7 +706,7 @@ class Espresso(FileIOCalculator, object):
 
         self._initialized = True
 
-    def calculate(self, atoms, properties=['energy'], system_changes=all_changes):
+    def calculate(self, atoms, properties=['energy']):
         '''
         Run the calculation and retrieve the results
         '''
@@ -3541,16 +3541,6 @@ class iEspresso(Espresso):
         self.read_output()
 
         self.set_results(atoms)
-
-    def calculation_required(self, atoms, properties):
-        system_changes = self.check_state(atoms)
-
-        if system_changes:
-            return True
-        for name in properties:
-            if name not in self.results:
-                return True
-        return False
 
     def run(self):
 
