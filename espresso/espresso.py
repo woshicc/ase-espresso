@@ -248,160 +248,160 @@ class Espresso(FileIOCalculator, object):
     default_parameters = []
 
     def __init__(self,
-                 atoms = None,
-                 pw = 350.0,
-                 dw = None,
-                 fw = None,
-                 nbands = -10,
-                 kpts = (1,1,1),
-                 kptshift = (0,0,0),
-                 fft_grid = None,   #if specified, set the keywrds nr1, nr2, nr3 in q.e. input [RK]
-                 calculation = 'relax',
-                 ion_dynamics = 'ase3',
-                 nstep = None,
-                 constr_tol = None,
-                 fmax = 0.05,
-                 cell_dynamics = None,
-                 press = None, # target pressure
-                 dpress = None, # convergence limit towards target pressure
-                 cell_factor = None,
-                 cell_dofree = None,
-                 dontcalcforces = False,
-                 nosym = False,
-                 noinv = False,
-                 nosym_evc = False,
-                 no_t_rev = False,
-                 xc = 'PBE',
-                 beefensemble = False,
-                 printensemble = False,
-                 psppath = None,
-                 spinpol = False,
-                 noncollinear = False,
-                 spinorbit = False,
-                 outdir = None,
-                 txt = None,
-                 calcstress = False,
-                 smearing = 'fd',
-                 sigma = 0.1,
-                 fix_magmom = False,
-                 isolated = None,
-                 U = None,
-                 J = None,
-                 U_alpha = None,
-                 U_projection_type = 'atomic',
-                 nqx1 = None,
-                 nqx2 = None,
-                 nqx3 = None,
-                 exx_fraction = None,
-                 screening_parameter = None,
-                 exxdiv_treatment = None,
-                 ecutvcut = None,
-                 tot_charge = None, # +1 means 1 e missing, -1 means 1 extra e
-                 charge = None, # overrides tot_charge (ase 3.7+ compatibility)
-                 tot_magnetization = -1, #-1 means unspecified, 'hund' means Hund's rule for each atom
-                 occupations = 'smearing', # 'smearing', 'fixed', 'tetrahedra'
-                 dipole = {'status':False},
-                 field = {'status':False},
-                 output = {'disk_io':'default',  # how often espresso writes wavefunctions to disk
-                           'avoidio':False,  # will overwrite disk_io parameter if True
-                           'removewf':True,
-                           'removesave':False,
-                           'wf_collect':False},
-                 convergence = {'energy':1e-6,
-                                'mixing':0.7,
-                                'maxsteps':100,
-                                'diag':'david'},
-                 startingpot = None,
-                 startingwfc = None,
-                 ion_positions = None,
-                 parflags = None,
-                 single_calculator = True, #if True, only one espresso job will be running
-                 procrange = None, #let this espresso calculator run only on a subset of the requested cpus
-                 numcalcs = None,  #used / set by multiespresso class
-                 alwayscreatenewarrayforforces = True,
-                 verbose = 'low',
-                 #automatically generated list of parameters
-                 #some coincide with ase-style names
-                 iprint = None,
-                 tstress = None,
-                 tprnfor = None,
-                 dt = None,
-                 lkpoint_dir = None,
-                 max_seconds = None,
-                 etot_conv_thr = None,
-                 forc_conv_thr = None,
-                 tefield = None,
-                 dipfield = None,
-                 lelfield = None,
-                 nberrycyc = None,
-                 lorbm = None,
-                 lberry = None,
-                 gdir = None,
-                 nppstr = None,
-                 nbnd = None,
-                 ecutwfc = None,
-                 ecutrho = None,
-                 ecutfock = None,
-                 force_symmorphic = None,
-                 use_all_frac = None,
-                 one_atom_occupations = None,
-                 starting_spin_angle = None,
-                 degauss = None,
-                 nspin = None,
-                 ecfixed = None,
-                 qcutz = None,
-                 q2sigma = None,
-                 x_gamma_extrapolation = None,
-                 lda_plus_u = None,
-                 lda_plus_u_kind = None,
-                 edir = None,
-                 emaxpos = None,
-                 eopreg = None,
-                 eamp = None,
-                 clambda = None,
-                 report = None,
-                 lspinorb = None,
-                 esm_w = None,
-                 esm_efield = None,
-                 esm_nfit = None,
-                 london = None,
-                 london_s6 = None,
-                 london_rcut = None,
-                 xdm = None,
-                 xdm_a1 = None,
-                 xdm_a2 = None,
-                 electron_maxstep = None,
-                 scf_must_converge = None,
-                 conv_thr = None,
-                 adaptive_thr = None,
-                 conv_thr_init = None,
-                 conv_thr_multi = None,
-                 mixing_beta = None,
-                 mixing_ndim = None,
-                 mixing_fixed_ns = None,
-                 ortho_para = None,
-                 diago_thr_init = None,
-                 diago_cg_maxiter = None,
-                 diago_david_ndim = None,
-                 diago_full_acc = None,
-                 efield = None,
-                 tqr = None,
-                 remove_rigid_rot = None,
-                 tempw = None,
-                 tolp = None,
-                 delta_t = None,
-                 nraise = None,
-                 refold_pos = None,
-                 upscale = None,
-                 bfgs_ndim = None,
-                 trust_radius_max = None,
-                 trust_radius_min = None,
-                 trust_radius_ini = None,
-                 w_1 = None,
-                 w_2 = None,
-                 wmass = None,
-                 press_conv_thr = None,
-                 site = None,
+                 atoms=None,
+                 pw=350.0,
+                 dw=None,
+                 fw=None,
+                 nbands=-10,
+                 kpts=(1, 1, 1),
+                 kptshift=(0, 0, 0),
+                 fft_grid=None,   # if specified, set the keywrds nr1, nr2, nr3 in q.e. input [RK]
+                 calculation='relax',
+                 ion_dynamics='ase3',
+                 nstep=None,
+                 constr_tol=None,
+                 fmax=0.05,
+                 cell_dynamics=None,
+                 press=None,    # target pressure
+                 dpress=None,   # convergence limit towards target pressure
+                 cell_factor=None,
+                 cell_dofree=None,
+                 dontcalcforces=False,
+                 nosym=False,
+                 noinv=False,
+                 nosym_evc=False,
+                 no_t_rev=False,
+                 xc='PBE',
+                 beefensemble=False,
+                 printensemble=False,
+                 psppath=None,
+                 spinpol=False,
+                 noncollinear=False,
+                 spinorbit=False,
+                 outdir=None,
+                 txt=None,
+                 calcstress=False,
+                 smearing='fd',
+                 sigma=0.1,
+                 fix_magmom=False,
+                 isolated=None,
+                 U=None,
+                 J=None,
+                 U_alpha=None,
+                 U_projection_type='atomic',
+                 nqx1=None,
+                 nqx2=None,
+                 nqx3=None,
+                 exx_fraction=None,
+                 screening_parameter=None,
+                 exxdiv_treatment=None,
+                 ecutvcut=None,
+                 tot_charge=None,         # +1 means 1 e missing, -1 means 1 extra e
+                 charge=None,             # overrides tot_charge (ase 3.7+ compatibility)
+                 tot_magnetization=-1,    # -1 means unspecified, 'hund' means Hund's rule for each atom
+                 occupations='smearing',  # 'smearing', 'fixed', 'tetrahedra'
+                 dipole={'status': False},
+                 field={'status': False},
+                 output={'disk_io': 'default',  # how often espresso writes wavefunctions to disk
+                         'avoidio': False,      # will overwrite disk_io parameter if True
+                         'removewf': True,
+                         'removesave': False,
+                         'wf_collect': False},
+                 convergence={'energy': 1e-6,
+                              'mixing': 0.7,
+                              'maxsteps': 100,
+                              'diag': 'david'},
+                 startingpot=None,
+                 startingwfc=None,
+                 ion_positions=None,
+                 parflags=None,
+                 single_calculator=True,  # if True, only one espresso job will be running
+                 procrange=None,          # let this espresso calculator run only on a subset of the requested cpus
+                 numcalcs=None,           # used / set by multiespresso class
+                 alwayscreatenewarrayforforces=True,
+                 verbose='low',
+                 # automatically generated list of parameters
+                 # some coincide with ase-style names
+                 iprint=None,
+                 tstress=None,
+                 tprnfor=None,
+                 dt=None,
+                 lkpoint_dir=None,
+                 max_seconds=None,
+                 etot_conv_thr=None,
+                 forc_conv_thr=None,
+                 tefield=None,
+                 dipfield=None,
+                 lelfield=None,
+                 nberrycyc=None,
+                 lorbm=None,
+                 lberry=None,
+                 gdir=None,
+                 nppstr=None,
+                 nbnd=None,
+                 ecutwfc=None,
+                 ecutrho=None,
+                 ecutfock=None,
+                 force_symmorphic=None,
+                 use_all_frac=None,
+                 one_atom_occupations=None,
+                 starting_spin_angle=None,
+                 degauss=None,
+                 nspin=None,
+                 ecfixed=None,
+                 qcutz=None,
+                 q2sigma=None,
+                 x_gamma_extrapolation=None,
+                 lda_plus_u=None,
+                 lda_plus_u_kind=None,
+                 edir=None,
+                 emaxpos=None,
+                 eopreg=None,
+                 eamp=None,
+                 clambda=None,
+                 report=None,
+                 lspinorb=None,
+                 esm_w=None,
+                 esm_efield=None,
+                 esm_nfit=None,
+                 london=None,
+                 london_s6=None,
+                 london_rcut=None,
+                 xdm=None,
+                 xdm_a1=None,
+                 xdm_a2=None,
+                 electron_maxstep=None,
+                 scf_must_converge=None,
+                 conv_thr=None,
+                 adaptive_thr=None,
+                 conv_thr_init=None,
+                 conv_thr_multi=None,
+                 mixing_beta=None,
+                 mixing_ndim=None,
+                 mixing_fixed_ns=None,
+                 ortho_para=None,
+                 diago_thr_init=None,
+                 diago_cg_maxiter=None,
+                 diago_david_ndim=None,
+                 diago_full_acc=None,
+                 efield=None,
+                 tqr=None,
+                 remove_rigid_rot=None,
+                 tempw=None,
+                 tolp=None,
+                 delta_t=None,
+                 nraise=None,
+                 refold_pos=None,
+                 upscale=None,
+                 bfgs_ndim=None,
+                 trust_radius_max=None,
+                 trust_radius_min=None,
+                 trust_radius_ini=None,
+                 w_1=None,
+                 w_2=None,
+                 wmass=None,
+                 press_conv_thr=None,
+                 site=None,
                  ):
 
         self.pw = pw
@@ -579,7 +579,6 @@ class Espresso(FileIOCalculator, object):
         # internal attributes
 
         self._initialized = False
-        #self._run_counts = 0
         self._running = False
 
         self.results = {}
@@ -834,19 +833,7 @@ class Espresso(FileIOCalculator, object):
         else:
             self.log = self.localtmp.joinpath(self.txt)
 
-        if self.output is not None:
-            if 'removewf' in list(self.output.keys()):
-                removewf = self.output['removewf']
-            else:
-                removewf = True
-            if 'removesave' in list(self.output.keys()):
-                removesave = self.output['removesave']
-            else:
-                removesave = False
-        else:
-            removewf = True
-            removesave = False
-        atexit.register(self.clean, removewf, removesave)
+        atexit.register(self.clean)
 
     def set(self, **kwargs):
         '''
@@ -1376,10 +1363,8 @@ class Espresso(FileIOCalculator, object):
             if len(otherconstr) != 0:
                 print('/\n&IONS\n  ion_dynamics=\'damp\',', file=finp)
                 self.optdamp = True
-            elif self.cancalc:
-                print('/\n&IONS\n  ion_dynamics=\''+self.ion_dynamics+'\',', file=finp)
             else:
-                print('/\n&IONS\n  ion_dynamics=\'bfgs\',', file=finp)
+                print('/\n&IONS\n  ion_dynamics=\'' + self.ion_dynamics + '\',', file=finp)
             if self.ion_positions is not None:
                 print('  ion_positions=\''+self.ion_positions+'\',', file=finp)
         elif self.ion_positions is not None:
@@ -1570,7 +1555,7 @@ class Espresso(FileIOCalculator, object):
 
             self._running = False
 
-    def clean(self, removewf, removesave):
+    def clean(self):
         '''
         Remove the temporary files and directories
         '''
@@ -1579,6 +1564,19 @@ class Espresso(FileIOCalculator, object):
             self.stop()
         except:
             pass
+
+        if self.output is not None:
+            if 'removewf' in list(self.output.keys()):
+                removewf = self.output['removewf']
+            else:
+                removewf = True
+            if 'removesave' in list(self.output.keys()):
+                removesave = self.output['removesave']
+            else:
+                removesave = False
+        else:
+            removewf = True
+            removesave = False
 
         if removewf:
             for fil in self.scratch.files('*.wfc'):
