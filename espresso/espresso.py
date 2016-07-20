@@ -820,33 +820,28 @@ class Espresso(FileIOCalculator, object):
         assign file names
         '''
 
-        self.localtmp = mklocaltmp(self.outdir, self.site)
+        self.localtmp = self.site.make_localtmp(self.outdir)
+        self.scratch = self.site.make_scratch()
 
         if self.txt is None:
             self.log = self.localtmp.joinpath('log')
         else:
             self.log = self.localtmp.joinpath(self.txt)
 
-        if self.site.batchmode:
-
-            self.scratch = mkscratch(self.localtmp, self.site)
-
-            if self.output is not None:
-                if 'removewf' in list(self.output.keys()):
-                    removewf = self.output['removewf']
-                else:
-                    removewf = True
-                if 'removesave' in list(self.output.keys()):
-                    removesave = self.output['removesave']
-                else:
-                    removesave = False
+        if self.output is not None:
+            if 'removewf' in list(self.output.keys()):
+                removewf = self.output['removewf']
             else:
                 removewf = True
+            if 'removesave' in list(self.output.keys()):
+                removesave = self.output['removesave']
+            else:
                 removesave = False
-            atexit.register(self.clean, self.localtmp, self.scratch, removewf, removesave)
-            self.cancalc = True
         else:
-            self.cancalc = False
+            removewf = True
+            removesave = False
+        atexit.register(self.clean, self.localtmp, self.scratch, removewf,
+                        removesave)
 
     def set(self, **kwargs):
         '''
