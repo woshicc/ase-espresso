@@ -26,7 +26,6 @@ from ase.calculators.calculator import FileIOCalculator
 from ase.units import Hartree, Rydberg, Bohr
 
 from .utils import specobj, num2str, bool2str, convert_constraints
-from .subdirs import mklocaltmp, mkscratch
 from .siteconfig import SiteConfig
 
 __version__ = '0.1.2'
@@ -418,9 +417,13 @@ class Espresso(FileIOCalculator, object):
         self.nbands = nbands
         self.kpts = kpts
         self.kptshift = kptshift
-        self.fft_grid = fft_grid # RK
+        self.fft_grid = fft_grid  # RK
         self.calculation = calculation
-        self.ion_dynamics = ion_dynamics
+
+        if self.calculation in ['scf', 'nscf', 'bands', 'hund']:
+            self.ion_dynamics = None
+        else:
+            self.ion_dynamics = ion_dynamics
         self.nstep = nstep
         self.constr_tol = constr_tol
         self.fmax = fmax
@@ -823,6 +826,9 @@ class Espresso(FileIOCalculator, object):
         self.localtmp = self.site.make_localtmp(self.outdir)
         self.scratch = self.site.make_scratch()
 
+        print('localtmp: ', self.localtmp)
+        print('scratch: ', self.scratch)
+
         if self.txt is None:
             self.log = self.localtmp.joinpath('log')
         else:
@@ -840,8 +846,7 @@ class Espresso(FileIOCalculator, object):
         else:
             removewf = True
             removesave = False
-        atexit.register(self.clean, self.localtmp, self.scratch, removewf,
-                        removesave)
+        atexit.register(self.clean, removewf, removesave)
 
     def set(self, **kwargs):
         '''
@@ -1017,7 +1022,7 @@ class Espresso(FileIOCalculator, object):
 
         if self.atoms is None:
             raise ValueError('no atoms defined')
-        #if self.cancalc:
+
         fname = self.localtmp.joinpath(inputname)
 
         finp = open(fname, 'w')
@@ -1027,7 +1032,7 @@ class Espresso(FileIOCalculator, object):
             if self.calculation.lower() == 'hund':
                 print('&CONTROL\n  calculation=\'scf\',\n  prefix=\'calc\',', file=finp)
             else:
-                print('&CONTROL\n  calculation=\''+self.calculation+'\',\n  prefix=\'calc\',', file=finp)
+                print('&CONTROL\n  calculation=\'' + self.calculation + '\',\n  prefix=\'calc\',', file=finp)
             ionssec = self.calculation not in ('scf', 'nscf', 'bands', 'hund')
         else:
             print('&CONTROL\n  calculation=\'' + calculation + '\',\n  prefix=\'calc\',', file=finp)
@@ -1062,7 +1067,7 @@ class Espresso(FileIOCalculator, object):
                 if 'wf_collect' in list(self.output.keys()):
                     if self.output['wf_collect']:
                         print('  wf_collect=.true.,', file=finp)
-        if self.ion_dynamics != 'ase3' or not self.cancalc:
+        if self.ion_dynamics != 'ase3':
             # we basically ignore convergence of total energy differences between
             # ionic steps and only consider fmax as in ase
             print('  etot_conv_thr=1d0,', file=finp)
@@ -1186,16 +1191,16 @@ class Espresso(FileIOCalculator, object):
             spcount  = 1
             if self.nel == None:
                 self.nvalence, self.nel = self.get_nvalence()
-            for species in self.species: # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
+            for species in self.species:  # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
                 spec = self.specdict[species]
                 el = spec.s
                 mag = spec.magmom/self.nel[el]
-                assert np.abs(mag) <= 1. # magnetization oversaturated!!!
-                print('  starting_magnetization(%d)=%s,' % (spcount,num2str(float(mag))), file=finp)
+                assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
+                print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
                 spcount += 1
         if self.isolated is not None:
-            print('  assume_isolated=\''+self.isolated+'\',', file=finp)
-        print('  input_dft=\''+self.xc+'\',', file=finp)
+            print('  assume_isolated=\'' + self.isolated + '\',', file=finp)
+        print('  input_dft=\'' + self.xc + '\',', file=finp)
         if self.beefensemble:
             print('  ensemble_energies=.true.,', file=finp)
             if self.printensemble:
@@ -1214,7 +1219,7 @@ class Espresso(FileIOCalculator, object):
             except:
                 pass
         if dipfield or efield:
-            print('  edir='+str(edir)+',', file=finp)
+            print('  edir=' + str(edir) + ',', file=finp)
         if dipfield:
             if 'emaxpos' in list(self.dipole.keys()):
                 emaxpos = self.dipole['emaxpos']
@@ -1458,8 +1463,9 @@ class Espresso(FileIOCalculator, object):
             kp = self.kpts
         else:
             kp = overridekpts
-        if kp == 'gamma':
-            print('K_POINTS Gamma', file=finp)
+        if isinstance(kp, str):
+            if kp == 'gamma':
+                print('K_POINTS Gamma', file=finp)
         else:
             if kp.ndim == 1:
                 print('K_POINTS automatic', file=finp)
@@ -1521,9 +1527,8 @@ class Espresso(FileIOCalculator, object):
                     command = self.site.perProcMpiExec.format(self.scratch,
                                 'pw.x ' + self.parflags + ' -in pw.inp')
                     if self.ion_dynamics == 'ase3':
-                        raise NotImplementedError
+                        raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
                     else:
-
                         with open(self.log, 'a') as flog:
                             flog.write(self.get_output_header())
                             output = pexpect.run(command, logfile=flog, timeout=None)
@@ -1542,20 +1547,20 @@ class Espresso(FileIOCalculator, object):
         else:  # not in batchmode
 
             pwinp = self.localtmp.joinpath('pw.inp')
-            Path.copy(pwinp, self.site.scratch)
+            Path.copy(pwinp, self.scratch)
             command = 'pw.x -in pw.inp'
             if self.calculation != 'hund':
-                self.site.scratch.chdir()
+                self.scratch.chdir()
 
                 with open(self.log, 'a') as flog:
                     output = pexpect.run(command, logfile=flog, timeout=None)
             else:
-                self.site.scratch.chdir()
+                self.scratch.chdir()
                 subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
 
                 os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
                 shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
-                self.site.scratch.chdir()
+                self.scratch.chdir()
                 self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
 
             self._running = True
@@ -1565,32 +1570,34 @@ class Espresso(FileIOCalculator, object):
 
             self._running = False
 
-    def clean(self, tmp, scratch, removewf, removesave):
+    def clean(self, removewf, removesave):
+        '''
+        Remove the temporary files and directories
+        '''
 
         try:
             self.stop()
         except:
             pass
 
-        scratch_path = Path(scratch)
-
         if removewf:
-            for fil in scratch_path.files('*.wfc'):
+            for fil in self.scratch.files('*.wfc'):
                 fil.remove()
-            for fil in scratch_path.files('*.hub'):
+            for fil in self.scratch.files('*.hub'):
                 fil.remove()
 
         if not removesave:
-            subprocess.call(['cp', '-r', scratch, tmp])
+            subprocess.call(['cp', '-r', self.scratch, self.localtmp])
 
-        cdir = os.getcwd()
-        os.chdir(tmp)
+        #cdir = os.getcwd()
 
-        devnull = open(os.devnull, 'w')
-        subprocess.call(self.site.perHostMpiExec + ['rm', '-r', scratch], stderr=devnull)
-        devnull.close()
+        if self.site.batchmode:
+            with open(os.devnull, 'w') as devnull:
+                subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
+        else:
+            shutil.rmtree(self.scratch)
 
-        os.chdir(cdir)
+        #os.chdir(cdir)
         if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
             os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
             os.system(self.site.mpdshutdown)
