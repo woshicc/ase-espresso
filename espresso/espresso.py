@@ -25,7 +25,7 @@ import pexpect
 from ase.calculators.calculator import FileIOCalculator
 from ase.units import Hartree, Rydberg, Bohr
 
-from .utils import specobj, num2str, bool2str, convert_constraints
+from .utils import speciestuple, num2str, bool2str, convert_constraints
 from .siteconfig import SiteConfig
 
 __version__ = '0.1.2'
@@ -683,10 +683,7 @@ class Espresso(FileIOCalculator, object):
         '''
 
         if not self._initialized:
-            self.create_outdir()  # Create the tmp output folder
-
-        #sdir is the directory the script is run or submitted from
-        #self.sdir = self.site.submitdir
+            self.create_outdir()
 
         if self.psppath is None:
             if os.environ['ESP_PSP_PATH'] is not None:
@@ -695,7 +692,6 @@ class Espresso(FileIOCalculator, object):
                 raise ValueError('Unable to find pseudopotential path.'
                     'Consider setting <ESP_PSP_PATH> environment variable')
 
-        #if not self.started:
         self.atoms = atoms.copy()
 
         self.atoms2species()
@@ -773,9 +769,10 @@ class Espresso(FileIOCalculator, object):
         '''
         Read the results from the file and populate the `results` dictionary
         '''
+
         self.results = {'energy': self.read_energies()[0],
                         'forces': self.read_forces(),
-                        #'stress': self.get_stress(),
+                        'stress': self.read_stress(),
                         #'dipole': self.get_dipole(),
                         #'charges': self.get_charges(),
                         #'magmom': 0.0,
@@ -786,7 +783,7 @@ class Espresso(FileIOCalculator, object):
 
         self.energy_zero, self.energy_free = self.read_energies()
         self.forces = self.read_forces()
-
+        self.stress = self.read_stress()
         positions = self.read_positions()
         cell = self.read_cell()
 
@@ -824,9 +821,6 @@ class Espresso(FileIOCalculator, object):
 
         self.localtmp = self.site.make_localtmp(self.outdir)
         self.scratch = self.site.make_scratch()
-
-        print('localtmp: ', self.localtmp)
-        print('scratch: ', self.scratch)
 
         if self.txt is None:
             self.log = self.localtmp.joinpath('log')
@@ -875,46 +869,46 @@ class Espresso(FileIOCalculator, object):
         symbols = self.atoms.get_chemical_symbols()
         masses = self.atoms.get_masses()
         magmoms = list(self.atoms.get_initial_magnetic_moments())
-        if len(magmoms)<len(symbols):
-            magmoms += list(np.zeros(len(symbols)-len(magmoms), np.float))
+        if len(magmoms) < len(symbols):
+            magmoms += list(np.zeros(len(symbols) - len(magmoms), np.float))
         pos = self.atoms.get_scaled_positions()
 
         if self.U is not None:
-            if type(self.U)==dict:
+            if isinstance(self.U, dict):
                 Ulist = np.zeros(len(symbols), np.float)
-                for i,s in enumerate(symbols):
+                for i, s in enumerate(symbols):
                     if s in list(self.U.keys()):
                         Ulist[i] = self.U[s]
             else:
                 Ulist = list(self.U)
-                if len(Ulist)<len(symbols):
-                    Ulist += list(np.zeros(len(symbols)-len(Ulist), np.float))
+                if len(Ulist) < len(symbols):
+                    Ulist += list(np.zeros(len(symbols) - len(Ulist), np.float))
         else:
             Ulist = np.zeros(len(symbols), np.float)
 
         if self.J is not None:
-            if type(self.J)==dict:
+            if isinstance(self.J, dict):
                 Jlist = np.zeros(len(symbols), np.float)
-                for i,s in enumerate(symbols):
+                for i, s in enumerate(symbols):
                     if s in list(self.J.keys()):
                         Jlist[i] = self.J[s]
             else:
                 Jlist = list(self.J)
-                if len(Jlist)<len(symbols):
-                    Jlist += list(np.zeros(len(symbols)-len(Jlist), np.float))
+                if len(Jlist) < len(symbols):
+                    Jlist += list(np.zeros(len(symbols) - len(Jlist), np.float))
         else:
             Jlist = np.zeros(len(symbols), np.float)
 
         if self.U_alpha is not None:
-            if type(self.U_alpha)==dict:
+            if isinstance(self.U_alpha, dict):
                 U_alphalist = np.zeros(len(symbols), np.float)
-                for i,s in enumerate(symbols):
+                for i, s in enumerate(symbols):
                     if s in list(self.U_alpha.keys()):
                         U_alphalist[i] = self.U_alpha[s]
             else:
                 U_alphalist = list(self.U_alpha)
-                if len(U_alphalist)<len(symbols):
-                    U_alphalist += list(np.zeros(len(symbols)-len(U_alphalist), np.float))
+                if len(U_alphalist) < len(symbols):
+                    U_alphalist += list(np.zeros(len(symbols) - len(U_alphalist), np.float))
         else:
             U_alphalist = np.zeros(len(symbols), np.float)
 
@@ -927,38 +921,38 @@ class Espresso(FileIOCalculator, object):
         for i in range(len(symbols)):
             key = symbols[i]+'_m%.14eU%.14eJ%.14eUa%.14e' % (magmoms[i],Ulist[i],Jlist[i],U_alphalist[i])
             if key in list(dic.keys()):
-                self.specprops.append((dic[key][1],pos[i]))
+                self.specprops.append((dic[key][1], pos[i]))
             else:
                 symcounter[symbols[i]] += 1
-                spec = symbols[i]+str(symcounter[symbols[i]])
-                dic[key] = [i,spec]
+                spec = symbols[i] + str(symcounter[symbols[i]])
+                dic[key] = [i, spec]
                 self.species.append(spec)
-                self.specprops.append((spec,pos[i]))
+                self.specprops.append((spec, pos[i]))
 
         self.nspecies = len(self.species)
         self.specdict = {}
-        for i,s in list(dic.values()):
-            self.specdict[s] = specobj(s = s.strip('0123456789'),  # chemical symbol w/o index
-                                       mass = masses[i],
-                                       magmom = magmoms[i],
-                                       U = Ulist[i],
-                                       J = Jlist[i],
-                                       U_alpha = U_alphalist[i])
+        for i, s in list(dic.values()):
+            self.specdict[s] = speciestuple(s.strip('0123456789'),  # chemical symbol w/o index
+                                            masses[i],
+                                            magmoms[i],
+                                            Ulist[i],
+                                            Jlist[i],
+                                            U_alphalist[i])
 
     def get_nvalence(self):
         nel = {}
         for x in self.species:
-            el = self.specdict[x].s
+            el = self.specdict[x].symbol
             #get number of valence electrons from pseudopotential or paw setup
             p = os.popen('egrep -i \'z\ valence|z_valence\' '+self.psppath+'/'+el+'.UPF | tr \'"\' \' \'','r')
             for y in p.readline().split():
-                if y[0].isdigit() or y[0]=='.':
+                if y[0].isdigit() or y[0] == '.':
                     nel[el] = int(round(float(y)))
                     break
             p.close()
         nvalence = np.zeros(len(self.specprops), np.int)
-        for i,x in enumerate(self.specprops):
-            nvalence[i] = nel[self.specdict[x[0]].s]
+        for i, x in enumerate(self.specprops):
+            nvalence[i] = nel[self.specdict[x[0]].symbol]
         return nvalence, nel
 
     def get_number_of_scf_steps(self, all=False):
@@ -1308,9 +1302,9 @@ class Espresso(FileIOCalculator, object):
             print("  diagonalization='{0:s}',".format(self.convergence['diag']), file=finp)
 
         if self.calculation != 'hund':
-            print('  conv_thr='+num2str(self.conv_thr)+',', file=finp)
+            print('  conv_thr=' + num2str(self.conv_thr) + ',', file=finp)
         else:
-            print('  conv_thr='+num2str(self.conv_thr*500.)+',', file=finp)
+            print('  conv_thr=' + num2str(self.conv_thr*500.) + ',', file=finp)
         for x in list(self.convergence.keys()):
             if x == 'mixing':
                 print('  mixing_beta='+num2str(self.convergence[x])+',', file=finp)
@@ -1328,14 +1322,14 @@ class Espresso(FileIOCalculator, object):
             print('  startingwfc=\''+self.startingwfc+'\',', file=finp)
 
         # automatically generated parameters
-        el_int_attrs = ['electron_maxstep', 'mixing_ndim', 'mixing_fixed_ns', 'ortho_para',
-                        'diago_cg_maxiter', 'diago_david_ndim']
+        el_int_attrs = ['electron_maxstep', 'mixing_ndim', 'mixing_fixed_ns',
+                        'ortho_para', 'diago_cg_maxiter', 'diago_david_ndim']
         for attr in el_int_attrs:
             value = getattr(self, attr)
             if value is not None:
                 print('  {0:s}={1:d},'.format(attr, value), file=finp)
 
-        el_float_attrs = ['conv_thr', 'conv_thr_init', 'conv_thr_multi', 'mixing_beta',
+        el_float_attrs = ['conv_thr_init', 'conv_thr_multi', 'mixing_beta',
                         'diago_thr_init', 'efield']
         for attr in el_float_attrs:
             value = getattr(self, attr)
@@ -1425,7 +1419,7 @@ class Espresso(FileIOCalculator, object):
         print('ATOMIC_SPECIES', file=finp)
         for species in self.species:   # PSP ORDERING FOLLOWS SPECIESINDEX
             spec = self.specdict[species]
-            print(species, num2str(spec.mass), spec.s + '.UPF', file=finp)
+            print(species, num2str(spec.mass), spec.symbol + '.UPF', file=finp)
 
         print('ATOMIC_POSITIONS {crystal}', file=finp)
         if len(simpleconstr) == 0:
@@ -1538,6 +1532,7 @@ class Espresso(FileIOCalculator, object):
                 self.scratch.chdir()
 
                 with open(self.log, 'a') as flog:
+                    flog.write(self.get_output_header())
                     output = pexpect.run(command, logfile=flog, timeout=None)
             else:
                 self.scratch.chdir()
@@ -1819,18 +1814,22 @@ class Espresso(FileIOCalculator, object):
         with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
-        forcestr = '     Forces acting on atoms (Ry/au):'
-        forcelines = [no for no, line in enumerate(lines) if forcestr in line]
+        forcestart = '     Forces acting on atoms (Ry/au):'
+        forceend = '     Total force = '
 
-        for forcelineno in forcelines:
+        startlnos = [no for no, line in enumerate(lines) if forcestart in line]
+        endlnos = [no for no, line in enumerate(lines) if forceend in line]
+
+        forcelinenos = zip(startlnos, endlnos)
+
+        for start, end in forcelinenos:
             forces = np.zeros((self.natoms, 3), dtype=float)
-            for line in lines[forcelineno + 4:]:
-                words = line.split()
-                if len(words) == 0:
-                    break
-                fxyz = [float(x) for x in words[-3:]]
-                atom_number = int(words[1]) - 1
-                forces[atom_number] = fxyz
+            for line in lines[start: end]:
+                linesplit = line.split()
+                if len(linesplit) > 0 and linesplit[0] == 'atom':
+                    fxyz = [float(x) for x in linesplit[-3:]]
+                    atom_number = int(linesplit[1]) - 1
+                    forces[atom_number] = fxyz
             forces *= Rydberg / Bohr
             forceslist.append(forces)
 
@@ -1969,6 +1968,45 @@ class Espresso(FileIOCalculator, object):
             return positionslist
         else:
             return positionslist[-1]
+
+    def read_stress(self, getall=False):
+        '''
+        Read the stress from the PWSCF output file
+
+        Args:
+            getall : bool
+                If ``True`` the forces for all relaxation steps are returned,
+                in other case only the last configuration is returned.
+
+        Returns:
+            stresslist : numpy.array or list of numpy.array's
+        '''
+
+        stresslist = []
+
+        with open(self.log, 'rU') as fout:
+            lines = fout.readlines()
+
+        stressstr = '          total   stress  (Ry/bohr**3) '
+        stresslnos = [no for no, line in enumerate(lines) if stressstr in line]
+
+        for lineno in stresslnos:
+            stress = np.zeros((3, 3), dtype=float)
+            for nrow, line in enumerate(lines[lineno + 1: lineno + 4]):
+                linesplit = line.split()
+                stressrow = [float(x) for x in linesplit[:3]]
+                stress[nrow] = stressrow
+            # ASE convention for the stress tensor appears to differ
+            # from the PWscf one by a factor of -1
+            stress = -1.0 * stress * Rydberg / Bohr**3
+            stresslist.append(stress)
+
+        del lines
+
+        if getall:
+            return stresslist
+        else:
+            return stresslist[-1]
 
     def topath(self, filename):
         if os.path.isabs(filename):
@@ -2198,42 +2236,10 @@ class Espresso(FileIOCalculator, object):
     def get_xc_functional(self):
         return self.xc
 
-    def get_final_stress(self):
-        """
-        returns 3x3 stress tensor after an internal
-        unit cell relaxation in quantum espresso
-        (also works for calcstress=True)
-        """
+    def get_stress(self, atoms=None):
 
-        self.stop()
-
-        p = os.popen('grep -3 "total   stress" ' + self.log + ' | tail -3', 'r')
-        s = p.readlines()
-        p.close()
-
-        if len(s) != 3:
-            raise RuntimeError('stress was not calculated\nconsider specifying calcstress or running a unit cell relaxation')
-
-        stress = np.empty((3, 3), np.float)
-        for i in range(3):
-            stress[i][:] = [float(x) for x in s[i].split()[:3]]
-
-        return stress * Rydberg / Bohr**3
-
-
-    def get_stress(self, dummyself=None):
-        """ returns stress tensor in Voigt notation """
-        if self.calcstress:
-            # ASE convention for the stress tensor appears to differ
-            # from the PWscf one by a factor of -1
-            stress = -1.0 * self.get_final_stress()
-            # converting to Voigt notation as expected by ASE
-            stress = np.array([stress[0, 0], stress[1, 1], stress[2, 2],
-                               stress[1, 2], stress[0, 2], stress[0, 1]])
-            self.results['stress'] = stress
-            return stress
-        else:
-            raise NotImplementedError
+        self.update(atoms)
+        return self.results['stress']
 
     def get_magnetization(self):
         """
