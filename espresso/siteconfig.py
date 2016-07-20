@@ -60,12 +60,12 @@ class SiteConfig(object):
 
         # check id SLURM is installed and running
         exitcode = call('scontrol version', shell=True)
-        if exitcode == 1:
+        if exitcode == 0:
             scheduler = 'SLURM'
 
         # check if PBS/TORQUE is installed and running
         exitcode = call('ps aux | grep pbs | grep -v grep', shell=True)
-        if exitcode == 1:
+        if exitcode == 0:
             scheduler = 'PBS'
 
         return cls(scheduler)
@@ -99,8 +99,8 @@ class SiteConfig(object):
         elif os.getenv('TMPDIR') is not None:
             self.global_scratch = Path(os.getenv('TMPDIR'))
         else:
-            dirname = '_'.join(['qe', str(os.getuid()), str(self.jobid), 'scratch'])
-            self.global_scratch = os.path.join(self.submitdir, dirname)
+            #dirname = '_'.join(['qe', str(os.getuid()), str(self.jobid), 'scratch'])
+            self.global_scratch = self.submitdir
 
     def set_slurm_env(self):
         '''
@@ -155,7 +155,7 @@ class SiteConfig(object):
                 for node in uniqnodes:
                     unf.write(node)
 
-            self.perHostMpiExec = ['mpiexec', '-machinefile',  uniqnodefile, '-np', str(len(uniqnodes))]
+            self.perHostMpiExec = ['mpiexec', '-machinefile', uniqnodefile, '-np', str(len(uniqnodes))]
             self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
             self.perSpecProcMpiExec = 'mpiexec -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
@@ -188,7 +188,7 @@ class SiteConfig(object):
 
         if workdir is None or len(workdir) == 0:
             prefix = '_'.join(['qe', str(os.getuid()), str(self.jobid)])
-            self.localtmp = Path(tempfile.mkdtemp(prefix=prefix, suffix='tmp',
+            self.localtmp = Path(tempfile.mkdtemp(prefix=prefix, suffix='_tmp',
                                                   dir=self.submitdir))
         else:
 
@@ -205,7 +205,7 @@ class SiteConfig(object):
 
         prefix = '_'.join(['qe', str(os.getuid()), str(self.jobid)])
         self.user_scratch = Path(tempfile.mkdtemp(prefix=prefix,
-                                                  suffix='scratch',
+                                                  suffix='_scratch',
                                                   dir=self.global_scratch))
 
         with working_directory(str(self.localtmp)):
