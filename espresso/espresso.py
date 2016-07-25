@@ -1094,10 +1094,10 @@ class Espresso(FileIOCalculator, object):
             print('  nppstr='+str(self.nppstr)+',', file=finp)
 
 
-        ### &SYSTEM ###
-        print('/\n&SYSTEM\n  ibrav=0,\n  celldm(1)=1.8897261245650618d0,', file=finp)
+        # &SYSTEM
+        print('/\n&SYSTEM\n  ibrav=0,', file=finp)
         print('  nat='+str(self.natoms)+',', file=finp)
-        self.atoms2species() #self.convertmag2species()
+        self.atoms2species()  # self.convertmag2species()
         print('  ntyp='+str(self.nspecies)+',', file=finp)
         if self.tot_charge is not None:
             print('  tot_charge='+num2str(self.tot_charge)+',', file=finp)
@@ -1412,7 +1412,7 @@ class Espresso(FileIOCalculator, object):
 
 
         ### CELL_PARAMETERS
-        print('/\nCELL_PARAMETERS', file=finp)
+        print('/\nCELL_PARAMETERS angstrom', file=finp)
         for i in range(3):
             print('%21.15fd0 %21.15fd0 %21.15fd0' % tuple(self.atoms.cell[i]), file=finp)
 
@@ -1720,25 +1720,6 @@ class Espresso(FileIOCalculator, object):
                 else:
                     a = self.cout.readline()
                     s.write(a)
-#                    if not self.dontcalcforces:
-#                        while a[:11] != '     Forces':
-#                            a = self.cout.readline()
-#                            s.write(a)
-#                            s.flush()
-#                        a = self.cout.readline()
-#                        s.write(a)
-#                        self.forces = np.empty((self.natoms, 3), np.float)
-#                        for i in range(self.natoms):
-#                            a = self.cout.readline()
-#                            while a.find('force') < 0:
-#                                s.write(a)
-#                                a = self.cout.readline()
-#                            s.write(a)
-#                            forceinp = a.split()
-#                            self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
-#                        self.forces *= rydberg_over_bohr
-#                    else:
-#                        self.forces = None
             else:
                 self.forces = None
             self.recalculate = False
@@ -1989,6 +1970,9 @@ class Espresso(FileIOCalculator, object):
 
         stressstr = '          total   stress  (Ry/bohr**3) '
         stresslnos = [no for no, line in enumerate(lines) if stressstr in line]
+
+        if len(stresslnos) == 0:
+            return None
 
         for lineno in stresslnos:
             stress = np.zeros((3, 3), dtype=float)
@@ -2382,12 +2366,14 @@ class Espresso(FileIOCalculator, object):
         self.ion_dynamics = oldalgo
         self.fmax = oldfmax
 
-
-    #runs one of the .x binaries of the espresso suite
-    #inp is expected to be in self.localtmp
-    #log will be created in self.localtmp
     def run_espressox(self, binary, inp, log=None, piperead=False,
-        parallel=True):
+                      parallel=True):
+        '''
+        runs one of the .x binaries of the espresso suite
+        inp is expected to be in self.localtmp
+        log will be created in self.localtmp
+        '''
+
         if log is None:
             ll = ''
         else:
@@ -3100,7 +3086,6 @@ class Espresso(FileIOCalculator, object):
             plot=[['fileout',self.topath(xsf)]],
             parallel=True, log='wfdens.log')
 
-
     def extract_electron_localization_function(self):
         """
         Obtains the ELF as a numpy array after a DFT calculation.
@@ -3492,7 +3477,6 @@ class Espresso(FileIOCalculator, object):
         del self.convergence
         self.convergence = convsave
 
-
     def get_world(self):
         from .worldstub import world
         return world(self.site.nprocs)
@@ -3520,12 +3504,13 @@ class iEspresso(Espresso):
         super().__init__(*args, **kwargs)
 
         self._spawned = False
+        self.timeout = 120
 
     def calculate(self, atoms, properties=['energy'], system_changes=all_changes):
         '''
         Run the calculation
         '''
-
+        print('# in calculate')
         if atoms is not None:
             self.atoms = atoms.copy()
 
@@ -3540,7 +3525,6 @@ class iEspresso(Espresso):
         # run
         self.run()
 
-        self.recalculate = True
         # check for errors
 
         # parse results
@@ -3549,6 +3533,8 @@ class iEspresso(Espresso):
         self.set_results(atoms)
 
     def run(self):
+
+        print('# logfile: ', self.logfile)
 
         if self.site.batchmode:
             cdir = os.getcwd()
@@ -3568,14 +3554,14 @@ class iEspresso(Espresso):
                         self._spawned = True
                         self.child.logfile = self.logfile
                         self.child.logfile.write(self.get_output_header())
-                        self.child.expect('!ASE\s*\n(.*\n){4}', timeout=None)
+                        self.child.expect('!ASE', timeout=self.timeout)
 
                     else:  # QE process is already spawned 
 
                         self.child.send('C\n')
                         for atom in self.atoms:
                             self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
-                        self.child.expect('!ASE\s*\n(.*\n){4}', timeout=None)
+                        self.child.expect('!ASE', timeout=self.timeout)
                         self.child.logfile.flush()
 
             else:  # calculation == 'hund'
@@ -3585,9 +3571,36 @@ class iEspresso(Espresso):
                 self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
             os.chdir(cdir)
 
+        else:
+            print('not in batchmode')
+            cdir = os.getcwd()
+            self.localtmp.chdir()
+
+            pwinp = self.localtmp.joinpath('pw.inp')
+            Path.copy(pwinp, self.scratch)
+            command = 'pw.x -in pw.inp'
+
+            if not self._spawned:
+                print('not spawned yet')
+                self.child = pexpect.spawn(command)
+                self._spawned = True
+                print('spawned the process')
+                self.child.logfile = self.logfile
+                #self.child.logfile.write(self.get_output_header())
+                self.child.expect('!ASE', timeout=self.timeout)
+
+            else:  # QE process is already spawned 
+
+                self.child.send('C\n')
+                for atom in self.atoms:
+                    self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
+                self.child.expect('!ASE', timeout=self.timeout)
+                #self.child.logfile.flush()
+            os.chdir(cdir)
+
     def stop(self):
 
         if self._spawned:
             self.child.send('Q\n')
 
-        self.logfile.close()
+        self.child.logfile.close()
