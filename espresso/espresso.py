@@ -16,7 +16,6 @@ import os
 import atexit
 import shutil
 import subprocess
-import sys
 import numpy as np
 from path import Path
 
@@ -723,7 +722,7 @@ class Espresso(FileIOCalculator, object):
         # check for errors
 
         # parse results
-        self.read_output()
+        self.read()
 
         self.set_results(atoms)
 
@@ -779,7 +778,7 @@ class Espresso(FileIOCalculator, object):
                         #'magmoms': np.zeros(len(atoms))
                         }
 
-    def read_output(self):
+    def read(self):
         '''
         Read the output file and set the attributes
         '''
@@ -1494,7 +1493,7 @@ class Espresso(FileIOCalculator, object):
     def run(self):
 
         if self.single_calculator:
-            while len(espresso_calculators)>0:
+            while len(espresso_calculators) > 0:
                 espresso_calculators.pop().stop()
             espresso_calculators.append(self)
 
@@ -1502,7 +1501,8 @@ class Espresso(FileIOCalculator, object):
             cdir = os.getcwd()
             self.localtmp.chdir()
 
-            subprocess.call(self.site.perHostMpiExec + ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+            subprocess.call(self.site.perHostMpiExec +
+                ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
 
             if self.calculation != 'hund':
                 if not self.proclist:
@@ -1597,188 +1597,6 @@ class Espresso(FileIOCalculator, object):
         if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
             os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
             os.system(self.site.mpdshutdown)
-
-    def read(self, atoms):
-
-        if not self.started and not self.only_init:
-            fresh = True
-            self.initialize(atoms)
-        else:
-            fresh = False
-        if self.recalculate:
-            if not fresh and not self.only_init:
-                if self.ion_dynamics == 'ase3':
-                    p = atoms.positions
-                    self.atoms = atoms.copy()
-                    print('G', file=self.cinp)
-                    for x in p:
-                        print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
-                self.cinp.flush()
-            self.only_init = False
-            s = open(self.log, 'a')
-            a = self.cout.readline()
-            s.write(a)
-            atom_occ = {}
-            magmoms = np.zeros(len(atoms))
-            while a != '' and a[:17] != '!    total energy' and a[:13] != '     stopping' and a[:20] != '     convergence NOT':
-                a = self.cout.readline()
-                s.write(a)
-                s.flush()
-
-                if a[:19] == '     iteration #  1':
-                    while (a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT' and
-                           a[:22]!=' --- exit write_ns ---' ) :
-                        a = self.cout.readline()
-                        s.write(a)
-                        s.flush()
-                        if a[:5] == 'atom ':
-                            atomnum = int(a[8:10])
-                            if a[12:25] == 'Tr[ns(na)] = ':#'atom    1   Tr[ns(na)] =   1.00000'
-                                N0 = float(a[27:35])/2.
-                            elif a[12:42] == 'Tr[ns(na)] (up, down, total) =':
-                                #'   4.20435  1.27943  5.48377'
-                                N0 = [float(a[42:52]), float(a[53:62]), float(a[63:71])]
-                                N0 = N0[-1] # only taking the total occupation
-                            atom_occ[atomnum-1] = {}
-                            atom_occ[atomnum-1][0] = N0
-                if a[:39]=='     End of self-consistent calculation':
-                    while a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT':
-                        a = self.cout.readline()
-                        s.write(a)
-                        s.flush()
-                        if a[:5]=='atom ':
-                            atomnum = int(a[8:10])
-                            if a[12:25]=='Tr[ns(na)] = ':#'atom    1   Tr[ns(na)] =   1.00000'
-                                Nks = float(a[27:35])/2.
-                            elif a[12:42]=='Tr[ns(na)] (up, down, total) =':
-                                #'   4.20435  1.27943  5.48377'
-                                Nks = [float(a[42:52]), float(a[53:62]), float(a[63:71])]
-                                Nks = Nks[-1] # only taking the total occupation
-                                magmom = Nks[0] - Nks[1]
-                                magmoms[atomnum] = magmom
-                            atom_occ[atomnum-1]['ks']=Nks
-                    break
-            if a[:20]=='     convergence NOT':
-                self.stop()
-                raise RuntimeError('scf cycles did not converge\nincrease maximum number of steps and/or decreasing mixing')
-            elif a[:13]=='     stopping':
-                self.stop()
-                self.checkerror()
-                #if checkerror shouldn't find an error here,
-                #throw this generic error
-                raise RuntimeError('SCF calculation failed')
-            elif a=='' and self.calculation in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
-                self.checkerror()
-                #if checkerror shouldn't find an error here,
-                #throw this generic error
-                raise RuntimeError('SCF calculation failed')
-            self.atom_occ = atom_occ
-            self.results['magmoms'] = magmoms
-            self.results['magmom'] = np.sum(magmoms)
-            if self.calculation in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md', 'hund'):
-                self.energy_free = float(a.split()[-2])*Rydberg
-                # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-                if self.occupations == 'smearing' and self.calculation != 'hund' and self.smearing[0].upper() != 'M' and self.smearing[0].upper() != 'C' and not self.optdamp:
-                    a = self.cout.readline()
-                    s.write(a)
-                    exx = False
-                    while a[:13] != '     smearing':
-                        a = self.cout.readline()
-                        s.write(a)
-                        if a.find('EXX') > -1:
-                            exx = True
-                            break
-                    if exx:
-                        self.ST = 0.0
-                        self.energy_zero = self.energy_free
-                    else:
-                        self.ST = -float(a.split()[-2])*Rydberg
-                        self.energy_zero = self.energy_free + 0.5*self.ST
-                else:
-                    self.ST = 0.0
-                    self.energy_zero = self.energy_free
-            else:
-                self.energy_free = None
-                self.energy_zero = None
-
-            self.got_energy = True
-
-            a = self.cout.readline()
-            s.write(a)
-            s.flush()
-
-            if self.calculation in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
-                if self.ion_dynamics == 'ase3' and self.calculation != 'scf':
-                    sys.stdout.flush()
-                    while a[:5] != ' !ASE':
-                        a = self.cout.readline()
-                        s.write(a)
-                        s.flush()
-                    self.forces = np.empty((self.natoms, 3), np.float)
-                    for i in range(self.natoms):
-                        self.cout.readline()
-                    for i in range(self.natoms):
-                        self.forces[i][:] = [float(x) for x in self.cout.readline().split()]
-                    self.forces *= rydberg_over_bohr
-                else:
-                    a = self.cout.readline()
-                    s.write(a)
-            else:
-                self.forces = None
-            self.recalculate = False
-            s.close()
-            if self.ion_dynamics != 'ase3':
-                self.stop()
-
-            #get final energy and forces for internal QE relaxation run
-            if self.calculation in ('relax','vc-relax','vc-md','md'):
-                if self.ion_dynamics == 'ase3':
-                    self.stop()
-#                p = os.popen('grep -n "!    total" '+self.log+' | tail -1','r')
-#                n = int(p.readline().split(':')[0])-1
-#                p.close()
-#                f = open(self.log,'r')
-#                for i in range(n):
-#                    f.readline()
-#                self.energy_free = float(f.readline().split()[-2])*Rydberg
-#                # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-#                if self.occupations=='smearing' and self.calculation!='hund' and self.smearing[0].upper()!='M' and self.smearing[0].upper()!='C' and not self.optdamp:
-#                    a = f.readline()
-#                    exx = False
-#                    while a[:13] != '     smearing':
-#                        a = f.readline()
-#                        if a.find('EXX') > -1:
-#                            exx = True
-#                            break
-#                    if exx:
-#                        self.ST = 0.0
-#                        self.energy_zero = self.energy_free
-#                    else:
-#                        self.ST = -float(a.split()[-2])*Rydberg
-#                        self.energy_zero = self.energy_free + 0.5*self.ST
-#                else:
-#                    self.ST = 0.0
-#                    self.energy_zero = self.energy_free
-
-#                if self.U_projection_type == 'atomic' and not self.dontcalcforces:
-#                    a = f.readline()
-#                    while a[:11] != '     Forces':
-#                        a = f.readline()
-#                    f.readline()
-#                    self.forces = np.empty((self.natoms, 3), np.float)
-#                    for i in range(self.natoms):
-#                        a = f.readline()
-#                        while a.find('force') < 0:
-#                            a = f.readline()
-#                        forceinp = a.split()
-#                        self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
-#                    self.forces *= rydberg_over_bohr
-                f.close()
-
-            self.results['energy'] = self.energy_zero
-            self.results['free_energy'] = self.energy_free
-            self.results['forces'] = self.forces
-            self.checkerror()
 
     def read_forces(self, getall=False):
         '''
@@ -3499,48 +3317,33 @@ class iEspresso(Espresso):
         self._spawned = False
         self.timeout = 200
 
-    def calculate(self, atoms, properties=['energy'],
-                  system_changes=all_changes):
+    def initialize(self, atoms):
         '''
-        Run the calculation
+        Create the scratch directories and pw.inp input file and
+        prepare for writing the input file
         '''
 
-        if atoms is not None:
-            self.atoms = atoms.copy()
-
-        # initialize
-        self.initialize(atoms)
-
-        # write input
-        self.write_input()
-
-        if not self._spawned:
+        if not self._initialized:
+            self.create_outdir()
             self.logfile = open(self.log, 'a')
 
-        # run
-        self.run()
+        if self.psppath is None:
+            if os.environ['ESP_PSP_PATH'] is not None:
+                self.psppath = os.environ['ESP_PSP_PATH']
+            else:
+                raise ValueError('Unable to find pseudopotential path.'
+                    'Consider setting <ESP_PSP_PATH> environment variable')
 
-        # check for errors
+        self.atoms = atoms.copy()
 
-        # parse results
-        self.read_output()
+        self.atoms2species()
 
-        self.set_results(atoms)
+        self.natoms = len(self.atoms)
 
-    def read_output(self):
-        '''
-        Read the output file and set the attributes
-        '''
+        self.check_spinpol()
 
-        print('# reading results in read_output')
-        print('positions: ', self.atoms.get_positions())
-        print('forces: ', self.read_forces())
+        self._initialized = True
 
-        self.energy_zero, self.energy_free = self.read_energies()
-        self.forces = self.read_forces()
-        self.stress = self.read_stress()
-        positions = self.read_positions()
-        cell = self.read_cell()
 
     def run(self):
 
@@ -3557,7 +3360,6 @@ class iEspresso(Espresso):
                                 'pw.x ' + self.parflags + ' -in pw.inp')
 
                     if not self._spawned:
-
                         self.child = pexpect.spawn(command)
                         self._spawned = True
                         self.child.logfile = self.logfile
@@ -3601,7 +3403,6 @@ class iEspresso(Espresso):
             os.chdir(cdir)
 
         else:
-            print('not in batchmode')
             cdir = os.getcwd()
             self.localtmp.chdir()
 
@@ -3610,10 +3411,8 @@ class iEspresso(Espresso):
             command = 'pw.x -in pw.inp'
 
             if not self._spawned:
-                print('not spawned yet')
                 self.child = pexpect.spawn(command)
                 self._spawned = True
-                print('spawned the process')
                 self.child.logfile = self.logfile
                 self.child.logfile.write(self.get_output_header())
                 try:
