@@ -152,7 +152,7 @@ class SiteConfig(object):
             uniqnodefile = os.path.realpath(os.path.join(self.global_scratch, 'uniqnodefile'))
             with open(uniqnodefile, 'w') as unf:
                 for node in uniqnodes:
-                    unf.write(node)
+                    unf.write(node + '\n')
 
             self.perHostMpiExec = ['mpiexec', '-machinefile', uniqnodefile, '-np', str(len(uniqnodes))]
             self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
