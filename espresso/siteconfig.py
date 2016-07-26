@@ -99,7 +99,6 @@ class SiteConfig(object):
         elif os.getenv('TMPDIR') is not None:
             self.global_scratch = Path(os.getenv('TMPDIR'))
         else:
-            #dirname = '_'.join(['qe', str(os.getuid()), str(self.jobid), 'scratch'])
             self.global_scratch = self.submitdir
 
     def set_slurm_env(self):
