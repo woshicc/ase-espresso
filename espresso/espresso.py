@@ -780,6 +780,9 @@ class Espresso(FileIOCalculator, object):
                         }
 
     def read_output(self):
+        '''
+        Read the output file and set the attributes
+        '''
 
         self.energy_zero, self.energy_free = self.read_energies()
         self.forces = self.read_forces()
@@ -1094,8 +1097,8 @@ class Espresso(FileIOCalculator, object):
             print('  nppstr='+str(self.nppstr)+',', file=finp)
 
 
-        # &SYSTEM
-        print('/\n&SYSTEM\n  ibrav=0,', file=finp)
+        ### &SYSTEM ###
+        print('/\n&SYSTEM\n  ibrav=0,\n  celldm(1)=1.8897261245650618d0,', file=finp)
         print('  nat='+str(self.natoms)+',', file=finp)
         self.atoms2species()  # self.convertmag2species()
         print('  ntyp='+str(self.nspecies)+',', file=finp)
@@ -1412,7 +1415,7 @@ class Espresso(FileIOCalculator, object):
 
 
         ### CELL_PARAMETERS
-        print('/\nCELL_PARAMETERS angstrom', file=finp)
+        print('/\nCELL_PARAMETERS alat', file=finp)
         for i in range(3):
             print('%21.15fd0 %21.15fd0 %21.15fd0' % tuple(self.atoms.cell[i]), file=finp)
 
@@ -2312,9 +2315,9 @@ class Espresso(FileIOCalculator, object):
         oldcell = self.cell_dynamics
         oldfactor = self.cell_factor
         oldfree = self.cell_dofree
-        self.cell_dynamics=cell_dynamics
-        self.ion_dynamics=ion_dynamics
-        self.cell_factor=cell_factor
+        self.cell_dynamics = cell_dynamics
+        self.ion_dynamics = ion_dynamics
+        self.cell_factor = cell_factor
         self.cell_dofree = cell_dofree
         oldfmax = self.fmax
         oldpress = self.press
@@ -2443,7 +2446,6 @@ class Espresso(FileIOCalculator, object):
         except:
             raise RuntimeError('get_fermi_level called before DFT calculation was run')
         return efermi
-
 
     def calc_pdos(self,
         Emin = None,
@@ -2577,7 +2579,6 @@ class Espresso(FileIOCalculator, object):
         else:
             return self.dos_energies, self.dos_total, self.pdos
 
-
     def calc_bandstructure(self,
         kptpath,
         nbands = None,
@@ -2710,7 +2711,6 @@ class Espresso(FileIOCalculator, object):
             projections = np.array(proj)
             return states, np.reshape(projections, (nkp, len(proj)/nkp, nbnd))
 
-
     def get_eigenvalues(self, kpt=None, spin=None, efermi=None):
         self.stop()
 
@@ -2775,7 +2775,6 @@ class Espresso(FileIOCalculator, object):
         else:
             return np.array(eig)
 
-
     def read_3d_grid(self, stream, log):
         f = open(self.localtmp+'/'+log, 'a')
         x = stream.readline()
@@ -2800,7 +2799,6 @@ class Espresso(FileIOCalculator, object):
 
         f.close()
         return (origin, cell, data)
-
 
     def read_2d_grid(self, stream, log):
         f = open(self.localtmp+'/' + log, 'a')
@@ -2867,7 +2865,6 @@ class Espresso(FileIOCalculator, object):
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='charge.log')
 
-
     def extract_total_potential(self, spin='both'):
         """
         Obtains the total potential as a numpy array after a DFT calculation.
@@ -2918,7 +2915,6 @@ class Espresso(FileIOCalculator, object):
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='vbare.log')
 
-
     def extract_local_dos_at_efermi(self):
         """
         Obtains the local DOS at the Fermi level as a numpy array after a DFT calculation.
@@ -2962,7 +2958,6 @@ class Espresso(FileIOCalculator, object):
             inputpp=[['plot_num',4]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='lentr.log')
-
 
     def extract_stm_data(self, bias):
         """
@@ -3008,7 +3003,6 @@ class Espresso(FileIOCalculator, object):
             inputpp=[['plot_num',6]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='magdens.log')
-
 
     def extract_wavefunction_density(self, band, kpoint=0, spin='up',
         gamma_with_sign=False):
@@ -3130,7 +3124,6 @@ class Espresso(FileIOCalculator, object):
             inputpp=[['plot_num',9]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='dens_wo_atm.log')
-
 
     def extract_int_local_dos(self, spin='both', emin=None, emax=None):
         """
@@ -3504,13 +3497,14 @@ class iEspresso(Espresso):
         super().__init__(*args, **kwargs)
 
         self._spawned = False
-        self.timeout = 120
+        self.timeout = 200
 
-    def calculate(self, atoms, properties=['energy'], system_changes=all_changes):
+    def calculate(self, atoms, properties=['energy'],
+                  system_changes=all_changes):
         '''
         Run the calculation
         '''
-        print('# in calculate')
+
         if atoms is not None:
             self.atoms = atoms.copy()
 
@@ -3522,6 +3516,7 @@ class iEspresso(Espresso):
 
         if not self._spawned:
             self.logfile = open(self.log, 'a')
+
         # run
         self.run()
 
@@ -3532,9 +3527,22 @@ class iEspresso(Espresso):
 
         self.set_results(atoms)
 
-    def run(self):
+    def read_output(self):
+        '''
+        Read the output file and set the attributes
+        '''
 
-        print('# logfile: ', self.logfile)
+        print('# reading results in read_output')
+        print('positions: ', self.atoms.get_positions())
+        print('forces: ', self.read_forces())
+
+        self.energy_zero, self.energy_free = self.read_energies()
+        self.forces = self.read_forces()
+        self.stress = self.read_stress()
+        positions = self.read_positions()
+        cell = self.read_cell()
+
+    def run(self):
 
         if self.site.batchmode:
             cdir = os.getcwd()
@@ -3554,14 +3562,35 @@ class iEspresso(Espresso):
                         self._spawned = True
                         self.child.logfile = self.logfile
                         self.child.logfile.write(self.get_output_header())
-                        self.child.expect('!ASE', timeout=self.timeout)
+
+                        try:
+                            i = self.child.expect(['!ASE\s*\n(.*\n){4}',
+                                '     convergence NOT', '     stopping'],
+                                                  timeout=self.timeout)
+                            if i == 1:
+                                raise SCFMaxIterationsError()
+                            elif i == 2:
+                                raise SCFConvergenceError()
+                        except:
+                            print('# Exception was thrown by pexpect.expect')
+                            print(str(self.child))
 
                     else:  # QE process is already spawned 
 
                         self.child.send('C\n')
                         for atom in self.atoms:
                             self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
-                        self.child.expect('!ASE', timeout=self.timeout)
+
+                        try:
+                            i = self.child.expect(['!ASE\s*\n(.*\n){4}', '     convergence NOT', '     stopping'],
+                                                  timeout=self.timeout)
+                            if i == 1:
+                                raise SCFMaxIterationsError()
+                            elif i == 2:
+                                raise SCFConvergenceError()
+                        except:
+                            print('# Exception was thrown by pexpect.expect')
+                            print(str(self.child))
                         self.child.logfile.flush()
 
             else:  # calculation == 'hund'
@@ -3586,8 +3615,17 @@ class iEspresso(Espresso):
                 self._spawned = True
                 print('spawned the process')
                 self.child.logfile = self.logfile
-                #self.child.logfile.write(self.get_output_header())
-                self.child.expect('!ASE', timeout=self.timeout)
+                self.child.logfile.write(self.get_output_header())
+                try:
+                    i = self.child.expect(['!ASE', '     convergence NOT', '     stopping'],
+                                          timeout=self.timeout)
+                    if i == 1:
+                        raise SCFMaxIterationsError()
+                    elif i == 2:
+                        raise SCFConvergenceError()
+                except:
+                    print('# Exception was thrown by pexpect.expect')
+                    print(str(self.child))
 
             else:  # QE process is already spawned 
 
