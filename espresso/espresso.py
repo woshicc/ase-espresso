@@ -27,7 +27,7 @@ from ase.units import Hartree, Rydberg, Bohr
 from .utils import speciestuple, num2str, bool2str, convert_constraints
 from .siteconfig import SiteConfig, preserve_cwd
 
-__version__ = '0.1.2'
+__version__ = '0.2.0'
 
 rydberg_over_bohr = Rydberg / Bohr
 

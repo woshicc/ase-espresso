@@ -12,7 +12,7 @@ from subprocess import call
 import hostlist
 from path import Path
 
-__version__ = '0.1.2'
+__version__ = '0.2.0'
 
 
 def preserve_cwd(function):

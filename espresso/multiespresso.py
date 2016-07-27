@@ -13,7 +13,7 @@ from __future__ import print_function, absolute_import
 import sys
 from .espresso import Espresso
 
-__version__ = '0.1.2'
+__version__ = '0.2.0'
 
 
 # keep track of ourselves so we can automatically stop us
