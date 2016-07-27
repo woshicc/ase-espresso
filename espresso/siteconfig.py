@@ -8,6 +8,7 @@ import sys
 import tempfile
 from subprocess import check_output, call
 
+import hostlist
 from path import Path
 
 __version__ = '0.1.2'
@@ -35,14 +36,10 @@ class SiteConfig(object):
     with methods for retrieving the details from systems variables and
     creating directories
 
-    Currently supports
-    - SLURM
-    - PBS/TORQUE
-
-
     Args:
         scheduler : str
-            Name of the scheduler, curretly supports only 'SLURM' and 'PBS'/'TORQUE'
+            Name of the scheduler, curretly supports only 'SLURM' and
+            'PBS'/'TORQUE'
         scratchenv : str
             Name of the envoronmental variable that defines the scratch path
     '''
@@ -121,7 +118,7 @@ class SiteConfig(object):
             raise OSError('variable ${} is undefied'.format(scratch))
         else:
             if os.path.exists(scratch):
-                self.global_scratch = Path(os.getenv(scratch))
+                self.global_scratch = Path(scratch)
             else:
                 raise OSError('scratch directory <{}> defined with ${} does not exist'.format(
                     scratch, self.scratchenv))
@@ -140,7 +137,7 @@ class SiteConfig(object):
         for name, var in env.items():
             value = os.getenv(var)
             if value is None:
-                raise RuntimeError('variable ${} is undefied'.format(var))
+                raise OSError('variable ${} is undefined'.format(var))
             else:
                 setattr(self, name, value)
 
@@ -148,13 +145,12 @@ class SiteConfig(object):
 
         self.nnodes = int(os.getenv('SLURM_JOB_NUM_NODES'))
         self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
-        jobnodelist = os.getenv('SLURM_JOB_NODELIST')
-        output = check_output(['scontrol', 'show', 'hostnames', jobnodelist])
-        nodeslist = output.split('\n')[:-1]
-        self.procs = [nodeslist[i // self.tpn] for i in range(len(nodeslist) * self.tpn)]
-        self.nprocs = len(self.procs)
+        jobnodelist = hostlist.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
 
-        self.perHostMpiExec = ['mpirun', '-host', ','.join(nodeslist),
+        self.hosts = [jobnodelist[i // self.tpn] for i in range(len(jobnodelist) * self.tpn)]
+        self.nprocs = len(self.hosts)
+
+        self.perHostMpiExec = ['mpirun', '-host', ','.join(jobnodelist),
                                '-np', '{0:d}'.format(self.nnodes)]
         self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
         self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
@@ -173,7 +169,7 @@ class SiteConfig(object):
         for name, var in env.items():
             value = os.getenv(var)
             if value is None:
-                raise RuntimeError('variable ${} undefied'.format(var))
+                raise OSError('variable ${} undefined'.format(var))
             else:
                 setattr(self, name, value)
 
@@ -181,13 +177,13 @@ class SiteConfig(object):
 
         nodefile = os.getenv('PBS_NODEFILE')
         with open(nodefile, 'r') as nf:
-            self.procs = [x.strip() for x in nf.readlines()]
+            self.hosts = [x.strip() for x in nf.readlines()]
 
-        self.nprocs = len(self.procs)
-        uniqnodes = sorted(set(self.procs))
+        self.nprocs = len(self.hosts)
+        uniqnodes = sorted(set(self.hosts))
 
         self.perHostMpiExec = ['mpirun', '-host', ','.join(uniqnodes),
-                               '-np', '{0:d}'.format(self.nnodes)]
+                               '-np', '{0:d}'.format(len(uniqnodes))]
 
         self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(
             nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'

@@ -6,7 +6,7 @@ Dependencies
 - `pexpect <https://pexpect.readthedocs.io/en/stable/>`_
 - `future <http://python-future.org/>`_
 - `path.py <http://pythonhosted.org/path.py/>`_
-
+- `hostname <https://www.nsc.liu.se/~kent/python-hostlist/>`_
 
 Installation
 ============
