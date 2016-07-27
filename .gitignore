@@ -53,3 +53,8 @@ c-src/*.o
 
 _site/
 .sass-cache/
+
+
+# sublim project files
+espresso.sublime-project
+espresso.sublime-workspace

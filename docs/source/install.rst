@@ -1,3 +1,13 @@
+Dependencies
+============
+
+- ASE_
+- `numpy <http://www.numpy.org/>`_
+- `pexpect <https://pexpect.readthedocs.io/en/stable/>`_
+- `future <http://python-future.org/>`_
+- `path.py <http://pythonhosted.org/path.py/>`_
+- `hostname <https://www.nsc.liu.se/~kent/python-hostlist/>`_
+
 Installation
 ============
 
@@ -51,6 +61,7 @@ to the directory containing pseudopotentials
    export ESP_PSP_PATH=/path/to/pseudo/pseudopotentials
 
 
+.. _ASE: https://wiki.fysik.dtu.dk/ase/index.html
 .. _github: https:github.com
 .. _lmmfixes: https://github.com/lmmentel/ase-espresso/tree/lmmfixes
 .. _pip: https://pip.pypa.io/en/stable/

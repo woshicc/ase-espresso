@@ -10,19 +10,22 @@
 
 from __future__ import print_function, absolute_import
 
+from builtins import (super, range, zip, round, int, object)
+
 import os
 import atexit
 import shutil
 import subprocess
-import sys
 import numpy as np
+from path import Path
 
-from .utils import specobj, num2str, bool2str, convert_constraints
-from .subdirs import *
-from .siteconfig import SiteConfig
+import pexpect
 
 from ase.calculators.calculator import FileIOCalculator
 from ase.units import Hartree, Rydberg, Bohr
+
+from .utils import speciestuple, num2str, bool2str, convert_constraints
+from .siteconfig import SiteConfig, preserve_cwd
 
 __version__ = '0.1.2'
 
@@ -34,226 +37,76 @@ GITREVISION = '$Id$'
 # stopped automatically
 espresso_calculators = []
 
+
+all_changes = ['positions', 'numbers', 'cell', 'pbc',
+               'initial_charges', 'initial_magmoms']
+
+
+class SCFConvergenceError(Exception):
+    pass
+
+
+class SCFMaxIterationsError(Exception):
+    pass
+
+
 class Espresso(FileIOCalculator, object):
     """
-    ase interface for Quantum Espresso
-    """
+    ASE interface for Quantum Espresso
 
-    implemented_properties = ['energy', 'forces', 'free_energy', 'magmom', 'magmoms', 'stress']
-
-    default_parameters = []
-
-    def __init__(self,
-                 atoms = None,
-                 pw = 350.0,
-                 dw = None,
-                 fw = None,
-                 nbands = -10,
-                 kpts = (1,1,1),
-                 kptshift = (0,0,0),
-                 fft_grid = None,   #if specified, set the keywrds nr1, nr2, nr3 in q.e. input [RK]
-                 mode = 'ase3',
-                 opt_algorithm = 'ase3',
-                 nstep = None,
-                 constr_tol = None,
-                 fmax = 0.05,
-                 cell_dynamics = None,
-                 press = None, # target pressure
-                 dpress = None, # convergence limit towards target pressure
-                 cell_factor = None,
-                 cell_dofree = None,
-                 dontcalcforces = False,
-                 nosym = False,
-                 noinv = False,
-                 nosym_evc = False,
-                 no_t_rev = False,
-                 xc = 'PBE',
-                 beefensemble = False,
-                 printensemble = False,
-                 psppath = None,
-                 spinpol = False,
-                 noncollinear = False,
-                 spinorbit = False,
-                 outdir = None,
-                 txt = None,
-                 calcstress = False,
-                 smearing = 'fd',
-                 sigma = 0.1,
-                 fix_magmom = False,
-                 isolated = None,
-                 U = None,
-                 J = None,
-                 U_alpha = None,
-                 U_projection_type = 'atomic',
-                 nqx1 = None,
-                 nqx2 = None,
-                 nqx3 = None,
-                 exx_fraction = None,
-                 screening_parameter = None,
-                 exxdiv_treatment = None,
-                 ecutvcut = None,
-                 tot_charge = None, # +1 means 1 e missing, -1 means 1 extra e
-                 charge = None, # overrides tot_charge (ase 3.7+ compatibility)
-                 tot_magnetization = -1, #-1 means unspecified, 'hund' means Hund's rule for each atom
-                 occupations = 'smearing', # 'smearing', 'fixed', 'tetrahedra'
-                 dipole = {'status':False},
-                 field = {'status':False},
-                 output = {'disk_io':'default',  # how often espresso writes wavefunctions to disk
-                           'avoidio':False,  # will overwrite disk_io parameter if True
-                           'removewf':True,
-                           'removesave':False,
-                           'wf_collect':False},
-                 convergence = {'energy':1e-6,
-                                'mixing':0.7,
-                                'maxsteps':100,
-                                'diag':'david'},
-                 startingpot = None,
-                 startingwfc = None,
-                 ion_positions = None,
-                 parflags = None,
-                 single_calculator = True, #if True, only one espresso job will be running
-                 procrange = None, #let this espresso calculator run only on a subset of the requested cpus
-                 numcalcs = None,  #used / set by multiespresso class
-                 alwayscreatenewarrayforforces = True,
-                 verbose = 'low',
-                 #automatically generated list of parameters
-                 #some coincide with ase-style names
-                 iprint = None,
-                 tstress = None,
-                 tprnfor = None,
-                 dt = None,
-                 lkpoint_dir = None,
-                 max_seconds = None,
-                 etot_conv_thr = None,
-                 forc_conv_thr = None,
-                 tefield = None,
-                 dipfield = None,
-                 lelfield = None,
-                 nberrycyc = None,
-                 lorbm = None,
-                 lberry = None,
-                 gdir = None,
-                 nppstr = None,
-                 nbnd = None,
-                 ecutwfc = None,
-                 ecutrho = None,
-                 ecutfock = None,
-                 force_symmorphic = None,
-                 use_all_frac = None,
-                 one_atom_occupations = None,
-                 starting_spin_angle = None,
-                 degauss = None,
-                 nspin = None,
-                 ecfixed = None,
-                 qcutz = None,
-                 q2sigma = None,
-                 x_gamma_extrapolation = None,
-                 lda_plus_u = None,
-                 lda_plus_u_kind = None,
-                 edir = None,
-                 emaxpos = None,
-                 eopreg = None,
-                 eamp = None,
-                 clambda = None,
-                 report = None,
-                 lspinorb = None,
-                 esm_w = None,
-                 esm_efield = None,
-                 esm_nfit = None,
-                 london = None,
-                 london_s6 = None,
-                 london_rcut = None,
-                 xdm = None,
-                 xdm_a1 = None,
-                 xdm_a2 = None,
-                 electron_maxstep = None,
-                 scf_must_converge = None,
-                 conv_thr = None,
-                 adaptive_thr = None,
-                 conv_thr_init = None,
-                 conv_thr_multi = None,
-                 mixing_beta = None,
-                 mixing_ndim = None,
-                 mixing_fixed_ns = None,
-                 ortho_para = None,
-                 diago_thr_init = None,
-                 diago_cg_maxiter = None,
-                 diago_david_ndim = None,
-                 diago_full_acc = None,
-                 efield = None,
-                 tqr = None,
-                 remove_rigid_rot = None,
-                 tempw = None,
-                 tolp = None,
-                 delta_t = None,
-                 nraise = None,
-                 refold_pos = None,
-                 upscale = None,
-                 bfgs_ndim = None,
-                 trust_radius_max = None,
-                 trust_radius_min = None,
-                 trust_radius_ini = None,
-                 w_1 = None,
-                 w_2 = None,
-                 wmass = None,
-                 press_conv_thr = None,
-                 site = None,
-                 ):
-        """
-    Construct an ase-espresso calculator.
     Parameters (with defaults in parentheses):
-     atoms (None)
-        list of atoms object to be attached to calculator
-        atoms.set_calculator can be used instead
-     pw (350.0)
-        plane-wave cut-off in eV
-     dw (10*pw)
-        charge-density cut-off in eV
-     fw (None)
-        plane-wave cutoff for evaluation of EXX in eV
-     nbands (-10)
-        number of bands, if negative: -n extra bands
-     kpts ( (1,1,1) )
-        k-point grid sub-divisions, k-point grid density,
-        explicit list of k-points, or simply 'gamma' for gamma-point only.
-     kptshift ( (0,0,0) )
-        shift of k-point grid
-     fft_grid ( None )
-        specify tuple of fft grid points (nr1,nr2,nr3) for q.e.
-        useful for series of calculations with changing cell size (e.g. lattice constant optimization)
-        uses q.e. default if not specified. [RK]
-     mode ( 'ase3' )
-        relaxation mode:
-        - 'ase3': dynamic communication between Quantum Espresso and python
-        - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
-     opt_algorithm ( 'ase3' )
-        - 'ase3': ase updates coordinates during relaxation
-        - 'relax' and other Quantum Espresso standard relaxation modes:
+        atoms (None)
+            list of atoms object to be attached to calculator
+            atoms.set_calculator can be used instead
+        pw (350.0)
+            plane-wave cut-off in eV
+        dw (10*pw)
+            charge-density cut-off in eV
+        fw (None)
+            plane-wave cutoff for evaluation of EXX in eV
+        nbands (-10)
+            number of bands, if negative: -n extra bands
+        kpts ( (1,1,1) )
+            k-point grid sub-divisions, k-point grid density,
+            explicit list of k-points, or simply 'gamma' for gamma-point only.
+        kptshift ( (0,0,0) )
+            shift of k-point grid
+        fft_grid ( None )
+            specify tuple of fft grid points (nr1, nr2, nr3) for q.e.
+            useful for series of calculations with changing cell size
+            (e.g. lattice constant optimization) uses q.e. default if not specified. [RK]
+        calculation ( 'relax' )
+            relaxation mode:
+            - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
+        ion_dynamics ( 'ase3' )
+            - 'ase3':
+                only possible with dynamic communication between Quantum Espresso and python
+                in this case ASE updates coordinates during relaxation
+            - 'relax' and other Quantum Espresso standard relaxation modes:
                   Quantum Espresso own algorithms for structural optimization
                   are used
-        Obtaining Quantum Espresso with the ase3 relaxation extensions is
-        highly recommended, since it allows for using ase's optimizers without
-        loosing efficiency:
-svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
-     fmax (0.05)
-        max force limit for Espresso-internal relaxation (eV/Angstrom)
-     constr_tol (None)
-        constraint tolerance for Espresso-internal relaxation
-     cell_dynamics (None)
-        algorithm (e.g. 'BFGS') to be used for Espresso-internal
-        unit-cell optimization
-     press (None)
-        target pressure for such an optimization
-     dpress (None)
-        convergence limit towards target pressure
-     cell_factor (None)
-        should be >>1 if unit-cell volume is expected to shrink a lot during
-        relaxation (would be more efficient to start with a better guess)
-     cell_dofree (None)
-        partially fix lattice vectors
-     nosym (False)
-     noinv (False)
-     nosym_evc (False)
+            Obtaining Quantum Espresso with the ase3 relaxation extensions is
+            highly recommended, since it allows for using ase's optimizers without
+            loosing efficiency:
+                svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
+        fmax (0.05)
+            max force limit for Espresso-internal relaxation (eV/Angstrom)
+        constr_tol (None)
+            constraint tolerance for Espresso-internal relaxation
+        cell_dynamics (None)
+            algorithm (e.g. 'BFGS') to be used for Espresso-internal unit-cell optimization
+        press (None)
+            target pressure for such an optimization
+        dpress (None)
+            convergence limit towards target pressure
+        cell_factor (None)
+            should be >>1 if unit-cell volume is expected to shrink a lot during
+            relaxation (would be more efficient to start with a better guess)
+        cell_dofree (None)
+            partially fix lattice vectors
+        nosym (False)
+        noinv (False)
+        nosym_evc (False)
      no_t_rev (False)
         turn off corresp. symmetries
      xc ('PBE')
@@ -388,25 +241,189 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         Can be 'high' or 'low'
      site (None)
         Site configuration deifinig how to execute pw.x in batch environment
-        """
+    """
 
-        self.outdir = outdir
+    implemented_properties = ['energy', 'forces', 'free_energy', 'magmom', 'magmoms', 'stress']
+
+    default_parameters = []
+
+    def __init__(self,
+                 atoms=None,
+                 pw=350.0,
+                 dw=None,
+                 fw=None,
+                 nbands=-10,
+                 kpts=(1, 1, 1),
+                 kptshift=(0, 0, 0),
+                 fft_grid=None,   # if specified, set the keywrds nr1, nr2, nr3 in q.e. input [RK]
+                 calculation='relax',
+                 ion_dynamics='ase3',
+                 nstep=None,
+                 constr_tol=None,
+                 fmax=0.05,
+                 cell_dynamics=None,
+                 press=None,    # target pressure
+                 dpress=None,   # convergence limit towards target pressure
+                 cell_factor=None,
+                 cell_dofree=None,
+                 dontcalcforces=False,
+                 nosym=False,
+                 noinv=False,
+                 nosym_evc=False,
+                 no_t_rev=False,
+                 xc='PBE',
+                 beefensemble=False,
+                 printensemble=False,
+                 psppath=None,
+                 spinpol=False,
+                 noncollinear=False,
+                 spinorbit=False,
+                 outdir=None,
+                 txt=None,
+                 calcstress=False,
+                 smearing='fd',
+                 sigma=0.1,
+                 fix_magmom=False,
+                 isolated=None,
+                 U=None,
+                 J=None,
+                 U_alpha=None,
+                 U_projection_type='atomic',
+                 nqx1=None,
+                 nqx2=None,
+                 nqx3=None,
+                 exx_fraction=None,
+                 screening_parameter=None,
+                 exxdiv_treatment=None,
+                 ecutvcut=None,
+                 tot_charge=None,         # +1 means 1 e missing, -1 means 1 extra e
+                 charge=None,             # overrides tot_charge (ase 3.7+ compatibility)
+                 tot_magnetization=-1,    # -1 means unspecified, 'hund' means Hund's rule for each atom
+                 occupations='smearing',  # 'smearing', 'fixed', 'tetrahedra'
+                 dipole={'status': False},
+                 field={'status': False},
+                 output={'disk_io': 'default',  # how often espresso writes wavefunctions to disk
+                         'avoidio': False,      # will overwrite disk_io parameter if True
+                         'removewf': True,
+                         'removesave': False,
+                         'wf_collect': False},
+                 convergence={'energy': 1e-6,
+                              'mixing': 0.7,
+                              'maxsteps': 100,
+                              'diag': 'david'},
+                 startingpot=None,
+                 startingwfc=None,
+                 ion_positions=None,
+                 parflags=None,
+                 single_calculator=True,  # if True, only one espresso job will be running
+                 procrange=None,          # let this espresso calculator run only on a subset of the requested cpus
+                 numcalcs=None,           # used / set by multiespresso class
+                 alwayscreatenewarrayforforces=True,
+                 verbose='low',
+                 # automatically generated list of parameters
+                 # some coincide with ase-style names
+                 iprint=None,
+                 tstress=None,
+                 tprnfor=None,
+                 dt=None,
+                 lkpoint_dir=None,
+                 max_seconds=None,
+                 etot_conv_thr=None,
+                 forc_conv_thr=None,
+                 tefield=None,
+                 dipfield=None,
+                 lelfield=None,
+                 nberrycyc=None,
+                 lorbm=None,
+                 lberry=None,
+                 gdir=None,
+                 nppstr=None,
+                 nbnd=None,
+                 ecutwfc=None,
+                 ecutrho=None,
+                 ecutfock=None,
+                 force_symmorphic=None,
+                 use_all_frac=None,
+                 one_atom_occupations=None,
+                 starting_spin_angle=None,
+                 degauss=None,
+                 nspin=None,
+                 ecfixed=None,
+                 qcutz=None,
+                 q2sigma=None,
+                 x_gamma_extrapolation=None,
+                 lda_plus_u=None,
+                 lda_plus_u_kind=None,
+                 edir=None,
+                 emaxpos=None,
+                 eopreg=None,
+                 eamp=None,
+                 clambda=None,
+                 report=None,
+                 lspinorb=None,
+                 esm_w=None,
+                 esm_efield=None,
+                 esm_nfit=None,
+                 london=None,
+                 london_s6=None,
+                 london_rcut=None,
+                 xdm=None,
+                 xdm_a1=None,
+                 xdm_a2=None,
+                 electron_maxstep=None,
+                 scf_must_converge=None,
+                 conv_thr=None,
+                 adaptive_thr=None,
+                 conv_thr_init=None,
+                 conv_thr_multi=None,
+                 mixing_beta=None,
+                 mixing_ndim=None,
+                 mixing_fixed_ns=None,
+                 ortho_para=None,
+                 diago_thr_init=None,
+                 diago_cg_maxiter=None,
+                 diago_david_ndim=None,
+                 diago_full_acc=None,
+                 efield=None,
+                 tqr=None,
+                 remove_rigid_rot=None,
+                 tempw=None,
+                 tolp=None,
+                 delta_t=None,
+                 nraise=None,
+                 refold_pos=None,
+                 upscale=None,
+                 bfgs_ndim=None,
+                 trust_radius_max=None,
+                 trust_radius_min=None,
+                 trust_radius_ini=None,
+                 w_1=None,
+                 w_2=None,
+                 wmass=None,
+                 press_conv_thr=None,
+                 site=None,
+                 ):
+
         self.pw = pw
         self.dw = dw
         self.fw = fw
+
+        if self.dw is None:
+            self.dw = 10.0 * self.pw
+
+        if self.dw < self.pw:
+            raise ValueError('<dw> smaller than <pw>: {0:.2f} < {1:.2f}'.format(self.dw, self.pw))
+
         self.nbands = nbands
-        if type(kpts) == float or type(kpts) == int:
-            from ase.calculators.calculator import kptdensity2monkhorstpack
-            kpts = kptdensity2monkhorstpack(atoms, kpts)
-        elif isinstance(kpts, str):
-            assert kpts == 'gamma'
-        else:
-            assert len(kpts) == 3
         self.kpts = kpts
         self.kptshift = kptshift
-        self.fft_grid = fft_grid #RK
-        self.calcmode = mode
-        self.opt_algorithm = opt_algorithm
+        self.fft_grid = fft_grid  # RK
+        self.calculation = calculation
+
+        if self.calculation in ['scf', 'nscf', 'bands', 'hund']:
+            self.ion_dynamics = None
+        else:
+            self.ion_dynamics = ion_dynamics
         self.nstep = nstep
         self.constr_tol = constr_tol
         self.fmax = fmax
@@ -423,7 +440,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.xc = xc
         self.beefensemble = beefensemble
         self.printensemble = printensemble
-        if type(smearing)==str:
+        if isinstance(smearing, str):
             self.smearing = smearing
             self.sigma = sigma
         else:
@@ -471,7 +488,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.txt = txt
 
         self.mypath = os.path.abspath(os.path.dirname(__file__))
-        self.writeversion = True
 
         self.atoms = None
         self.sigma_small = 1e-13
@@ -479,7 +495,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.got_energy = False
         self.only_init = False
 
-        #automatically generated list
+        # automatically generated list
         self.iprint = iprint
         self.tstress = tstress
         self.tprnfor = tprnfor
@@ -560,10 +576,15 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.wmass = wmass
         self.press_conv_thr = press_conv_thr
 
+        # internal attributes
+
+        self._initialized = False
+        self._running = False
+
         self.results = {}
 
-        #give original espresso style input names
-        #preference over ase / dacapo - style names
+        # give original espresso style input names
+        # preference over ase / dacapo - style names
         if ecutwfc is not None:
             self.pw = ecutwfc
         if ecutrho is not None:
@@ -571,10 +592,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if nbnd is not None:
             self.nbands = nbnd
 
-        if site is None:
-            self.site = SiteConfig.check_scheduler()
-        else:
-            self.site = site
+        self.site = site
 
         # Variables that cannot be set by inputs
         self.nvalence = None
@@ -601,104 +619,233 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if atoms is not None:
             atoms.set_calculator(self)
 
-#    @property
-#    def site(self):
-#        return self._site
-#
-#    @site.setter
-#    def site(self, value):
-#        print('setting site')
-#        if value is None:
-#            print('setting site to default')
-#            self._site = SiteConfig.check_scheduler()
-#        else:
-#            print('setting site to value')
-#            self._site = value
+    @property
+    def site(self):
+        return self._site
+
+    @site.setter
+    def site(self, value):
+        if value is None:
+            self._site = SiteConfig.check_scheduler()
+        else:
+            self._site = value
 
     @property
     def name(self):
         return self.get_name()
 
-    def input_update(self):
-        # Run initialization functions, such that this can be called if variables in espresso are
-        #changes using set or directly.
+    def get_name(self):
+        return 'QE-ASE interface'
 
-        self.create_outdir() # Create the tmp output folder
+    @property
+    def kpts(self):
+        return self._kpts
 
-        #sdir is the directory the script is run or submitted from
-        self.sdir = getsubmitorcurrentdir(self.site)
+    @kpts.setter
+    def kpts(self, value):
+        '''
+        Resolve the `kpts` and store as an attribute
+        '''
 
-        if self.dw is None:
-            self.dw = 10. * self.pw
+        if isinstance(value, str):
+
+            if value.lower() == 'gamma':
+                self._kpts = value.lower()
+            else:
+                raise ValueError('wrong <kpts>: {}'.format(value))
+
+        elif isinstance(value, (float, int)):
+
+            if self.atoms is not None:
+                from ase.calculators.calculator import kptdensity2monkhorstpack
+                self._kpts = kptdensity2monkhorstpack(self.atoms, value)
+            else:
+                raise ValueError('cannot calculate the Monkhorst-Pack grid '
+                                 'without the <atoms> object specified')
+        elif isinstance(value, (list, tuple)):
+
+            self._kpts = np.asarray(value)
+
+        elif type(value).__module__ == np.__name__:
+
+            self._kpts = value
+
         else:
-            assert self.dw >= self.pw
+            raise ValueError('unknown <kpts> type: {}'.format(type(value)))
+
+    def get_version(self):
+        return __version__
+
+    def initialize(self, atoms):
+        '''
+        Create the scratch directories and pw.inp input file and
+        prepare for writing the input file
+        '''
+
+        if not self._initialized:
+            self.create_outdir()
 
         if self.psppath is None:
-            try:
+            if os.environ['ESP_PSP_PATH'] is not None:
                 self.psppath = os.environ['ESP_PSP_PATH']
-            except:
-                print('Unable to find pseudopotential path.  Consider setting ESP_PSP_PATH environment variable')
-                raise
+            else:
+                raise ValueError('Unable to find pseudopotential path.'
+                    'Consider setting <ESP_PSP_PATH> environment variable')
+
+        self.atoms = atoms.copy()
+
+        self.atoms2species()
+
+        self.natoms = len(self.atoms)
+
+        self.check_spinpol()
+
+        self._initialized = True
+
+    def calculate(self, atoms, properties=['energy']):
+        '''
+        Run the calculation and retrieve the results
+        '''
+
+        if atoms is not None:
+            self.atoms = atoms.copy()
+
+        # initialize
+        self.initialize(atoms)
+
+        # write input
+        self.write_input()
+
+        # run
+        self.run()
+
+        self.recalculate = True
+        # check for errors
+
+        # parse results
+        self.read()
+
+        self.set_results(atoms)
+
+    def set_atoms(self, atoms):
+
+        if self.atoms is None or not self.started:
+            self.atoms = atoms.copy()
+        else:
+            if len(atoms) != len(self.atoms):
+                self.stop()
+                self.nvalence = None
+                self.nel = None
+                self.recalculate = True
+
+            x = atoms.cell - self.atoms.cell
+            if np.max(x) > 1E-13 or np.min(x) < -1E-13:
+                self.stop()
+                self.recalculate = True
+            if (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any():
+                self.stop()
+                self.nvalence = None
+                self.nel = None
+                self.recalculate = True
+            x = atoms.positions - self.atoms.positions
+            if np.max(x) > 1E-13 or np.min(x) < -1E-13 or (not self.started and not self.got_energy):
+                self.recalculate = True
+        self.atoms = atoms.copy()
+
+    def update(self, atoms):
+        '''
+        Check if the atoms object has changes and perform a calcualtion
+        when it does
+        '''
+
+        if self.atoms is None:
+            self.set_atoms(atoms)
+
+        if self.calculation_required(atoms, ['energy']):
+            self.calculate(atoms)
+            self.recalculate = False
+
+    def set_results(self, atoms):
+        '''
+        Read the results from the file and populate the `results` dictionary
+        '''
+
+        self.results = {'energy': self.read_energies()[0],
+                        'forces': self.read_forces(),
+                        'stress': self.read_stress(),
+                        #'dipole': self.get_dipole(),
+                        #'charges': self.get_charges(),
+                        #'magmom': 0.0,
+                        #'magmoms': np.zeros(len(atoms))
+                        }
+
+    def read(self):
+        '''
+        Read the output file and set the attributes
+        '''
+
+        self.energy_zero, self.energy_free = self.read_energies()
+        self.forces = self.read_forces()
+        self.stress = self.read_stress()
+        positions = self.read_positions()
+        cell = self.read_cell()
+
+    def input_update(self):
+        '''
+        Run initialization functions, such that this can be called if variables
+        in espresso are changes using set or directly.
+        '''
+
         if self.dipole is None:
-            self.dipole = {'status':False}
+            self.dipole = {'status': False}
         if self.field is None:
-            self.field = {'status':False}
+            self.field = {'status': False}
 
         if self.convergence is None:
-            self.conv_thr = 1e-6/Rydberg
+            self.conv_thr = 1.0e-6 / Rydberg
         else:
             if 'energy' in list(self.convergence.keys()):
-                self.conv_thr = self.convergence['energy']/Rydberg
+                self.conv_thr = self.convergence['energy'] / Rydberg
             else:
-                self.conv_thr = 1e-6/Rydberg
+                self.conv_thr = 1.0e-6 / Rydberg
 
         if self.beefensemble:
-            if self.xc.upper().find('BEEF')<0:
+            if self.xc.upper().find('BEEF') < 0:
                 raise KeyError("ensemble-energies only work with xc=BEEF or variants of it!")
 
         self.started = False
         self.got_energy = False
 
     def create_outdir(self):
-        if self.site.batchmode:
-            self.localtmp = mklocaltmp(self.outdir, self.site)
-            if not self.txt:
-                self.log = self.localtmp + '/log'
-            elif self.txt[0] != '/':
-                self.log = self.sdir + '/log'
-            else:
-                self.log = self.txt
-            self.scratch = mkscratch(self.localtmp, self.site)
-            if self.output is not None:
-                if 'removewf' in list(self.output.keys()):
-                    removewf = self.output['removewf']
-                else:
-                    removewf = True
-                if 'removesave' in list(self.output.keys()):
-                    removesave = self.output['removesave']
-                else:
-                    removesave = False
-            else:
-                removewf = True
-                removesave = False
-            atexit.register(cleanup, self.localtmp, self.scratch, removewf, removesave, self, self.site)
-            self.cancalc = True
+        '''
+        Create the necessary directory structure to run the calculation and
+        assign file names
+        '''
+
+        self.localtmp = self.site.make_localtmp(self.outdir)
+        self.scratch = self.site.make_scratch()
+
+        if self.txt is None:
+            self.log = self.localtmp.joinpath('log')
         else:
-            self.pwinp = not self.site.batchmode
-            self.localtmp=''
-            self.cancalc = False
+            self.log = self.localtmp.joinpath(self.txt)
 
+        atexit.register(self.clean)
 
-    def set(self,  **kwargs):
-        """ Define settings for the Quantum Espresso calculator object after it has been initialized.
-        This is done in the following way:
+    def set(self, **kwargs):
+        '''
+        Define settings for the Quantum Espresso calculator object after it
+        has been initialized. This is done in the following way::
 
-        >> calc = espresso(...)
+        >> calc = Espresso(...)
         >> atoms = set.calculator(calc)
         >> calc.set(xc='BEEF')
 
-        NB: No input validation is made
-        """
+        .. warning::
+
+           No input validation is done
+
+        '''
 
         for key, value in list(kwargs.items()):
             setattr(self, key, value)
@@ -708,60 +855,160 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.input_update()
         self.recalculate = True
 
-    def __del__(self):
+    @preserve_cwd
+    def run(self):
+        '''
+        Execute the expresso program `pw.x`
+        '''
+
+        if self.single_calculator:
+            while len(espresso_calculators) > 0:
+                espresso_calculators.pop().stop()
+            espresso_calculators.append(self)
+
+        if self.site.batchmode:
+            self.localtmp.chdir()
+            Path.copy2(self.localtmp.joinpath('pw.inp'), self.scratch)
+
+            if self.calculation != 'hund':
+                if not self.proclist:
+                    command = self.site.perProcMpiExec.format(self.scratch,
+                                'pw.x ' + self.parflags + ' -in pw.inp')
+                    if self.ion_dynamics == 'ase3':
+                        raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
+                    else:
+                        with open(self.log, 'a') as flog:
+                            flog.write(self.get_output_header())
+                            output = pexpect.run(command, logfile=flog, timeout=None)
+                else:
+                    self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
+                            self.myncpus, self.scratch,
+                            'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
+
+            else:  # calculation == 'hund'
+                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
+                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+
+        else:  # not in batchmode
+
+            pwinp = self.localtmp.joinpath('pw.inp')
+            Path.copy(pwinp, self.scratch)
+            command = 'pw.x -in pw.inp'
+            if self.calculation != 'hund':
+                self.scratch.chdir()
+
+                with open(self.log, 'a') as flog:
+                    flog.write(self.get_output_header())
+                    output = pexpect.run(command, logfile=flog, timeout=None)
+            else:
+                self.scratch.chdir()
+                subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
+
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
+                self.scratch.chdir()
+                self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
+
+            self._running = True
+
+    def stop(self):
+        if self._running:
+
+            self._running = False
+
+    def clean(self):
+        '''
+        Remove the temporary files and directories
+        '''
+
+        os.chdir(self.site.submitdir)
+
         try:
             self.stop()
         except:
             pass
 
+        if self.output is not None:
+            if 'removewf' in list(self.output.keys()):
+                removewf = self.output['removewf']
+            else:
+                removewf = True
+            if 'removesave' in list(self.output.keys()):
+                removesave = self.output['removesave']
+            else:
+                removesave = False
+        else:
+            removewf = True
+            removesave = False
+
+        toremove = ['*.wfc*', '*.update', '*.igk*', '*.hub']
+        if removewf:
+            for pattern in toremove:
+                for fil in self.scratch.files(pattern):
+                    fil.remove()
+
+        if not removesave:
+            Path.copytree(self.scratch, self.localtmp.joinpath(self.scratch.basename()))
+
+        self.scratch.rmtree_p()
+
+        if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
+            os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
+            os.system(self.site.mpdshutdown)
+
     def atoms2species(self):
-        # Define several properties of the quantum espresso species from the ase atoms object.
-        # Takes into account that different spins (or different U etc.) on same kind of
-        # chemical elements are considered different species in quantum espresso
+        '''
+        Define several properties of the quantum espresso species from the ase
+        atoms object. Takes into account that different spins (or different U
+        etc.) on same kind of chemical elements are considered different
+        species in quantum espresso
+        '''
 
         symbols = self.atoms.get_chemical_symbols()
         masses = self.atoms.get_masses()
         magmoms = list(self.atoms.get_initial_magnetic_moments())
-        if len(magmoms)<len(symbols):
-            magmoms += list(np.zeros(len(symbols)-len(magmoms), np.float))
+        if len(magmoms) < len(symbols):
+            magmoms += list(np.zeros(len(symbols) - len(magmoms), np.float))
         pos = self.atoms.get_scaled_positions()
 
         if self.U is not None:
-            if type(self.U)==dict:
+            if isinstance(self.U, dict):
                 Ulist = np.zeros(len(symbols), np.float)
-                for i,s in enumerate(symbols):
+                for i, s in enumerate(symbols):
                     if s in list(self.U.keys()):
                         Ulist[i] = self.U[s]
             else:
                 Ulist = list(self.U)
-                if len(Ulist)<len(symbols):
-                    Ulist += list(np.zeros(len(symbols)-len(Ulist), np.float))
+                if len(Ulist) < len(symbols):
+                    Ulist += list(np.zeros(len(symbols) - len(Ulist), np.float))
         else:
             Ulist = np.zeros(len(symbols), np.float)
 
         if self.J is not None:
-            if type(self.J)==dict:
+            if isinstance(self.J, dict):
                 Jlist = np.zeros(len(symbols), np.float)
-                for i,s in enumerate(symbols):
+                for i, s in enumerate(symbols):
                     if s in list(self.J.keys()):
                         Jlist[i] = self.J[s]
             else:
                 Jlist = list(self.J)
-                if len(Jlist)<len(symbols):
-                    Jlist += list(np.zeros(len(symbols)-len(Jlist), np.float))
+                if len(Jlist) < len(symbols):
+                    Jlist += list(np.zeros(len(symbols) - len(Jlist), np.float))
         else:
             Jlist = np.zeros(len(symbols), np.float)
 
         if self.U_alpha is not None:
-            if type(self.U_alpha)==dict:
+            if isinstance(self.U_alpha, dict):
                 U_alphalist = np.zeros(len(symbols), np.float)
-                for i,s in enumerate(symbols):
+                for i, s in enumerate(symbols):
                     if s in list(self.U_alpha.keys()):
                         U_alphalist[i] = self.U_alpha[s]
             else:
                 U_alphalist = list(self.U_alpha)
-                if len(U_alphalist)<len(symbols):
-                    U_alphalist += list(np.zeros(len(symbols)-len(U_alphalist), np.float))
+                if len(U_alphalist) < len(symbols):
+                    U_alphalist += list(np.zeros(len(symbols) - len(U_alphalist), np.float))
         else:
             U_alphalist = np.zeros(len(symbols), np.float)
 
@@ -774,76 +1021,114 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         for i in range(len(symbols)):
             key = symbols[i]+'_m%.14eU%.14eJ%.14eUa%.14e' % (magmoms[i],Ulist[i],Jlist[i],U_alphalist[i])
             if key in list(dic.keys()):
-                self.specprops.append((dic[key][1],pos[i]))
+                self.specprops.append((dic[key][1], pos[i]))
             else:
                 symcounter[symbols[i]] += 1
-                spec = symbols[i]+str(symcounter[symbols[i]])
-                dic[key] = [i,spec]
+                spec = symbols[i] + str(symcounter[symbols[i]])
+                dic[key] = [i, spec]
                 self.species.append(spec)
-                self.specprops.append((spec,pos[i]))
+                self.specprops.append((spec, pos[i]))
 
         self.nspecies = len(self.species)
         self.specdict = {}
-        for i,s in list(dic.values()):
-            self.specdict[s] = specobj(s = s.strip('0123456789'), #chemical symbol w/o index
-                                       mass = masses[i],
-                                       magmom = magmoms[i],
-                                       U = Ulist[i],
-                                       J = Jlist[i],
-                                       U_alpha = U_alphalist[i])
+        for i, s in list(dic.values()):
+            self.specdict[s] = speciestuple(s.strip('0123456789'),  # chemical symbol w/o index
+                                            masses[i],
+                                            magmoms[i],
+                                            Ulist[i],
+                                            Jlist[i],
+                                            U_alphalist[i])
 
     def get_nvalence(self):
         nel = {}
         for x in self.species:
-            el = self.specdict[x].s
+            el = self.specdict[x].symbol
             #get number of valence electrons from pseudopotential or paw setup
             p = os.popen('egrep -i \'z\ valence|z_valence\' '+self.psppath+'/'+el+'.UPF | tr \'"\' \' \'','r')
             for y in p.readline().split():
-                if y[0].isdigit() or y[0]=='.':
+                if y[0].isdigit() or y[0] == '.':
                     nel[el] = int(round(float(y)))
                     break
             p.close()
         nvalence = np.zeros(len(self.specprops), np.int)
-        for i,x in enumerate(self.specprops):
-            nvalence[i] = nel[self.specdict[x[0]].s]
+        for i, x in enumerate(self.specprops):
+            nvalence[i] = nel[self.specdict[x[0]].symbol]
         return nvalence, nel
 
-    def writeinputfile(self, filename='pw.inp', mode=None,
-        overridekpts=None, overridekptshift=None, overridenbands=None,
-        suppressforcecalc=False, usetetrahedra=False):
+    def get_number_of_scf_steps(self, all=False):
+        """Get number of steps for convered scf. Returns an array.
+        Option 'all' gives all numbers of steps in log,
+        not only for the latest scf."""
+        if all:
+            tail = 'tail'
+        else:
+            tail = 'tail -1'
+        p = os.popen('grep "convergence has been achieved in" '+self.log+' | '+tail, 'r')
+        s = p.readlines()
+        p.close()
+        if not all:
+            assert len(s) < 2
+        if len(s) == 0:
+            return None
+        else:
+            out = []
+            for s_ in s:
+                tmp = s_.split('in')
+                out.append(int(tmp[-1].split('iterations')[0]))
+            return out
+
+    def get_number_of_bfgs_steps(self):
+        """Get total number of internal BFGS steps."""
+        p = os.popen('grep "bfgs converged in" '+self.log+' | tail -1', 'r')
+        s = p.readlines()
+        p.close()
+        assert len(s) < 2
+        if len(s) == 0:
+            return None
+        else:
+            tmp = s[0].split('and')
+            return int(tmp[-1].split('bfgs')[0])
+
+    def get_forces(self, atoms):
+        self.update(atoms)
+        if self.newforcearray:
+            return self.forces.copy()
+        else:
+            return self.forces
+
+    def write_input(self, inputname='pw.inp', calculation=None,
+                    overridekpts=None, overridekptshift=None,
+                    overridenbands=None, suppressforcecalc=False,
+                    usetetrahedra=False):
 
         if self.atoms is None:
             raise ValueError('no atoms defined')
-        if self.cancalc:
-            fname = self.localtmp+'/'+filename
-        else:
-            fname = self.pwinp
+
+        fname = self.localtmp.joinpath(inputname)
 
         finp = open(fname, 'w')
 
-        ### &CONTROL ###
-        if mode is None:
-            if self.calcmode=='ase3':
-                print('&CONTROL\n  calculation=\'relax\',\n  prefix=\'calc\',', file=finp)
-            elif self.calcmode=='hund':
+        # &CONTROL
+        if calculation is None:
+            if self.calculation.lower() == 'hund':
                 print('&CONTROL\n  calculation=\'scf\',\n  prefix=\'calc\',', file=finp)
             else:
-                print('&CONTROL\n  calculation=\''+self.calcmode+'\',\n  prefix=\'calc\',', file=finp)
-            ionssec = self.calcmode not in ('scf','nscf','bands','hund')
+                print('&CONTROL\n  calculation=\'' + self.calculation + '\',\n  prefix=\'calc\',', file=finp)
+            ionssec = self.calculation not in ('scf', 'nscf', 'bands', 'hund')
         else:
-            print('&CONTROL\n  calculation=\''+mode+'\',\n  prefix=\'calc\',', file=finp)
-            ionssec = mode not in ('scf','nscf','bands','hund')
+            print('&CONTROL\n  calculation=\'' + calculation + '\',\n  prefix=\'calc\',', file=finp)
+            ionssec = calculation not in ('scf', 'nscf', 'bands', 'hund')
 
-        if self.nstep != None:
-            print('  nstep='+str(self.nstep)+',', file=finp)
+        if self.nstep is not None:
+            print('  nstep=' + str(self.nstep) + ',', file=finp)
 
-        if self.verbose!='low':
-            print('  verbosity=\''+self.verbose+'\',', file=finp)
+        if self.verbose != 'low':
+            print('  verbosity=\'' + self.verbose + '\',', file=finp)
 
-        print('  pseudo_dir=\''+self.psppath+'\',', file=finp)
+        print('  pseudo_dir=\'' + self.psppath + '\',', file=finp)
         print('  outdir=\'.\',', file=finp)
-        efield = (self.field['status'] == True)
-        dipfield = (self.dipole['status'] == True)
+        efield = (self.field['status'] is True)
+        dipfield = (self.dipole['status'] is True)
         if efield or dipfield:
             print('  tefield=.true.,', file=finp)
             if dipfield:
@@ -858,12 +1143,12 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                         self.output['disk_io'] = 'none'
                 if 'disk_io' in list(self.output.keys()):
                     if self.output['disk_io'] in ['high', 'low', 'none']:
-                        print('  disk_io=\''+self.output['disk_io']+'\',', file=finp)
+                        print('  disk_io=\'' + self.output['disk_io'] + '\',', file=finp)
 
                 if 'wf_collect' in list(self.output.keys()):
                     if self.output['wf_collect']:
                         print('  wf_collect=.true.,', file=finp)
-        if self.opt_algorithm!='ase3' or not self.cancalc:
+        if self.ion_dynamics != 'ase3':
             # we basically ignore convergence of total energy differences between
             # ionic steps and only consider fmax as in ase
             print('  etot_conv_thr=1d0,', file=finp)
@@ -912,11 +1197,11 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         ### &SYSTEM ###
         print('/\n&SYSTEM\n  ibrav=0,\n  celldm(1)=1.8897261245650618d0,', file=finp)
         print('  nat='+str(self.natoms)+',', file=finp)
-        self.atoms2species() #self.convertmag2species()
+        self.atoms2species()  # self.convertmag2species()
         print('  ntyp='+str(self.nspecies)+',', file=finp)
         if self.tot_charge is not None:
             print('  tot_charge='+num2str(self.tot_charge)+',', file=finp)
-        if self.calcmode!='hund':
+        if self.calculation!='hund':
             inimagscale = 1.0
         else:
             inimagscale = 0.9
@@ -987,16 +1272,16 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             spcount  = 1
             if self.nel == None:
                 self.nvalence, self.nel = self.get_nvalence()
-            for species in self.species: # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
+            for species in self.species:  # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
                 spec = self.specdict[species]
                 el = spec.s
                 mag = spec.magmom/self.nel[el]
-                assert np.abs(mag) <= 1. # magnetization oversaturated!!!
-                print('  starting_magnetization(%d)=%s,' % (spcount,num2str(float(mag))), file=finp)
+                assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
+                print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
                 spcount += 1
         if self.isolated is not None:
-            print('  assume_isolated=\''+self.isolated+'\',', file=finp)
-        print('  input_dft=\''+self.xc+'\',', file=finp)
+            print('  assume_isolated=\'' + self.isolated + '\',', file=finp)
+        print('  input_dft=\'' + self.xc + '\',', file=finp)
         if self.beefensemble:
             print('  ensemble_energies=.true.,', file=finp)
             if self.printensemble:
@@ -1015,7 +1300,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             except:
                 pass
         if dipfield or efield:
-            print('  edir='+str(edir)+',', file=finp)
+            print('  edir=' + str(edir) + ',', file=finp)
         if dipfield:
             if 'emaxpos' in list(self.dipole.keys()):
                 emaxpos = self.dipole['emaxpos']
@@ -1116,10 +1401,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if 'diag' in list(self.convergence.keys()):
             print("  diagonalization='{0:s}',".format(self.convergence['diag']), file=finp)
 
-        if self.calcmode != 'hund':
-            print('  conv_thr='+num2str(self.conv_thr)+',', file=finp)
+        if self.calculation != 'hund':
+            print('  conv_thr=' + num2str(self.conv_thr) + ',', file=finp)
         else:
-            print('  conv_thr='+num2str(self.conv_thr*500.)+',', file=finp)
+            print('  conv_thr=' + num2str(self.conv_thr*500.) + ',', file=finp)
         for x in list(self.convergence.keys()):
             if x == 'mixing':
                 print('  mixing_beta='+num2str(self.convergence[x])+',', file=finp)
@@ -1131,20 +1416,20 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 print('  mixing_mode=\''+self.convergence[x]+'\',', file=finp)
             elif x == 'diago_cg_maxiter':
                 print('  diago_cg_maxiter='+str(self.convergence[x])+',', file=finp)
-        if self.startingpot is not None and self.calcmode != 'hund':
+        if self.startingpot is not None and self.calculation != 'hund':
             print('  startingpot=\''+self.startingpot+'\',', file=finp)
-        if self.startingwfc is not None and self.calcmode != 'hund':
+        if self.startingwfc is not None and self.calculation != 'hund':
             print('  startingwfc=\''+self.startingwfc+'\',', file=finp)
 
         # automatically generated parameters
-        el_int_attrs = ['electron_maxstep', 'mixing_ndim', 'mixing_fixed_ns', 'ortho_para',
-                        'diago_cg_maxiter', 'diago_david_ndim']
+        el_int_attrs = ['electron_maxstep', 'mixing_ndim', 'mixing_fixed_ns',
+                        'ortho_para', 'diago_cg_maxiter', 'diago_david_ndim']
         for attr in el_int_attrs:
             value = getattr(self, attr)
             if value is not None:
                 print('  {0:s}={1:d},'.format(attr, value), file=finp)
 
-        el_float_attrs = ['conv_thr', 'conv_thr_init', 'conv_thr_multi', 'mixing_beta',
+        el_float_attrs = ['conv_thr_init', 'conv_thr_multi', 'mixing_beta',
                         'diago_thr_init', 'efield']
         for attr in el_float_attrs:
             value = getattr(self, attr)
@@ -1158,23 +1443,22 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
                 print('  {0:s}={1:s},'.format(attr, bool2str(value)), file=finp)
 
         ### &IONS ###
-        if self.opt_algorithm == 'ase3' or not ionssec:
+        if self.ion_dynamics == 'ase3' or not ionssec:
             simpleconstr, otherconstr = [], []
         else:
             simpleconstr, otherconstr = convert_constraints(self.atoms)
 
-        if self.opt_algorithm is None:
+        if self.ion_dynamics is None:
             self.optdamp = False
         else:
-            self.optdamp = (self.opt_algorithm.upper() == 'DAMP')
-        if self.opt_algorithm is not None and ionssec:
+            self.optdamp = (self.ion_dynamics.upper() == 'DAMP')
+
+        if self.ion_dynamics is not None and ionssec:
             if len(otherconstr) != 0:
                 print('/\n&IONS\n  ion_dynamics=\'damp\',', file=finp)
                 self.optdamp = True
-            elif self.cancalc:
-                print('/\n&IONS\n  ion_dynamics=\''+self.opt_algorithm+'\',', file=finp)
             else:
-                print('/\n&IONS\n  ion_dynamics=\'bfgs\',', file=finp)
+                print('/\n&IONS\n  ion_dynamics=\'' + self.ion_dynamics + '\',', file=finp)
             if self.ion_positions is not None:
                 print('  ion_positions=\''+self.ion_positions+'\',', file=finp)
         elif self.ion_positions is not None:
@@ -1228,14 +1512,14 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
 
         ### CELL_PARAMETERS
-        print('/\nCELL_PARAMETERS', file=finp)
+        print('/\nCELL_PARAMETERS alat', file=finp)
         for i in range(3):
             print('%21.15fd0 %21.15fd0 %21.15fd0' % tuple(self.atoms.cell[i]), file=finp)
 
         print('ATOMIC_SPECIES', file=finp)
         for species in self.species:   # PSP ORDERING FOLLOWS SPECIESINDEX
             spec = self.specdict[species]
-            print(species, num2str(spec.mass), spec.s + '.UPF', file=finp)
+            print(species, num2str(spec.mass), spec.symbol + '.UPF', file=finp)
 
         print('ATOMIC_POSITIONS {crystal}', file=finp)
         if len(simpleconstr) == 0:
@@ -1258,423 +1542,257 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             kp = self.kpts
         else:
             kp = overridekpts
-        if kp == 'gamma':
-            print('K_POINTS Gamma', file=finp)
+        if isinstance(kp, str):
+            if kp == 'gamma':
+                print('K_POINTS Gamma', file=finp)
         else:
-            x = np.shape(kp)
-            if len(x)==1:
+            if kp.ndim == 1:
                 print('K_POINTS automatic', file=finp)
                 print(kp[0], kp[1], kp[2], file=finp)
                 if overridekptshift is None:
-                    print(self.kptshift[0],self.kptshift[1],self.kptshift[2], file=finp)
+                    print(self.kptshift[0], self.kptshift[1],
+                          self.kptshift[2], file=finp)
                 else:
-                    print(overridekptshift[0],overridekptshift[1],overridekptshift[2], file=finp)
+                    print(overridekptshift[0], overridekptshift[1],
+                          overridekptshift[2], file=finp)
             else:
                 print('K_POINTS crystal', file=finp)
-                print(x[0], file=finp)
-                w = 1./x[0]
-                for k in kp:
-                    if len(k) == 3:
-                        print('%24.15e %24.15e %24.15e %24.15e' % (k[0],k[1],k[2],w), file=finp)
+                nrows, ncols = kp.shape
+                print(nrows, file=finp)
+                w = 1.0 / nrows
+                for row in kp:
+                    if ncols == 3:
+                        print('{0:24.15e} {1:24.15e} {2:24.15e} {w:24.15e}'.format(
+                            *row, w=w), file=finp)
                     else:
-                        print('%24.15e %24.15e %24.15e %24.15e' % (k[0],k[1],k[2],k[3]), file=finp)
+                        print('{0:24.15e} {1:24.15e} {2:24.15e} {3:24.15e}'.format(
+                            *row), file=finp)
 
-        ### closing PWscf input file ###
+        # closing PWscf input file
         finp.close()
         if self.verbose == 'high':
             print('\nPWscf input file {} written\n'.format(fname))
 
-    def set_atoms(self, atoms):
-        if self.atoms is None or not self.started:
-            self.atoms = atoms.copy()
+    def read_forces(self, getall=False):
+        '''
+        Read the forces from the PWSCF output file
+
+        Args:
+            getall : bool
+                If ``True`` the forces for all relaxation steps are returned,
+                in other case only the last configuration is returned.
+
+        Returns:
+            forceslist : numpy.array or list of numpy.array's
+        '''
+
+        forceslist = []
+
+        with open(self.log, 'rU') as fout:
+            lines = fout.readlines()
+
+        forcestart = '     Forces acting on atoms (Ry/au):'
+        forceend = '     Total force = '
+
+        startlnos = [no for no, line in enumerate(lines) if forcestart in line]
+        endlnos = [no for no, line in enumerate(lines) if forceend in line]
+
+        forcelinenos = zip(startlnos, endlnos)
+
+        for start, end in forcelinenos:
+            forces = np.zeros((self.natoms, 3), dtype=float)
+            for line in lines[start: end]:
+                linesplit = line.split()
+                if len(linesplit) > 0 and linesplit[0] == 'atom':
+                    fxyz = [float(x) for x in linesplit[-3:]]
+                    atom_number = int(linesplit[1]) - 1
+                    forces[atom_number] = fxyz
+            forces *= Rydberg / Bohr
+            forceslist.append(forces)
+
+        del lines
+
+        if getall:
+            return forceslist
         else:
-            if len(atoms) != len(self.atoms):
-                self.stop()
-                self.nvalence = None
-                self.nel = None
-                self.recalculate = True
+            return forceslist[-1]
 
-            x = atoms.cell-self.atoms.cell
-            if np.max(x) > 1E-13 or np.min(x) < -1E-13:
-                self.stop()
-                self.recalculate = True
-            if (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any():
-                self.stop()
-                self.nvalence = None
-                self.nel = None
-                self.recalculate = True
-            x = atoms.positions - self.atoms.positions
-            if np.max(x) > 1E-13 or np.min(x) < -1E-13 or (not self.started and not self.got_energy):
-                self.recalculate = True
-        self.atoms = atoms.copy()
+    def read_energies(self, getall=False):
+        '''
+        Read the energies from the PWSCF output file
 
-    def update(self, atoms):
-        if self.atoms is None:
-            self.set_atoms(atoms)
-        x = atoms.cell-self.atoms.cell
-        morethanposchange = np.max(x)>1E-13 or np.min(x)<-1E-13 or len(atoms)!=len(self.atoms) \
-            or (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any()
-        x = atoms.positions-self.atoms.positions
-        if np.max(x)>1E-13 or np.min(x)<-1E-13 or morethanposchange \
-            or (not self.started and not self.got_energy) or self.recalculate:
-            self.recalculate = True
-            if self.opt_algorithm != 'ase3' or self.calcmode in ('scf','nscf') or \
-                morethanposchange:
-                self.stop()
-            self.read(atoms)
-        elif self.only_init:
-            self.read(atoms)
+        The method read total energies (zero point) and smearing contributions
+        (-TS) and returns either a tuple ``(energy, free_energy)`` or a list
+        of such tuples
+
+        Args:
+            all : bool
+                If ``True`` the forces for all relaxation steps are returned,
+                in other case only the last configuration is returned.
+
+        Returns:
+            energylist : tuple or list of tuples
+        '''
+
+        with open(self.log, 'rU') as fout:
+            lines = fout.readlines()
+
+        energylinenos = [no for no, line in enumerate(lines) if
+                ('!' in line and 'total energy' in line)]
+
+        tslinenos = [no for no, line in enumerate(lines) if
+                ('     smearing contrib. (-TS)' in line)]
+
+        energies = [float(lines[no].split()[-2])*Rydberg for no in energylinenos]
+        free_energies = [float(lines[no].split()[-2])*Rydberg for no in tslinenos]
+
+        energylist = list(zip(energies, free_energies))
+
+        del lines
+
+        if getall:
+            return energylist
         else:
-            self.atoms = atoms.copy()
+            return energylist[-1]
 
-    def get_name(self):
-        return 'QE-ASE3 interface'
+    def read_cell(self, getall=False):
+        '''
+        Read unit cell parameters from the PWSCF output file
 
-    def get_version(self):
-        return __version__
+        Args:
+            getall : bool
+                If ``True`` the cells for all relaxation steps are returned,
+                in other case only the last cell is returned.
 
-    def init_only(self, atoms):
-        if self.atoms is None:
-            self.set_atoms(atoms)
-        x = atoms.positions-self.atoms.positions
-        if np.max(x) > 1e-13 or np.min(x) < -1e-13 or (not self.started and not self.got_energy) or self.recalculate:
-            self.recalculate = True
-            if self.opt_algorithm != 'ase3':
-                self.stop()
+        Returns:
+            celllist : numpy.array or list of numpy.array's
+                Either a 3x3 array with unit cell parameters or list of such
+                arrays
+        '''
 
-            if not self.started:
-                self.initialize(atoms)
-                self.only_init = True
-            elif self.recalculate:
-                self.only_init = True
-                if self.opt_algorithm == 'ase3':
-                    p = atoms.positions
-                    self.atoms = atoms.copy()
-                    print('G', file=self.cinp)
-                    for x in p:
-                        print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
-                self.cinp.flush()
+        celllist = []
 
-    def read(self, atoms):
-        if self.writeversion:
-            self.writeversion = False
-            with open(self.log, 'a') as flog:
-                flog.write('  python dir           : {}\n'.format(self.mypath))
-                exedir = os.path.dirname(os.popen('which pw.x').readline())
-                flog.write('  espresso dir         : {}\n'.format(exedir))
-                flog.write('  pseudo dir           : {}\n'.format(self.psppath))
-                flog.write('  ase-espresso version : {}\n'.format(self.get_version()))
-                flog.write('  ase-espresso git rev : {}\n\n\n'.format(GITREVISION))
+        with open(self.log, 'rU') as fout:
+            lines = fout.readlines()
 
-        if not self.started and not self.only_init:
-            fresh = True
-            self.initialize(atoms)
+        # additional unit cell information
+        bli_lines = [line for line in lines if 'bravais-lattice index' in line]
+        brav_latt_indices = [int(line.split('=')[1].strip()) for line in bli_lines]
+
+        lp_lines = [line for line in lines if 'lattice parameter (alat)' in line]
+        lattice_parameters = [float(line.strip().split('=')[1].strip().split()[0])*Bohr for line in lp_lines]
+
+        ca_linenos = [no for no, line in enumerate(lines) if
+                      'crystal axes: (cart. coord. in units of alat)' in line]
+
+        for i, no in enumerate(ca_linenos):
+            cell = np.zeros((3, 3), dtype=float)
+
+            for number, line in enumerate(lines[no + 1: no + 4]):
+                line = line.split('=')[1].strip()[1:-1]
+                values = [float(value) for value in line.split()]
+                cell[number, :] = values
+                cell *= lattice_parameters[i]
+            celllist.append(cell)
+
+        del lines
+
+        if getall:
+            return celllist
         else:
-            fresh = False
-        if self.recalculate:
-            if not fresh and not self.only_init:
-                if self.opt_algorithm == 'ase3':
-                    p = atoms.positions
-                    self.atoms = atoms.copy()
-                    print('G', file=self.cinp)
-                    for x in p:
-                        print(('%.15e %.15e %.15e' % (x[0],x[1],x[2])).replace('e','d'), file=self.cinp)
-                self.cinp.flush()
-            self.only_init = False
-            s = open(self.log, 'a')
-            a = self.cout.readline()
-            s.write(a)
-            atom_occ = {}
-            magmoms = np.zeros(len(atoms))
-            while a != '' and a[:17] != '!    total energy' and a[:13] != '     stopping' and a[:20] != '     convergence NOT':
-                a = self.cout.readline()
-                s.write(a)
-                s.flush()
+            return celllist[-1]
 
-                if a[:19] == '     iteration #  1':
-                    while (a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT' and
-                           a[:22]!=' --- exit write_ns ---' ) :
-                        a = self.cout.readline()
-                        s.write(a)
-                        s.flush()
-                        if a[:5] == 'atom ':
-                            atomnum = int(a[8:10])
-                            if a[12:25] == 'Tr[ns(na)] = ':#'atom    1   Tr[ns(na)] =   1.00000'
-                                N0 = float(a[27:35])/2.
-                            elif a[12:42] == 'Tr[ns(na)] (up, down, total) =':
-                                #'   4.20435  1.27943  5.48377'
-                                N0 = [float(a[42:52]), float(a[53:62]), float(a[63:71])]
-                                N0 = N0[-1] # only taking the total occupation
-                            atom_occ[atomnum-1] = {}
-                            atom_occ[atomnum-1][0] = N0
-                if a[:39]=='     End of self-consistent calculation':
-                    while a!='' and a[:17]!='!    total energy' and a[:13]!='     stopping' and a[:20]!='     convergence NOT':
-                        a = self.cout.readline()
-                        s.write(a)
-                        s.flush()
-                        if a[:5]=='atom ':
-                            atomnum = int(a[8:10])
-                            if a[12:25]=='Tr[ns(na)] = ':#'atom    1   Tr[ns(na)] =   1.00000'
-                                Nks = float(a[27:35])/2.
-                            elif a[12:42]=='Tr[ns(na)] (up, down, total) =':
-                                #'   4.20435  1.27943  5.48377'
-                                Nks = [float(a[42:52]), float(a[53:62]), float(a[63:71])]
-                                Nks = Nks[-1] # only taking the total occupation
-                                magmom = Nks[0] - Nks[1]
-                                magmoms[atomnum] = magmom
-                            atom_occ[atomnum-1]['ks']=Nks
+    def read_positions(self, getall=False):
+        '''
+        Read ion positions from the PWSCF output file
+
+        Args:
+            getall : bool
+                If ``True`` the positions for all relaxation steps are
+                returned, in other case only the last consiguration is
+                returned.
+
+        Returns:
+            positionslist : tuple or list of tuples
+                A tuple contains list of symbols and an array of ion positions
+        '''
+
+        positionslist = []
+
+        with open(self.log, 'rU') as fout:
+            lines = fout.readlines()
+
+        carteslinenos = [no for no, line in enumerate(lines) if 'Cartesian axes' in line]
+        crystallinenos = [no for no, line in enumerate(lines) if 'ATOMIC_POSITIONS (crystal)' in line]
+
+        for no in carteslinenos:
+            positions = np.zeros((self.natoms, 3), dtype=float)
+            symbols = []
+            for line in lines[no + 3:]:
+                words = line.split()
+                if len(words) == 0:
                     break
-            if a[:20]=='     convergence NOT':
-                self.stop()
-                raise RuntimeError('scf cycles did not converge\nincrease maximum number of steps and/or decreasing mixing')
-            elif a[:13]=='     stopping':
-                self.stop()
-                self.checkerror()
-                #if checkerror shouldn't find an error here,
-                #throw this generic error
-                raise RuntimeError('SCF calculation failed')
-            elif a=='' and self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
-                self.checkerror()
-                #if checkerror shouldn't find an error here,
-                #throw this generic error
-                raise RuntimeError('SCF calculation failed')
-            self.atom_occ = atom_occ
-            self.results['magmoms'] = magmoms
-            self.results['magmom'] = np.sum(magmoms)
-            if self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md', 'hund'):
-                self.energy_free = float(a.split()[-2])*Rydberg
-                # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-                if self.occupations == 'smearing' and self.calcmode != 'hund' and self.smearing[0].upper() != 'M' and self.smearing[0].upper() != 'C' and not self.optdamp:
-                    a = self.cout.readline()
-                    s.write(a)
-                    exx = False
-                    while a[:13] != '     smearing':
-                        a = self.cout.readline()
-                        s.write(a)
-                        if a.find('EXX') > -1:
-                            exx = True
-                            break
-                    if exx:
-                        self.ST = 0.0
-                        self.energy_zero = self.energy_free
-                    else:
-                        self.ST = -float(a.split()[-2])*Rydberg
-                        self.energy_zero = self.energy_free + 0.5*self.ST
-                else:
-                    self.ST = 0.0
-                    self.energy_zero = self.energy_free
-            else:
-                self.energy_free = None
-                self.energy_zero = None
+                atom_number = int(words[0]) - 1
+                xyz = [float(x) for x in words[-4:-1]]
+                positions[atom_number] = xyz
+                symbols.append(words[1].strip('0123456789'))
 
-            self.got_energy = True
+            positionslist.append((symbols, positions))
 
-            a = self.cout.readline()
-            s.write(a)
-            s.flush()
+        del lines
 
-            if self.calcmode in ('ase3', 'relax', 'scf', 'vc-relax', 'vc-md', 'md'):
-                if self.opt_algorithm == 'ase3' and self.calcmode != 'scf':
-                    sys.stdout.flush()
-                    while a[:5] != ' !ASE':
-                        a = self.cout.readline()
-                        s.write(a)
-                        s.flush()
-                    self.forces = np.empty((self.natoms, 3), np.float)
-                    for i in range(self.natoms):
-                        self.cout.readline()
-                    for i in range(self.natoms):
-                        self.forces[i][:] = [float(x) for x in self.cout.readline().split()]
-                    self.forces *= rydberg_over_bohr
-                else:
-                    a = self.cout.readline()
-                    s.write(a)
-                    if not self.dontcalcforces:
-                        while a[:11] != '     Forces':
-                            a = self.cout.readline()
-                            s.write(a)
-                            s.flush()
-                        a = self.cout.readline()
-                        s.write(a)
-                        self.forces = np.empty((self.natoms, 3), np.float)
-                        for i in range(self.natoms):
-                            a = self.cout.readline()
-                            while a.find('force') < 0:
-                                s.write(a)
-                                a = self.cout.readline()
-                            s.write(a)
-                            forceinp = a.split()
-                            self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
-                        self.forces *= rydberg_over_bohr
-                    else:
-                        self.forces = None
-            else:
-                self.forces = None
-            self.recalculate = False
-            s.close()
-            if self.opt_algorithm != 'ase3':
-                self.stop()
-
-            #get final energy and forces for internal QE relaxation run
-            if self.calcmode in ('relax','vc-relax','vc-md','md'):
-                if self.opt_algorithm == 'ase3':
-                    self.stop()
-                p = os.popen('grep -n "!    total" '+self.log+' | tail -1','r')
-                n = int(p.readline().split(':')[0])-1
-                p.close()
-                f = open(self.log,'r')
-                for i in range(n):
-                    f.readline()
-                self.energy_free = float(f.readline().split()[-2])*Rydberg
-                # get S*T correction (there is none for Marzari-Vanderbilt=Cold smearing)
-                if self.occupations=='smearing' and self.calcmode!='hund' and self.smearing[0].upper()!='M' and self.smearing[0].upper()!='C' and not self.optdamp:
-                    a = f.readline()
-                    exx = False
-                    while a[:13] != '     smearing':
-                        a = f.readline()
-                        if a.find('EXX') > -1:
-                            exx = True
-                            break
-                    if exx:
-                        self.ST = 0.0
-                        self.energy_zero = self.energy_free
-                    else:
-                        self.ST = -float(a.split()[-2])*Rydberg
-                        self.energy_zero = self.energy_free + 0.5*self.ST
-                else:
-                    self.ST = 0.0
-                    self.energy_zero = self.energy_free
-
-                if self.U_projection_type == 'atomic' and not self.dontcalcforces:
-                    a = f.readline()
-                    while a[:11] != '     Forces':
-                        a = f.readline()
-                    f.readline()
-                    self.forces = np.empty((self.natoms, 3), np.float)
-                    for i in range(self.natoms):
-                        a = f.readline()
-                        while a.find('force') < 0:
-                            a = f.readline()
-                        forceinp = a.split()
-                        self.forces[i][:] = [float(x) for x in forceinp[len(forceinp)-3:]]
-                    self.forces *= rydberg_over_bohr
-                f.close()
-
-            self.results['energy'] = self.energy_zero
-            self.results['free_energy'] = self.energy_free
-            self.results['forces'] = self.forces
-            self.checkerror()
-
-    def initialize(self, atoms):
-        """ Create the pw.inp input file and start the calculation.
-        If ``self.site.batchmode=False`` only the input file will
-        be written for manual submission.
-        """
-        if not self.started:
-            self.atoms = atoms.copy()
-
-            self.atoms2species()
-            #s = a.get_chemical_symbols()
-            #m = a.get_masses()
-            #sd = {}
-            #for x in zip(s, m):
-            #    sd[x[0]] = x[1]
-            #k = sd.keys()
-            #k.sort()
-            #self.species = [(x,sd[x]) for x in k] # UPDATE: NOT COMPATIBLE WITH MAGNETIC PARTS
-            #self.nspec = len(self.species)
-            self.natoms = len(self.atoms)
-            #self.spos = zip(s, a.get_scaled_positions()) # UPDATE to have species indices
-            self.check_spinpol()
-            self.writeinputfile()
-        if self.cancalc:
-            self.start()
-
-    def check_spinpol(self):
-        mm = self.atoms.get_initial_magnetic_moments()
-        sp = mm.any()
-        self.summed_magmoms = np.sum(mm)
-        if sp:
-            if not self.spinpol and not self.noncollinear:
-                raise KeyError('Explicitly specify spinpol=True or noncollinear=True for spin-polarized systems')
-            elif abs(self.sigma) <= self.sigma_small and not self.fix_magmom:
-                raise KeyError('Please use fix_magmom=True for sigma=0.0 eV and spinpol=True. Hopefully this is not an extended system...?')
+        if getall:
+            return positionslist
         else:
-            if self.spinpol and abs(self.sigma) <= self.sigma_small:
-                self.fix_magmom = True
-        if abs(self.sigma) <= self.sigma_small:
-            self.occupations = 'fixed'
+            return positionslist[-1]
 
-    def start(self):
-        if not self.started:
-            if self.single_calculator:
-                while len(espresso_calculators)>0:
-                    espresso_calculators.pop().stop()
-                espresso_calculators.append(self)
-            if self.site.batchmode:
-                cdir = os.getcwd()
-                os.chdir(self.localtmp)
-                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw.inp '+self.scratch)
-                if self.calcmode != 'hund':
-                    if not self.proclist:
-                        self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw.inp')
-                    else:
-                        self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
-                                self.myncpus, self.scratch,
-                                'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
-                else:
-                    self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
-                    os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                    os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
-                    self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
-                os.chdir(cdir)
-            else:
-                os.system('cp '+self.localtmp+'/pw.inp '+self.scratch)
-                if self.calcmode != 'hund':
-                    os.chdir(self.scratch)
-                    self.cinp, self.cout = os.popen2('pw.x -in pw.inp')
-                else:
-                    os.chdir(self.scratch)
-                    subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
-                    
-                    os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                    shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
-                    os.chdir(self.scratch)
-                    self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
+    def read_stress(self, getall=False):
+        '''
+        Read the stress from the PWSCF output file
 
-            self.started = True
+        Args:
+            getall : bool
+                If ``True`` the forces for all relaxation steps are returned,
+                in other case only the last configuration is returned.
 
-    def stop(self):
-        if self.started:
-            if self.opt_algorithm == 'ase3':
-                #sending 'Q' to espresso tells it to quit cleanly
-                print('Q', file=self.cinp)
-                try:
-                    self.cinp.flush()
-                except IOError:
-                    #espresso may have already shut down, so flush may fail
-                    pass
-            else:
-                self.cinp.flush()
-            s = open(self.log,'a')
-            a = self.cout.readline()
-            s.write(a)
-            while a != '':
-                a = self.cout.readline()
-                s.write(a)
-                s.flush()
-            s.close()
-            self.cinp.close()
-            self.cout.close()
-            self.started = False
+        Returns:
+            stresslist : numpy.array or list of numpy.array's
+        '''
 
+        stresslist = []
+
+        with open(self.log, 'rU') as fout:
+            lines = fout.readlines()
+
+        stressstr = '          total   stress  (Ry/bohr**3) '
+        stresslnos = [no for no, line in enumerate(lines) if stressstr in line]
+
+        if len(stresslnos) == 0:
+            return None
+
+        for lineno in stresslnos:
+            stress = np.zeros((3, 3), dtype=float)
+            for nrow, line in enumerate(lines[lineno + 1: lineno + 4]):
+                linesplit = line.split()
+                stressrow = [float(x) for x in linesplit[:3]]
+                stress[nrow] = stressrow
+            # ASE convention for the stress tensor appears to differ
+            # from the PWscf one by a factor of -1
+            stress = -1.0 * stress * Rydberg / Bohr**3
+            stresslist.append(stress)
+
+        del lines
+
+        if getall:
+            return stresslist
+        else:
+            return stresslist[-1]
 
     def topath(self, filename):
         if os.path.isabs(filename):
             return filename
         else:
-            return os.path.join(self.sdir, filename)
-
+            return os.path.join(self.site.submitdir, filename)
 
     def save_output(self, filename='calc.tgz'):
         """
@@ -1686,7 +1804,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         os.system('tar czf ' + filename + ' --directory=' + self.scratch + ' calc.save')
 
-
     def load_output(self, filename='calc.tgz'):
         """
         Restore the contents of previously saved calc.save directory.
@@ -1695,7 +1812,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         file = self.topath(filename)
 
         os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
-
 
     def save_flev_output(self, filename='calc.tgz'):
         """
@@ -1711,7 +1827,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save `find . -name "calc.occup*";find . -name "calc.paw"`')
 
-
     def load_flev_output(self, filename='calc.tgz'):
         """
         Restore the contents of previously saved calc.save directory
@@ -1726,7 +1841,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         with open(self.scratch + '/calc.save/fermilevel.txt', 'r') as ftxt:
             self.inputfermilevel = float(ftxt.readline())
 
-
     def save_chg(self, filename='chg.tgz'):
         """
         Save charge density.
@@ -1737,7 +1851,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"`')
 
-
     def load_chg(self, filename='chg.tgz'):
         """
         Load charge density.
@@ -1746,7 +1859,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         file = self.topath(filename)
 
         os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
-
 
     def save_wf(self, filename='wf.tgz'):
         """
@@ -1758,7 +1870,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         os.system('tar czf ' + filename + ' --directory=' + self.scratch + ' --exclude=calc.save .')
 
-
     def load_wf(self, filename='wf.tgz'):
         """
         Load wave functions.
@@ -1767,7 +1878,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         file = self.topath(filename)
 
         os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
-
 
     def save_flev_chg(self, filename='chg.tgz'):
         """
@@ -1783,7 +1893,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"` calc.save/fermilevel.txt')
-
 
     def load_flev_chg(self, filename='efchg.tgz'):
         """
@@ -1899,42 +2008,10 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
     def get_xc_functional(self):
         return self.xc
 
-    def get_final_stress(self):
-        """
-        returns 3x3 stress tensor after an internal
-        unit cell relaxation in quantum espresso
-        (also works for calcstress=True)
-        """
+    def get_stress(self, atoms=None):
 
-        self.stop()
-
-        p = os.popen('grep -3 "total   stress" '+self.log+' | tail -3', 'r')
-        s = p.readlines()
-        p.close()
-
-        if len(s) != 3:
-            raise RuntimeError('stress was not calculated\nconsider specifying calcstress or running a unit cell relaxation')
-
-        stress = np.empty((3, 3), np.float)
-        for i in range(3):
-            stress[i][:] = [float(x) for x in s[i].split()[:3]]
-
-        return stress * Rydberg/Bohr**3
-
-
-    def get_stress(self, dummyself=None):
-        """ returns stress tensor in Voigt notation """
-        if self.calcstress:
-            # ASE convention for the stress tensor appears to differ
-            # from the PWscf one by a factor of -1
-            stress = -1.0 * self.get_final_stress()
-            # converting to Voigt notation as expected by ASE
-            stress = np.array([stress[0, 0], stress[1, 1], stress[2, 2],
-                               stress[1, 2], stress[0, 2], stress[0, 1]])
-            self.results['stress'] = stress
-            return stress
-        else:
-            raise NotImplementedError
+        self.update(atoms)
+        return self.results['stress']
 
     def get_magnetization(self):
         """
@@ -1997,9 +2074,24 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             msg += e
         raise RuntimeError(msg[:len(msg)-1])
 
+    def check_spinpol(self):
+        mm = self.atoms.get_initial_magnetic_moments()
+        sp = mm.any()
+        self.summed_magmoms = np.sum(mm)
+        if sp:
+            if not self.spinpol and not self.noncollinear:
+                raise KeyError('Explicitly specify spinpol=True or noncollinear=True for spin-polarized systems')
+            elif abs(self.sigma) <= self.sigma_small and not self.fix_magmom:
+                raise KeyError('Please use fix_magmom=True for sigma=0.0 eV and spinpol=True. Hopefully this is not an extended system...?')
+        else:
+            if self.spinpol and abs(self.sigma) <= self.sigma_small:
+                self.fix_magmom = True
+        if abs(self.sigma) <= self.sigma_small:
+            self.occupations = 'fixed'
+
     def relax_cell_and_atoms(self,
             cell_dynamics='bfgs', # {'none', 'sd', 'damp-pr', 'damp-w', 'bfgs'}
-            opt_algorithm='bfgs', # {'bfgs', 'damp'}
+            ion_dynamics='bfgs', # {'bfgs', 'damp'}
             cell_factor=1.2,
             cell_dofree=None,
             fmax=None,
@@ -2018,14 +2110,14 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         relaxed_atoms.set_calculator(some_espresso_calculator)
         """
         self.stop()
-        oldmode = self.calcmode
-        oldalgo = self.opt_algorithm
+        oldcalculation = self.calculation
+        oldalgo = self.ion_dynamics
         oldcell = self.cell_dynamics
         oldfactor = self.cell_factor
         oldfree = self.cell_dofree
-        self.cell_dynamics=cell_dynamics
-        self.opt_algorithm=opt_algorithm
-        self.cell_factor=cell_factor
+        self.cell_dynamics = cell_dynamics
+        self.ion_dynamics = ion_dynamics
+        self.cell_factor = cell_factor
         self.cell_dofree = cell_dofree
         oldfmax = self.fmax
         oldpress = self.press
@@ -2037,11 +2129,11 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             self.press = press
         if dpress is not None:
             self.dpress = dpress
-        self.calcmode = 'vc-relax'
+        self.calculation = 'vc-relax'
         self.recalculate = True
         self.read(self.atoms)
-        self.calcmode = oldmode
-        self.opt_algorithm = oldalgo
+        self.calculation = oldcalculation
+        self.ion_dynamics = oldalgo
         self.cell_dynamics = oldcell
         self.cell_factor = oldfactor
         self.cell_dofree = oldfree
@@ -2050,7 +2142,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         self.dpress = olddpress
 
     def relax_atoms(self,
-            opt_algorithm='bfgs', # {'bfgs', 'damp'}
+            ion_dynamics='bfgs', # {'bfgs', 'damp'}
             fmax=None
             ):
         """
@@ -2063,26 +2155,28 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         relaxed_atoms.set_calculator(some_espresso_calculator)
         """
         self.stop()
-        oldmode = self.calcmode
-        oldalgo = self.opt_algorithm
-        self.opt_algorithm=opt_algorithm
+        oldcalculation = self.calculation
+        oldalgo = self.ion_dynamics
+        self.ion_dynamics=ion_dynamics
         oldfmax = self.fmax
 
-        self.calcmode='relax'
+        self.calculation='relax'
         if fmax is not None:
             self.fmax = fmax
         self.recalculate=True
         self.read(self.atoms)
-        self.calcmode = oldmode
-        self.opt_algorithm = oldalgo
+        self.calculation = oldcalculation
+        self.ion_dynamics = oldalgo
         self.fmax = oldfmax
 
-
-    #runs one of the .x binaries of the espresso suite
-    #inp is expected to be in self.localtmp
-    #log will be created in self.localtmp
     def run_espressox(self, binary, inp, log=None, piperead=False,
-        parallel=True):
+                      parallel=True):
+        '''
+        runs one of the .x binaries of the espresso suite
+        inp is expected to be in self.localtmp
+        log will be created in self.localtmp
+        '''
+
         if log is None:
             ll = ''
         else:
@@ -2153,7 +2247,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             raise RuntimeError('get_fermi_level called before DFT calculation was run')
         return efermi
 
-
     def calc_pdos(self,
         Emin = None,
         Emax = None,
@@ -2209,8 +2302,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             if not hasattr(self, 'natoms'):
                 self.atoms2species()
                 self.natoms = len(self.atoms)
-            self.writeinputfile(filename='pwnscf.inp',
-                mode='nscf', usetetrahedra=tetrahedra, overridekpts=kpts,
+            self.write_input(filename='pwnscf.inp',
+                calculation='nscf', usetetrahedra=tetrahedra, overridekpts=kpts,
                 overridekptshift=kptshift, overridenbands=nbands,
                 suppressforcecalc=True)
             self.run_espressox('pw.x', 'pwnscf.inp', 'pwnscf.log')
@@ -2286,7 +2379,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         else:
             return self.dos_energies, self.dos_total, self.pdos
 
-
     def calc_bandstructure(self,
         kptpath,
         nbands = None,
@@ -2312,8 +2404,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         oldnosym = self.nosym
         self.noinv = True
         self.nosym = True
-        self.writeinputfile(filename='pwnscf.inp',
-            mode='nscf', overridekpts=kptpath,
+        self.write_input(filename='pwnscf.inp',
+            calculation='nscf', overridekpts=kptpath,
             overridenbands=nbands, suppressforcecalc=True)
         self.noinv = oldnoinv
         self.nosym = oldnosym
@@ -2419,7 +2511,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             projections = np.array(proj)
             return states, np.reshape(projections, (nkp, len(proj)/nkp, nbnd))
 
-
     def get_eigenvalues(self, kpt=None, spin=None, efermi=None):
         self.stop()
 
@@ -2484,7 +2575,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         else:
             return np.array(eig)
 
-
     def read_3d_grid(self, stream, log):
         f = open(self.localtmp+'/'+log, 'a')
         x = stream.readline()
@@ -2509,7 +2599,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         f.close()
         return (origin, cell, data)
-
 
     def read_2d_grid(self, stream, log):
         f = open(self.localtmp+'/' + log, 'a')
@@ -2576,7 +2665,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='charge.log')
 
-
     def extract_total_potential(self, spin='both'):
         """
         Obtains the total potential as a numpy array after a DFT calculation.
@@ -2627,7 +2715,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='vbare.log')
 
-
     def extract_local_dos_at_efermi(self):
         """
         Obtains the local DOS at the Fermi level as a numpy array after a DFT calculation.
@@ -2671,7 +2758,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             inputpp=[['plot_num',4]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='lentr.log')
-
 
     def extract_stm_data(self, bias):
         """
@@ -2717,7 +2803,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             inputpp=[['plot_num',6]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='magdens.log')
-
 
     def extract_wavefunction_density(self, band, kpoint=0, spin='up',
         gamma_with_sign=False):
@@ -2795,7 +2880,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             plot=[['fileout',self.topath(xsf)]],
             parallel=True, log='wfdens.log')
 
-
     def extract_electron_localization_function(self):
         """
         Obtains the ELF as a numpy array after a DFT calculation.
@@ -2840,7 +2924,6 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
             inputpp=[['plot_num',9]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='dens_wo_atm.log')
-
 
     def extract_int_local_dos(self, spin='both', emin=None, emax=None):
         """
@@ -3098,7 +3181,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         """
         #TODO: Implement some sort of tuning for these parameters?
         if pot_filename[0] != '/':
-            file = self.sdir + '/' + pot_filename
+            file = os.path.join(self.site.submitdir, pot_filename)
         else:
             file = pot_filename
         self.update(self.atoms)
@@ -3109,7 +3192,7 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
 
         favg = open(self.localtmp + '/avg.in', 'w')
         print('1', file=favg)
-        print(self.sdir + "/" + pot_filename, file=favg)
+        print(os.path.join(self.site.submitdir, pot_filename), file=favg)
         print('1.D0', file=favg)
         print('1440', file=favg)
         print(str(edir), file=favg)
@@ -3178,8 +3261,8 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         if not hasattr(self, 'natoms'):
             self.atoms2species()
             self.natoms = len(self.atoms)
-        self.writeinputfile(filename='nonsense.inp',
-                            mode='nscf', overridekpts=(1,1,1),
+        self.write_input(filename='nonsense.inp',
+                            calculation='nscf', overridekpts=(1,1,1),
                             overridekptshift=(0,0,0), overridenbands=1,
                             suppressforcecalc=True)
         self.run_espressox('pw.x', 'nonsense.inp', 'nonsense.log', parallel=False)
@@ -3187,60 +3270,157 @@ svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espress
         del self.convergence
         self.convergence = convsave
 
-
     def get_world(self):
         from .worldstub import world
         return world(self.site.nprocs)
 
-
-    def get_number_of_scf_steps(self, all=False):
-        """Get number of steps for convered scf. Returns an array.
-        Option 'all' gives all numbers of steps in log,
-        not only for the latest scf."""
-        if all:
-            tail = 'tail'
-        else:
-            tail = 'tail -1'
-        p = os.popen('grep "convergence has been achieved in" '+self.log+' | '+tail, 'r')
-        s = p.readlines()
-        p.close()
-        if not all:
-            assert len(s) < 2
-        if len(s) == 0:
-            return None
-        else:
-            out = []
-            for s_ in s:
-                tmp = s_.split('in')
-                out.append(int(tmp[-1].split('iterations')[0]))
-            return out
-
-
-    def get_number_of_bfgs_steps(self):
-        """Get total number of internal BFGS steps."""
-        p = os.popen('grep "bfgs converged in" '+self.log+' | tail -1', 'r')
-        s = p.readlines()
-        p.close()
-        assert len(s) < 2
-        if len(s) == 0:
-            return None
-        else:
-            tmp = s[0].split('and')
-            return int(tmp[-1].split('bfgs')[0])
-
-    def get_forces(self, atoms):
-        self.update(atoms)
-        if self.newforcearray:
-            return self.forces.copy()
-        else:
-            return self.forces
-
-    def calculation_required(self, atoms, properties):
+    def get_output_header(self):
         '''
-        This method should check if the calculation is necessary be be performed
-
-        .. note :: now it doesn't check anything but returns True, this is done
-                   to be compatible with ase v3.9.1
+        Return a string with information about the execution environment
         '''
 
-        return True
+        exedir = os.path.dirname(os.popen('which pw.x').readline())
+
+        out = '\n'.join(['# python dir           : {}'.format(self.mypath),
+                         '# espresso dir         : {}'.format(exedir),
+                         '# pseudo dir           : {}'.format(self.psppath),
+                         '# ase-espresso version : {}'.format(self.get_version()),
+                         '# ase-espresso git rev : {}'.format(GITREVISION),
+                         ])
+        return out + '\n\n\n'
+
+    def __del__(self):
+        try:
+            self.stop()
+        except:
+            pass
+
+
+class iEspresso(Espresso):
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self._spawned = False
+        self.timeout = 200
+
+    def initialize(self, atoms):
+        '''
+        Create the scratch directories and pw.inp input file and
+        prepare for writing the input file
+        '''
+
+        if not self._initialized:
+            self.create_outdir()
+            self.logfile = open(self.log, 'a')
+
+        if self.psppath is None:
+            if os.environ['ESP_PSP_PATH'] is not None:
+                self.psppath = os.environ['ESP_PSP_PATH']
+            else:
+                raise ValueError('Unable to find pseudopotential path.'
+                    'Consider setting <ESP_PSP_PATH> environment variable')
+
+        self.atoms = atoms.copy()
+
+        self.atoms2species()
+
+        self.natoms = len(self.atoms)
+
+        self.check_spinpol()
+
+        self._initialized = True
+
+    @preserve_cwd
+    def run(self):
+
+        if self.site.batchmode:
+            self.localtmp.chdir()
+
+            subprocess.call(self.site.perHostMpiExec +
+                            ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+
+            if self.calculation != 'hund':
+                if not self.proclist:
+                    command = self.site.perProcMpiExec.format(self.scratch,
+                                'pw.x ' + self.parflags + ' -in pw.inp')
+
+                    if not self._spawned:
+                        self.child = pexpect.spawn(command)
+                        self._spawned = True
+                        self.child.logfile = self.logfile
+                        self.child.logfile.write(self.get_output_header())
+
+                        try:
+                            i = self.child.expect(['!ASE\s*\n(.*\n){4}',
+                                '     convergence NOT', '     stopping'],
+                                                  timeout=self.timeout)
+                            if i == 1:
+                                raise SCFMaxIterationsError()
+                            elif i == 2:
+                                raise SCFConvergenceError()
+                        except:
+                            print('# Exception was thrown by pexpect.expect')
+                            print(str(self.child))
+
+                    else:  # QE process is already spawned 
+
+                        self.child.send('C\n')
+                        for atom in self.atoms:
+                            self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
+
+                        try:
+                            i = self.child.expect(['!ASE\s*\n(.*\n){4}', '     convergence NOT', '     stopping'],
+                                                  timeout=self.timeout)
+                            if i == 1:
+                                raise SCFMaxIterationsError()
+                            elif i == 2:
+                                raise SCFConvergenceError()
+                        except:
+                            print('# Exception was thrown by pexpect.expect')
+                            print(str(self.child))
+                        self.child.logfile.flush()
+
+            else:  # calculation == 'hund'
+                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
+                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+
+        else:
+            self.localtmp.chdir()
+
+            pwinp = self.localtmp.joinpath('pw.inp')
+            Path.copy(pwinp, self.scratch)
+            command = 'pw.x -in pw.inp'
+
+            if not self._spawned:
+                self.child = pexpect.spawn(command)
+                self._spawned = True
+                self.child.logfile = self.logfile
+                self.child.logfile.write(self.get_output_header())
+                try:
+                    i = self.child.expect(['!ASE', '     convergence NOT', '     stopping'],
+                                          timeout=self.timeout)
+                    if i == 1:
+                        raise SCFMaxIterationsError()
+                    elif i == 2:
+                        raise SCFConvergenceError()
+                except:
+                    print('# Exception was thrown by pexpect.expect')
+                    print(str(self.child))
+
+            else:  # QE process is already spawned 
+
+                self.child.send('C\n')
+                for atom in self.atoms:
+                    self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
+                self.child.expect('!ASE', timeout=self.timeout)
+
+    def stop(self):
+
+        if self._spawned:
+            self.child.send('Q\n')
+
+        self.child.logfile.close()
