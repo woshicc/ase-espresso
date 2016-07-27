@@ -716,9 +716,7 @@ class Espresso(FileIOCalculator, object):
         self.write_input()
 
         # run
-        print('# in calculate before run: cdw is: ', os.getcwd())
         self.run()
-        print('# in calculate after run: cdw is: ', os.getcwd())
 
         self.recalculate = True
         # check for errors
@@ -831,11 +829,6 @@ class Espresso(FileIOCalculator, object):
         else:
             self.log = self.localtmp.joinpath(self.txt)
 
-        print('# in create_outdir end')
-        print('## localtmp: ', self.localtmp)
-        print('## scratch: ', self.scratch)
-        print('## log: ', self.log)
-
         atexit.register(self.clean)
 
     def set(self, **kwargs):
@@ -863,8 +856,9 @@ class Espresso(FileIOCalculator, object):
 
     @preserve_cwd
     def run(self):
-
-        print('# in run start: cwd: ', os.getcwd())
+        '''
+        Execute the expresso program `pw.x`
+        '''
 
         if self.single_calculator:
             while len(espresso_calculators) > 0:
@@ -873,10 +867,7 @@ class Espresso(FileIOCalculator, object):
 
         if self.site.batchmode:
             self.localtmp.chdir()
-            print('# in run batchmode: after chdir to localtmp ', os.getcwd())
-
-            subprocess.call(self.site.perHostMpiExec +
-                ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+            Path.copy2(self.localtmp.joinpath('pw.inp'), self.scratch)
 
             if self.calculation != 'hund':
                 if not self.proclist:
@@ -921,8 +912,6 @@ class Espresso(FileIOCalculator, object):
 
             self._running = True
 
-        print('# in run end: cwd: ', os.getcwd())
-
     def stop(self):
         if self._running:
 
@@ -934,8 +923,6 @@ class Espresso(FileIOCalculator, object):
         '''
 
         os.chdir(self.site.submitdir)
-
-        print('# in clean start: cdw is: ', os.getcwd())
 
         try:
             self.stop()
@@ -955,26 +942,20 @@ class Espresso(FileIOCalculator, object):
             removewf = True
             removesave = False
 
+        toremove = ['*.wfc*', '*.update', '*.igk*', '*.hub']
         if removewf:
-            for fil in self.scratch.files('*.wfc'):
-                fil.remove()
-            for fil in self.scratch.files('*.hub'):
-                fil.remove()
+            for pattern in toremove:
+                for fil in self.scratch.files(pattern):
+                    fil.remove()
 
         if not removesave:
-            subprocess.call(['cp', '-r', self.scratch, self.localtmp])
+            Path.copytree(self.scratch, self.localtmp.joinpath(self.scratch.basename()))
 
-        if self.site.batchmode:
-            with open(os.devnull, 'w') as devnull:
-                subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
-        else:
-            shutil.rmtree(self.scratch)
+        self.scratch.rmtree_p()
 
         if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
             os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
             os.system(self.site.mpdshutdown)
-
-        print('# in clean end: cdw is: ', os.getcwd())
 
     def atoms2species(self):
         '''

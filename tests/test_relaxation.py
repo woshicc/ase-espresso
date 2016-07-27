@@ -23,7 +23,8 @@ def test_relax_co_qe_bfgs():
                     xc='PBE',
                     calculation='relax',
                     ion_dynamics='bfgs',
-                    spinpol=False)
+                    spinpol=False,
+                    outdir='qe_bfgs')
 
     co.set_calculator(calc)
     calc.calculate(co)
@@ -46,7 +47,7 @@ def test_relax_co_ase_bfgs():
                     calculation='scf',
                     ion_dynamics=None,
                     spinpol=False,
-                    )
+                    outdir='qe_ase_bfgs')
 
     co.set_calculator(calc)
 
@@ -70,7 +71,8 @@ def test_relax_co_ase_interactive_bfgs():
                      xc='PBE',
                      calculation='relax',
                      ion_dynamics='ase3',
-                     spinpol=False)
+                     spinpol=False,
+                     outdir='qe_ase_interactive_bfgs')
 
     co.set_calculator(calc)
 
