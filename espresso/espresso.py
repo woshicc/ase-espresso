@@ -1548,7 +1548,7 @@ class Espresso(FileIOCalculator, object):
         else:
             if kp.ndim == 1:
                 print('K_POINTS automatic', file=finp)
-                print(kp[0], kp[1], kp[2], file=finp)
+                print(kp[0], kp[1], kp[2], file=finp, end=' ')
                 if overridekptshift is None:
                     print(self.kptshift[0], self.kptshift[1],
                           self.kptshift[2], file=finp)
