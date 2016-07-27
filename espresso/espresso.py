@@ -25,7 +25,7 @@ from ase.calculators.calculator import FileIOCalculator
 from ase.units import Hartree, Rydberg, Bohr
 
 from .utils import speciestuple, num2str, bool2str, convert_constraints
-from .siteconfig import SiteConfig
+from .siteconfig import SiteConfig, preserve_cwd
 
 __version__ = '0.1.2'
 
@@ -716,7 +716,9 @@ class Espresso(FileIOCalculator, object):
         self.write_input()
 
         # run
+        print('# in calculate before run: cdw is: ', os.getcwd())
         self.run()
+        print('# in calculate after run: cdw is: ', os.getcwd())
 
         self.recalculate = True
         # check for errors
@@ -859,11 +861,120 @@ class Espresso(FileIOCalculator, object):
         self.input_update()
         self.recalculate = True
 
-    def __del__(self):
+    @preserve_cwd
+    def run(self):
+
+        print('# in run start: cwd: ', os.getcwd())
+
+        if self.single_calculator:
+            while len(espresso_calculators) > 0:
+                espresso_calculators.pop().stop()
+            espresso_calculators.append(self)
+
+        if self.site.batchmode:
+            self.localtmp.chdir()
+            print('# in run batchmode: after chdir to localtmp ', os.getcwd())
+
+            subprocess.call(self.site.perHostMpiExec +
+                ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+
+            if self.calculation != 'hund':
+                if not self.proclist:
+                    command = self.site.perProcMpiExec.format(self.scratch,
+                                'pw.x ' + self.parflags + ' -in pw.inp')
+                    if self.ion_dynamics == 'ase3':
+                        raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
+                    else:
+                        with open(self.log, 'a') as flog:
+                            flog.write(self.get_output_header())
+                            output = pexpect.run(command, logfile=flog, timeout=None)
+                else:
+                    self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
+                            self.myncpus, self.scratch,
+                            'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
+
+            else:  # calculation == 'hund'
+                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
+                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+
+        else:  # not in batchmode
+
+            pwinp = self.localtmp.joinpath('pw.inp')
+            Path.copy(pwinp, self.scratch)
+            command = 'pw.x -in pw.inp'
+            if self.calculation != 'hund':
+                self.scratch.chdir()
+
+                with open(self.log, 'a') as flog:
+                    flog.write(self.get_output_header())
+                    output = pexpect.run(command, logfile=flog, timeout=None)
+            else:
+                self.scratch.chdir()
+                subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
+
+                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
+                shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
+                self.scratch.chdir()
+                self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
+
+            self._running = True
+
+        print('# in run end: cwd: ', os.getcwd())
+
+    def stop(self):
+        if self._running:
+
+            self._running = False
+
+    def clean(self):
+        '''
+        Remove the temporary files and directories
+        '''
+
+        os.chdir(self.site.submitdir)
+
+        print('# in clean start: cdw is: ', os.getcwd())
+
         try:
             self.stop()
         except:
             pass
+
+        if self.output is not None:
+            if 'removewf' in list(self.output.keys()):
+                removewf = self.output['removewf']
+            else:
+                removewf = True
+            if 'removesave' in list(self.output.keys()):
+                removesave = self.output['removesave']
+            else:
+                removesave = False
+        else:
+            removewf = True
+            removesave = False
+
+        if removewf:
+            for fil in self.scratch.files('*.wfc'):
+                fil.remove()
+            for fil in self.scratch.files('*.hub'):
+                fil.remove()
+
+        if not removesave:
+            subprocess.call(['cp', '-r', self.scratch, self.localtmp])
+
+        if self.site.batchmode:
+            #with open(os.devnull, 'w') as devnull:
+            subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
+        else:
+            shutil.rmtree(self.scratch)
+
+        if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
+            os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
+            os.system(self.site.mpdshutdown)
+
+        print('# in clean end: cdw is: ', os.getcwd())
 
     def atoms2species(self):
         '''
@@ -1480,136 +1591,6 @@ class Espresso(FileIOCalculator, object):
         if self.verbose == 'high':
             print('\nPWscf input file {} written\n'.format(fname))
 
-    def check_spinpol(self):
-        mm = self.atoms.get_initial_magnetic_moments()
-        sp = mm.any()
-        self.summed_magmoms = np.sum(mm)
-        if sp:
-            if not self.spinpol and not self.noncollinear:
-                raise KeyError('Explicitly specify spinpol=True or noncollinear=True for spin-polarized systems')
-            elif abs(self.sigma) <= self.sigma_small and not self.fix_magmom:
-                raise KeyError('Please use fix_magmom=True for sigma=0.0 eV and spinpol=True. Hopefully this is not an extended system...?')
-        else:
-            if self.spinpol and abs(self.sigma) <= self.sigma_small:
-                self.fix_magmom = True
-        if abs(self.sigma) <= self.sigma_small:
-            self.occupations = 'fixed'
-
-    def run(self):
-
-        print('# in run start: cwd: ', os.getcwd())
-
-        if self.single_calculator:
-            while len(espresso_calculators) > 0:
-                espresso_calculators.pop().stop()
-            espresso_calculators.append(self)
-
-        if self.site.batchmode:
-            print('# in run batchmode: cwd: ', os.getcwd())
-            cdir = os.getcwd()
-            self.localtmp.chdir()
-            print('# in run batchmode: after chdir to localtmp ', os.getcwd())
-
-            subprocess.call(self.site.perHostMpiExec +
-                ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
-
-            if self.calculation != 'hund':
-                if not self.proclist:
-                    command = self.site.perProcMpiExec.format(self.scratch,
-                                'pw.x ' + self.parflags + ' -in pw.inp')
-                    if self.ion_dynamics == 'ase3':
-                        raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
-                    else:
-                        with open(self.log, 'a') as flog:
-                            flog.write(self.get_output_header())
-                            output = pexpect.run(command, logfile=flog, timeout=None)
-                else:
-                    self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
-                            self.myncpus, self.scratch,
-                            'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
-
-            else:  # calculation == 'hund'
-                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
-                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
-                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
-            os.chdir(cdir)
-
-        else:  # not in batchmode
-
-            pwinp = self.localtmp.joinpath('pw.inp')
-            Path.copy(pwinp, self.scratch)
-            command = 'pw.x -in pw.inp'
-            if self.calculation != 'hund':
-                self.scratch.chdir()
-
-                with open(self.log, 'a') as flog:
-                    flog.write(self.get_output_header())
-                    output = pexpect.run(command, logfile=flog, timeout=None)
-            else:
-                self.scratch.chdir()
-                subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
-
-                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
-                self.scratch.chdir()
-                self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
-
-            self._running = True
-
-        print('# in run end: cwd: ', os.getcwd())
-
-    def stop(self):
-        if self._running:
-
-            self._running = False
-
-    def clean(self):
-        '''
-        Remove the temporary files and directories
-        '''
-
-        print('# in clean start: cdw is: ', os.getcwd())
-
-        try:
-            self.stop()
-        except:
-            pass
-
-        if self.output is not None:
-            if 'removewf' in list(self.output.keys()):
-                removewf = self.output['removewf']
-            else:
-                removewf = True
-            if 'removesave' in list(self.output.keys()):
-                removesave = self.output['removesave']
-            else:
-                removesave = False
-        else:
-            removewf = True
-            removesave = False
-
-        if removewf:
-            for fil in self.scratch.files('*.wfc'):
-                fil.remove()
-            for fil in self.scratch.files('*.hub'):
-                fil.remove()
-
-        if not removesave:
-            subprocess.call(['cp', '-r', self.scratch, self.localtmp])
-
-        if self.site.batchmode:
-            #with open(os.devnull, 'w') as devnull:
-            subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
-        else:
-            shutil.rmtree(self.scratch)
-
-        if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
-            os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
-            os.system(self.site.mpdshutdown)
-
-        print('# in clean end: cdw is: ', os.getcwd())
-
     def read_forces(self, getall=False):
         '''
         Read the forces from the PWSCF output file
@@ -1850,7 +1831,6 @@ class Espresso(FileIOCalculator, object):
 
         os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
 
-
     def save_flev_output(self, filename='calc.tgz'):
         """
         Save the contents of calc.save directory + Fermi level
@@ -1864,7 +1844,6 @@ class Espresso(FileIOCalculator, object):
             ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save `find . -name "calc.occup*";find . -name "calc.paw"`')
-
 
     def load_flev_output(self, filename='calc.tgz'):
         """
@@ -1880,7 +1859,6 @@ class Espresso(FileIOCalculator, object):
         with open(self.scratch + '/calc.save/fermilevel.txt', 'r') as ftxt:
             self.inputfermilevel = float(ftxt.readline())
 
-
     def save_chg(self, filename='chg.tgz'):
         """
         Save charge density.
@@ -1891,7 +1869,6 @@ class Espresso(FileIOCalculator, object):
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"`')
 
-
     def load_chg(self, filename='chg.tgz'):
         """
         Load charge density.
@@ -1900,7 +1877,6 @@ class Espresso(FileIOCalculator, object):
         file = self.topath(filename)
 
         os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
-
 
     def save_wf(self, filename='wf.tgz'):
         """
@@ -1912,7 +1888,6 @@ class Espresso(FileIOCalculator, object):
 
         os.system('tar czf ' + filename + ' --directory=' + self.scratch + ' --exclude=calc.save .')
 
-
     def load_wf(self, filename='wf.tgz'):
         """
         Load wave functions.
@@ -1921,7 +1896,6 @@ class Espresso(FileIOCalculator, object):
         file = self.topath(filename)
 
         os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
-
 
     def save_flev_chg(self, filename='chg.tgz'):
         """
@@ -1937,7 +1911,6 @@ class Espresso(FileIOCalculator, object):
             ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
 
         os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"` calc.save/fermilevel.txt')
-
 
     def load_flev_chg(self, filename='efchg.tgz'):
         """
@@ -2118,6 +2091,21 @@ class Espresso(FileIOCalculator, object):
         for e in err:
             msg += e
         raise RuntimeError(msg[:len(msg)-1])
+
+    def check_spinpol(self):
+        mm = self.atoms.get_initial_magnetic_moments()
+        sp = mm.any()
+        self.summed_magmoms = np.sum(mm)
+        if sp:
+            if not self.spinpol and not self.noncollinear:
+                raise KeyError('Explicitly specify spinpol=True or noncollinear=True for spin-polarized systems')
+            elif abs(self.sigma) <= self.sigma_small and not self.fix_magmom:
+                raise KeyError('Please use fix_magmom=True for sigma=0.0 eV and spinpol=True. Hopefully this is not an extended system...?')
+        else:
+            if self.spinpol and abs(self.sigma) <= self.sigma_small:
+                self.fix_magmom = True
+        if abs(self.sigma) <= self.sigma_small:
+            self.occupations = 'fixed'
 
     def relax_cell_and_atoms(self,
             cell_dynamics='bfgs', # {'none', 'sd', 'damp-pr', 'damp-w', 'bfgs'}
@@ -3319,6 +3307,12 @@ class Espresso(FileIOCalculator, object):
                          ])
         return out + '\n\n\n'
 
+    def __del__(self):
+        try:
+            self.stop()
+        except:
+            pass
+
 
 class iEspresso(Espresso):
 
@@ -3356,15 +3350,14 @@ class iEspresso(Espresso):
 
         self._initialized = True
 
-
+    @preserve_cwd
     def run(self):
 
         if self.site.batchmode:
-            cdir = os.getcwd()
             self.localtmp.chdir()
 
             subprocess.call(self.site.perHostMpiExec +
-                            ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+                            ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
 
             if self.calculation != 'hund':
                 if not self.proclist:
@@ -3412,10 +3405,8 @@ class iEspresso(Espresso):
                 os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
                 os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
                 self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
-            os.chdir(cdir)
 
         else:
-            cdir = os.getcwd()
             self.localtmp.chdir()
 
             pwinp = self.localtmp.joinpath('pw.inp')
@@ -3444,8 +3435,6 @@ class iEspresso(Espresso):
                 for atom in self.atoms:
                     self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
                 self.child.expect('!ASE', timeout=self.timeout)
-                #self.child.logfile.flush()
-            os.chdir(cdir)
 
     def stop(self):
 

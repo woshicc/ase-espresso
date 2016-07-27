@@ -6,12 +6,24 @@ import contextlib
 import os
 import sys
 import tempfile
-from subprocess import check_output, call
+import functools
+from subprocess import call
 
 import hostlist
 from path import Path
 
 __version__ = '0.1.2'
+
+
+def preserve_cwd(function):
+    @functools.wraps(function)
+    def decorator(*args, **kwargs):
+        cwd = os.getcwd()
+        try:
+            return function(*args, **kwargs)
+        finally:
+            os.chdir(cwd)
+    return decorator
 
 
 @contextlib.contextmanager
@@ -222,7 +234,6 @@ class SiteConfig(object):
             self.localtmp = Path(tempfile.mkdtemp(prefix=prefix, suffix='_tmp',
                                                   dir=self.submitdir))
         else:
-
             self.localtmp = Path(tempfile.mkdtemp(prefix=workdir,
                                                   dir=self.submitdir))
 

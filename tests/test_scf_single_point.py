@@ -77,7 +77,8 @@ def test_al_scf_david():
 
     calc = Espresso(pw=15.0 * Rydberg, calculation='scf', kpts=kpts,
                     tprnfor=True, tstress=True, occupations='smearing',
-                    smearing='marzari-vanderbilt', degauss=0.05)
+                    smearing='marzari-vanderbilt', degauss=0.05,
+                    outdir='al_scf')
 
     al.set_calculator(calc)
 
@@ -108,12 +109,13 @@ def test_si_scf_cg():
                     tprnfor=True, tstress=True, occupations='smearing',
                     smearing='marzari-vanderbilt', degauss=0.05,
                     convergence={'energy': 1e-6, 'mixing': 0.7,
-                                 'maxsteps': 100, 'diag': 'cg'},)
+                                 'maxsteps': 100, 'diag': 'cg'},
+                    outdir='si_scf')
 
     si.set_calculator(calc)
 
     calc.calculate(si)
 
 
-#test_al_scf_david()
+test_al_scf_david()
 test_si_scf_cg()
