@@ -965,8 +965,8 @@ class Espresso(FileIOCalculator, object):
             subprocess.call(['cp', '-r', self.scratch, self.localtmp])
 
         if self.site.batchmode:
-            #with open(os.devnull, 'w') as devnull:
-            subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
+            with open(os.devnull, 'w') as devnull:
+                subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
         else:
             shutil.rmtree(self.scratch)
 
