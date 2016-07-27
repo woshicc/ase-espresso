@@ -38,37 +38,25 @@ class SiteConfig(object):
     Currently supports
     - SLURM
     - PBS/TORQUE
+
+
+    Args:
+        scheduler : str
+            Name of the scheduler, curretly supports only 'SLURM' and 'PBS'/'TORQUE'
+        scratchenv : str
+            Name of the envoronmental variable that defines the scratch path
     '''
 
-    def __init__(self, scheduler):
+    def __init__(self, scheduler, scratchenv='SCRATCH'):
 
         self.scheduler = scheduler
+        self.scratchenv = scratchenv
         self.localtmp = None
         self.global_scratch = None
         self.user_scratch = None
         self.submitdir = None
         self.jobid = None
         self.set_variables()
-
-    @classmethod
-    def check_scheduler(cls):
-        '''
-        Check if either SLURM or PBS/TORQUE are running
-        '''
-
-        scheduler = None
-
-        # check id SLURM is installed and running
-        exitcode = call('scontrol version', shell=True)
-        if exitcode == 0:
-            scheduler = 'SLURM'
-
-        # check if PBS/TORQUE is installed and running
-        exitcode = call('ps aux | grep pbs | grep -v grep', shell=True)
-        if exitcode == 0:
-            scheduler = 'PBS'
-
-        return cls(scheduler)
 
     def set_variables(self):
         '''
@@ -82,24 +70,61 @@ class SiteConfig(object):
         elif self.scheduler.lower() in ['pbs', 'torque']:
             self.set_pbs_env()
 
+    @classmethod
+    def check_scheduler(cls):
+        '''
+        Check if either SLURM or PBS/TORQUE are running
+        '''
+
+        scheduler = None
+
+        # check id SLURM is installed and running
+        with open(os.devnull, 'w') as devnull:
+            exitcode = call('scontrol version', shell=True, stderr=devnull)
+            if exitcode == 0:
+                scheduler = 'SLURM'
+
+        # check if PBS/TORQUE is installed and running
+        with open(os.devnull, 'w') as devnull:
+            exitcode = call('ps aux | grep pbs | grep -v grep', shell=True,
+                            stderr=devnull)
+            if exitcode == 0:
+                scheduler = 'PBS'
+
+        return cls(scheduler)
+
     def set_interactive(self):
         '''
         Set the attributes necessary for interactive runs
 
         - `batchmode` is False
         - `jobid` is set to the PID
-
+        - 'global_scratch' checks for scratch under `self.scratchenv` if it is
+          not defined used current directory
         '''
 
         self.batchmode = False
         self.submitdir = Path(os.path.dirname(os.path.realpath(sys.argv[0])))
         self.jobid = os.getpid()
-        if os.getenv('SCRATCH') is not None:
-            self.global_scratch = Path(os.getenv('SCRATCH'))
-        elif os.getenv('TMPDIR') is not None:
-            self.global_scratch = Path(os.getenv('TMPDIR'))
+
+        if os.getenv(self.scratchenv) is not None:
+            self.global_scratch = Path(os.getenv(self.scratchenv))
         else:
             self.global_scratch = self.submitdir
+
+    def set_global_scratch(self):
+        'Set the global scratch attribute'
+
+        scratch = os.getenv(self.scratchenv)
+
+        if scratch is None:
+            raise OSError('variable ${} is undefied'.format(scratch))
+        else:
+            if os.path.exists(scratch):
+                self.global_scratch = Path(os.getenv(scratch))
+            else:
+                raise OSError('scratch directory <{}> defined with ${} does not exist'.format(
+                    scratch, self.scratchenv))
 
     def set_slurm_env(self):
         '''
@@ -107,24 +132,32 @@ class SiteConfig(object):
         enviromental variables associated with SLURM scheduler
         '''
 
-        self.jobid = os.getenv('SLURM_JOB_ID')
-        self.batchmode = self.jobid is not None
+        self.batchmode = True
 
-        if self.batchmode:
-            self.global_scratch = os.getenv('SCRATCH')
-            self.nnodes = int(os.getenv('SLURM_JOB_NUM_NODES'))
-            self.submitdir = os.getenv('SUBMITDIR')
-            self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
-            jobnodelist = os.getenv('SLURM_JOB_NODELIST')
-            output = check_output(['scontrol', 'show', 'hostnames', jobnodelist])
-            nodeslist = output.split('\n')[:-1]
-            self.procs = [nodeslist[i // self.tpn] for i in range(len(nodeslist) * self.tpn)]
-            self.nprocs = len(self.procs)
+        env = {'jobid': 'SLURM_JOB_ID',
+               'submitdir': 'SUBMITDIR'}
 
-            self.perHostMpiExec = ['mpirun', '-host', ','.join(nodeslist),
-                                   '-np', '{0:d}'.format(self.nnodes)]
-            self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
-            self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
+        for name, var in env.items():
+            value = os.getenv(var)
+            if value is None:
+                raise RuntimeError('variable ${} is undefied'.format(var))
+            else:
+                setattr(self, name, value)
+
+        self.set_global_scratch()
+
+        self.nnodes = int(os.getenv('SLURM_JOB_NUM_NODES'))
+        self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
+        jobnodelist = os.getenv('SLURM_JOB_NODELIST')
+        output = check_output(['scontrol', 'show', 'hostnames', jobnodelist])
+        nodeslist = output.split('\n')[:-1]
+        self.procs = [nodeslist[i // self.tpn] for i in range(len(nodeslist) * self.tpn)]
+        self.nprocs = len(self.procs)
+
+        self.perHostMpiExec = ['mpirun', '-host', ','.join(nodeslist),
+                               '-np', '{0:d}'.format(self.nnodes)]
+        self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
+        self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     def set_pbs_env(self):
         '''
@@ -132,31 +165,33 @@ class SiteConfig(object):
         enviromental variables associated with PBS/TORQUE scheduler
         '''
 
-        self.jobid = os.getenv('PBS_JOBID')
-        self.batchmode = self.jobid is not None
+        self.batchmode = True
 
-        if self.batchmode:
-            self.global_scratch = os.getenv('SCRATCH')
-            if not os.path.exists(self.global_scratch):
-                self.global_scratch = os.path.join('/tmp', os.getenv('USER'))
+        env = {'jobid': 'PBS_JOBID',
+               'submitdir': 'PBS_O_WORKDIR'}
 
-            self.submitdir = os.getenv('PBS_O_WORKDIR')
+        for name, var in env.items():
+            value = os.getenv(var)
+            if value is None:
+                raise RuntimeError('variable ${} undefied'.format(var))
+            else:
+                setattr(self, name, value)
 
-            nodefile = os.getenv('PBS_NODEFILE')
-            with open(nodefile, 'r') as nf:
-                self.procs = [x.strip() for x in nf.readlines()]
+        self.set_global_scratch()
 
-            self.nprocs = len(self.procs)
-            uniqnodes = sorted(set(self.procs))
+        nodefile = os.getenv('PBS_NODEFILE')
+        with open(nodefile, 'r') as nf:
+            self.procs = [x.strip() for x in nf.readlines()]
 
-            uniqnodefile = os.path.realpath(os.path.join(self.global_scratch, 'uniqnodefile'))
-            with open(uniqnodefile, 'w') as unf:
-                for node in uniqnodes:
-                    unf.write(node + '\n')
+        self.nprocs = len(self.procs)
+        uniqnodes = sorted(set(self.procs))
 
-            self.perHostMpiExec = ['mpiexec', '-machinefile', uniqnodefile, '-np', str(len(uniqnodes))]
-            self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
-            self.perSpecProcMpiExec = 'mpiexec -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
+        self.perHostMpiExec = ['mpirun', '-host', ','.join(uniqnodes),
+                               '-np', '{0:d}'.format(self.nnodes)]
+
+        self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(
+            nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
+        self.perSpecProcMpiExec = 'mpiexec -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     # methods for running espresso
 
@@ -174,7 +209,8 @@ class SiteConfig(object):
 
     def do_perSpecProcMpiExec(self, machinefile, nproc, workdir, program):
 
-        return os.popen3(self.perSpecProcMpiExec.format(machinefile, nproc, workdir, program))
+        return os.popen3(self.perSpecProcMpiExec.format(machinefile, nproc,
+                                                        workdir, program))
 
     def make_localtmp(self, workdir):
         '''
