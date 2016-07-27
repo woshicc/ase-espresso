@@ -12,7 +12,7 @@ the most important ones include:
 - the `site.cfg` is obsolete now, and no additional configuration is required, the functionality is replaced
   by a new `SiteConfig` class that dynamically gathers information about the execution environment 
 - the old `espresso` class is now split into two: `Espresso` preserving the standard functionality and
-  `iEspresso` the responsible for dynamical/interactive jobs with a custom version of pw.x
+  `iEspresso` responsible for dynamic/interactive jobs with a custom version of pw.x
 - changes were made to establish python 3.x compatibility
 - the `Espresso` class were restructured according to [ase] guidelines regarding calculator objects to
   support full compatibility with [ase]
@@ -58,7 +58,7 @@ pip install ./ase-espresso
 [pexpect]: https://pexpect.readthedocs.io/en/stable
 [setuptools]: https://pypi.python.org/pypi/setuptools
 [sphinx]: http://www.sphinx-doc.org/en/stable/
-[subrocess]: https://docs.python.org/2/library/subprocess.html
+[subprocess]: https://docs.python.org/2/library/subprocess.html
 [vossjo-ae]: https://github.com/vossjo/ase-espresso
 [Quantum Espresso]: http://www.quantum-espresso.org/
 [wiki]: https://github.com/vossjo/ase-espresso/wiki
