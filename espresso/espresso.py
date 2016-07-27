@@ -829,6 +829,11 @@ class Espresso(FileIOCalculator, object):
         else:
             self.log = self.localtmp.joinpath(self.txt)
 
+        print('# in create_outdir end')
+        print('## localtmp: ', self.localtmp)
+        print('## scratch: ', self.scratch)
+        print('## log: ', self.log)
+
         atexit.register(self.clean)
 
     def set(self, **kwargs):
@@ -1492,17 +1497,21 @@ class Espresso(FileIOCalculator, object):
 
     def run(self):
 
+        print('# in run start: cwd: ', os.getcwd())
+
         if self.single_calculator:
             while len(espresso_calculators) > 0:
                 espresso_calculators.pop().stop()
             espresso_calculators.append(self)
 
         if self.site.batchmode:
+            print('# in run batchmode: cwd: ', os.getcwd())
             cdir = os.getcwd()
             self.localtmp.chdir()
+            print('# in run batchmode: after chdir to localtmp ', os.getcwd())
 
             subprocess.call(self.site.perHostMpiExec +
-                ['cp', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+                ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
 
             if self.calculation != 'hund':
                 if not self.proclist:
@@ -1548,6 +1557,8 @@ class Espresso(FileIOCalculator, object):
 
             self._running = True
 
+        print('# in run end: cwd: ', os.getcwd())
+
     def stop(self):
         if self._running:
 
@@ -1557,6 +1568,8 @@ class Espresso(FileIOCalculator, object):
         '''
         Remove the temporary files and directories
         '''
+
+        print('# in clean start: cdw is: ', os.getcwd())
 
         try:
             self.stop()
@@ -1585,18 +1598,17 @@ class Espresso(FileIOCalculator, object):
         if not removesave:
             subprocess.call(['cp', '-r', self.scratch, self.localtmp])
 
-        #cdir = os.getcwd()
-
         if self.site.batchmode:
-            with open(os.devnull, 'w') as devnull:
-                subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
+            #with open(os.devnull, 'w') as devnull:
+            subprocess.call(self.site.perHostMpiExec + ['rm', '-r', self.scratch], stderr=devnull)
         else:
             shutil.rmtree(self.scratch)
 
-        #os.chdir(cdir)
         if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
             os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
             os.system(self.site.mpdshutdown)
+
+        print('# in clean end: cdw is: ', os.getcwd())
 
     def read_forces(self, getall=False):
         '''
