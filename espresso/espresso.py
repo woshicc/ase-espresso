@@ -13,10 +13,12 @@ from __future__ import print_function, absolute_import
 from builtins import (super, range, zip, round, int, object)
 
 import os
+import re
 import atexit
 import shutil
 import subprocess
 import numpy as np
+from collections import OrderedDict
 from path import Path
 
 import pexpect
@@ -1039,17 +1041,59 @@ class Espresso(FileIOCalculator, object):
                                             Jlist[i],
                                             U_alphalist[i])
 
+    def parse_upf(self, symbols, fext='.UPF'):
+        '''
+        Parse the <PP_HEADER> section from the pseudopotential files in the
+        Unified Pseudopotential Format (UPF)
+
+        Args:
+            symbols : list of str
+                List of symbols for which the UPF files will be parsed
+            fext : str (default='.UPF')
+                File extension of the pseudopotential files
+
+        Returns:
+            parsed : dict
+                Dictionary with filed parsed from the <PP_HEADER> section
+
+        .. seealso::
+           `http://www.quantum-espresso.org/pseudopotentials/unified-pseudopotential-format/`_
+
+        '''
+
+        pat = re.compile(r'(?P<block><PP_HEADER)\s+(?P<entries>.*?)/>',
+                         flags=re.DOTALL | re.IGNORECASE)
+
+        parsed = OrderedDict()
+        for symbol in symbols:
+            parsed[symbol] = dict()
+            fname = os.path.join(self.psppath, symbol + fext)
+            if os.path.exists(fname):
+                with open(fname, 'r') as pspfile:
+                    match = pat.search(pspfile.read())
+                if match:
+                    for line in [s.strip() for s in match.group("entries").split("\n")]:
+                        key, value = line.split("=")
+                        parsed[symbol][key] = value.strip('"')
+            else:
+                raise IOError('Missing pseudopotential file: {}'.format(fname))
+        return parsed
+
     def get_nvalence(self):
-        nel = {}
-        for x in self.species:
-            el = self.specdict[x].symbol
-            #get number of valence electrons from pseudopotential or paw setup
-            p = os.popen('egrep -i \'z\ valence|z_valence\' '+self.psppath+'/'+el+'.UPF | tr \'"\' \' \'','r')
-            for y in p.readline().split():
-                if y[0].isdigit() or y[0] == '.':
-                    nel[el] = int(round(float(y)))
-                    break
-            p.close()
+        '''
+        Get the number of valence electrons from pseudopotential or paw setup
+        '''
+
+        symbols = [self.specdict[x].symbol for x in self.species]
+        parsed = self.parse_upf(symbols)
+
+        nel = dict()
+        for symbol, sdict in parsed.items():
+            for key, value in sdict.items():
+                match = re.match('z\s*_?valence', key)
+                if match:
+                    nel[symbol] = int(round(float(value)))
+
         nvalence = np.zeros(len(self.specprops), np.int)
         for i, x in enumerate(self.specprops):
             nvalence[i] = nel[self.specdict[x[0]].symbol]
@@ -1228,54 +1272,54 @@ class Espresso(FileIOCalculator, object):
                 nbandssave = self.nbands
             self.nbands = overridenbands
         if self.nbands is not None:
-            #set number of bands
+            # set number of bands
             if self.nbands > 0:
                 self.nbnd = int(self.nbands)
             else:
-            #if self.nbands is negative create -self.nbands extra bands
+            # if self.nbands is negative create - self.nbands extra bands
                 if self.nvalence is None:
-                     self.nvalence, self.nel = self.get_nvalence()
+                    self.nvalence, self.nel = self.get_nvalence()
                 if self.noncollinear:
-                    self.nbnd = int(np.sum(self.nvalence)-self.nbands*2.)
+                    self.nbnd = int(np.sum(self.nvalence) - self.nbands * 2.0)
                 else:
-                    self.nbnd = int(np.sum(self.nvalence)/2.-self.nbands)
-            print('  nbnd='+str(self.nbnd)+',', file=finp)
+                    self.nbnd = int(np.sum(self.nvalence) / 2.0 - self.nbands)
+            print('  nbnd=' + str(self.nbnd) + ',', file=finp)
         if overridenbands is not None:
             self.nbands = nbandssave
         if usetetrahedra:
             print('  occupations=\'tetrahedra\',', file=finp)
         else:
             if abs(self.sigma) > 1e-13:
-                print('  occupations=\''+self.occupations+'\',', file=finp)
-                print('  smearing=\''+self.smearing+'\',', file=finp)
-                print('  degauss='+num2str(self.sigma/Rydberg)+',', file=finp)
+                print('  occupations=\'' + self.occupations + '\',', file=finp)
+                print('  smearing=\'' + self.smearing + '\',', file=finp)
+                print('  degauss=' + num2str(self.sigma / Rydberg) + ',', file=finp)
             else:
                 if self.spinpol:
                     assert self.fix_magmom
                 print('  occupations=\'fixed\',', file=finp)
         if self.spinpol:
             print('  nspin=2,', file=finp)
-            spcount  = 1
-            if self.nel == None:
+            spcount = 1
+            if self.nel is None:
                 self.nvalence, self.nel = self.get_nvalence()
-            for species in self.species: # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
+            for species in self.species:  # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
                 spec = self.specdict[species]
                 el = spec.s
-                mag = spec.magmom/self.nel[el]
-                assert np.abs(mag) <= 1. # magnetization oversaturated!!!
-                print('  starting_magnetization(%d)=%s,' % (spcount,num2str(float(mag))), file=finp)
+                mag = spec.magmom / self.nel[el]
+                assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
+                print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
                 spcount += 1
         elif self.noncollinear:
             print('  noncolin=.true.,', file=finp)
             if self.spinorbit:
                 print('  lspinorb=.true.', file=finp)
-            spcount  = 1
-            if self.nel == None:
+            spcount = 1
+            if self.nel is None:
                 self.nvalence, self.nel = self.get_nvalence()
             for species in self.species:  # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
                 spec = self.specdict[species]
                 el = spec.s
-                mag = spec.magmom/self.nel[el]
+                mag = spec.magmom / self.nel[el]
                 assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
                 print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
                 spcount += 1
