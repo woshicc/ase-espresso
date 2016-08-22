@@ -27,17 +27,14 @@ class Vibespresso(FileIOCalculator, object):
     calculations are then initialized with the Kohn-Sham potential of
     the first calculation to speed up vibrational calculations.
     """
-    def __init__(self,
-        outdirprefix = 'out',
-        **kwargs
-        ):
+    def __init__(self, outdirprefix='out', **kwargs):
         """
         In addition to the parameters of a standard espresso calculator,
         outdirprefix (default: 'out') can be specified, which will be the
         prefix of the output of the calculations for different displacements
         """
 
-        super().__init__(**kwargs)
+        # super().__init__(**kwargs)
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
@@ -45,11 +42,11 @@ class Vibespresso(FileIOCalculator, object):
         self.firststep = True
         self.ready = False
 
-        #self.atoms = None
+        self.atoms = None
 
     def update(self, atoms):
         if self.atoms is not None:
-            x = atoms.positions-self.atoms.positions
+            x = atoms.positions - self.atoms.positions
             if np.max(x) > 1.0e-13 or np.min(x) < -1.0e-13:
                 self.ready = False
         else:
@@ -60,7 +57,7 @@ class Vibespresso(FileIOCalculator, object):
 
     def runcalc(self, atoms):
         if not self.ready:
-            self.arg['outdir'] = self.outdirprefix+'_%04d' % self.counter
+            self.arg['outdir'] = self.outdirprefix + '_%04d' % self.counter
             self.counter += 1
             if self.firststep:
                 self.esp = Espresso(**self.arg)
@@ -93,4 +90,3 @@ class Vibespresso(FileIOCalculator, object):
 
     def get_version(self):
         return __version__
-
