@@ -967,7 +967,7 @@ class Espresso(FileIOCalculator, object):
         '''
 
         symbols = self.atoms.get_chemical_symbols()
-        masses = self.atoms.get_masses()
+        masses = np.nan_to_num(self.atoms.get_masses())
         magmoms = list(self.atoms.get_initial_magnetic_moments())
         if len(magmoms) < len(symbols):
             magmoms += list(np.zeros(len(symbols) - len(magmoms), np.float))
