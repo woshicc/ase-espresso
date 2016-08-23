@@ -69,6 +69,7 @@ class Vibespresso(FileIOCalculator, object):
                 self.arg['startingpot'] = 'file'
                 self.esp = Espresso(**self.arg)
                 self.esp.set_atoms(atoms)
+                self.esp.initialize(atoms)
                 self.esp.load_chg(self.equilibriumdensity)
                 self.esp.get_potential_energy(atoms)
                 self.esp.stop()
