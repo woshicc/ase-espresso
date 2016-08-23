@@ -723,7 +723,9 @@ class Espresso(FileIOCalculator, object):
         self.run()
 
         self.recalculate = True
+
         # check for errors
+        self.checkerror()
 
         # parse results
         self.read()
@@ -2111,37 +2113,27 @@ class Espresso(FileIOCalculator, object):
         return self.ST
 
     def checkerror(self):
-        p = os.popen('grep -n Giannozzi '+self.log+' | tail -1', 'r')
-        try:
-            n = int(p.readline().split()[0].strip(':'))
-        except:
+        '''
+        Check if any errors occured during the calculation
+        '''
+
+        with open(self.log, 'r') as flog:
+            loglines = flog.readlines()
+
+        gnos = [no for no, line in enumerate(loglines) if 'Giannozzi' in line]
+        if len(gnos) < 1:
             raise RuntimeError("Espresso executable doesn't seem to have been started.")
-        p.close()
 
-        p = os.popen(('tail -n +%d ' % n)+self.log+' | grep -n %%%%%%%%%%%%%%%% |tail -2', 'r')
-        s = p.readlines()
-        p.close()
+        lnos = [no for no, line in enumerate(loglines) if '%' * 78 in line]
 
-        if len(s) < 2:
+        if len(lnos) < 2:
             return
-
-        a = int(s[0].split()[0].strip(':'))+1
-        b = int(s[1].split()[0].strip(':'))-a
-
-        if b < 1:
-            return
-
-        p = os.popen(('tail -n +%d ' % (a+n-1))+self.log+('|head -%d' % b), 'r')
-        err = p.readlines()
-        p.close()
-
-        if err[0].lower().find('error') < 0:
-            return
-
-        msg = ''
-        for e in err:
-            msg += e
-        raise RuntimeError(msg[:len(msg)-1])
+        else:
+            msg = ' '.join(loglines[lnos[-2] + 1: lnos[-1]])
+            if msg.lower().find('error') < 0:
+                return
+            else:
+                raise RuntimeError(msg.rstrip('\n'))
 
     def check_spinpol(self):
         mm = self.atoms.get_initial_magnetic_moments()
