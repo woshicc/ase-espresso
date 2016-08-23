@@ -14,6 +14,7 @@ from builtins import (super, range, zip, round, int, object)
 
 import os
 import re
+import tarfile
 import atexit
 import shutil
 import subprocess
@@ -1021,7 +1022,7 @@ class Espresso(FileIOCalculator, object):
         for s in symbols:
             symcounter[s] = 0
         for i in range(len(symbols)):
-            key = symbols[i]+'_m%.14eU%.14eJ%.14eUa%.14e' % (magmoms[i],Ulist[i],Jlist[i],U_alphalist[i])
+            key = symbols[i] + '_m%.14eU%.14eJ%.14eUa%.14e' % (magmoms[i], Ulist[i], Jlist[i], U_alphalist[i])
             if key in list(dic.keys()):
                 self.specprops.append((dic[key][1], pos[i]))
             else:
@@ -1889,39 +1890,63 @@ class Espresso(FileIOCalculator, object):
         """
         Save charge density.
         """
-        file = self.topath(filename)
+
         self.update(self.atoms)
         self.stop()
 
-        os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"`')
+        patterns = ["spin-polarization.*", "magnetization.*", "calc.occup*",
+                    "calc.paw"]
+        files = [str(x) for patt in patterns for x in self.scratch.files(patt)]
+
+        fpath = self.topath(filename)
+        with tarfile.open(fpath, mode='w:gz') as tgz:
+            for f in files:
+                tgz.add(f)
 
     def load_chg(self, filename='chg.tgz'):
         """
-        Load charge density.
+        Extract charge density.
         """
-        self.stop()
-        file = self.topath(filename)
 
-        os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
+        self.stop()
+        fpath = self.topath(filename)
+
+        if os.path.exists(fpath):
+            with tarfile.open(fpath, mode='r:gz') as tgz:
+                tgz.extractall(path=self.scratch)
+        else:
+            raise OSError('File <{}> does not exist'.format(fpath))
 
     def save_wf(self, filename='wf.tgz'):
         """
         Save wave functions.
+
+        Excluding the calc.save directory
         """
-        file = self.topath(filename)
+
         self.update(self.atoms)
         self.stop()
 
-        os.system('tar czf ' + filename + ' --directory=' + self.scratch + ' --exclude=calc.save .')
+        files = [str(x) for x in self.scratch.files()]
+
+        fpath = self.topath(filename)
+        with tarfile.open(fpath, mode='w:gz') as tgz:
+            for f in files:
+                tgz.add(f)
 
     def load_wf(self, filename='wf.tgz'):
         """
-        Load wave functions.
+        Extract the wave functions.
         """
-        self.stop()
-        file = self.topath(filename)
 
-        os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
+        self.stop()
+
+        fpath = self.topath(filename)
+        if os.path.exists(fpath):
+            with tarfile.open(fpath, mode='r:gz') as tgz:
+                tgz.extractall(path=self.scratch)
+        else:
+            raise OSError('File <{}> does not exist'.format(fpath))
 
     def save_flev_chg(self, filename='chg.tgz'):
         """
