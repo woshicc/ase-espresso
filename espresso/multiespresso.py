@@ -23,20 +23,24 @@ espressos = []
 
 class Multiespresso(object):
     """
-    Special calculator running multiple espresso calculators in parallel.
+    Special calculator running multiple Espresso calculators in parallel.
     Useful for e.g. nudged elastic band calculations.
     """
-    def __init__(self,
-        ncalc = 1,
-        outdirprefix = 'out',
-        mtxt = 'multilog.txt',
-        **kwargs
-        ):
+    def __init__(self, ncalc=1, outdirprefix='out', txt='multilog.txt',
+                 **kwargs):
         """
         In addition to the parameters of a standard espresso calculator,
         the number ncalc (default 1) of espresso calculators to be spawned
         should be specified. outdirprefix (default 'out') and
-        mtxt (default 'multilog.txt') are optional.
+        txt (default 'multilog.txt') are optional.
+        
+        Args:
+            ncalc : int, default=1
+                Number of Espresso calculators to be spwaned
+            outdirprefix : str, default='out'
+                Prefix for the output directories
+            txt : str, default='multilog.txt'
+                Filename for the text output
         """
 
         #stop old espresso calculators
@@ -48,19 +52,20 @@ class Multiespresso(object):
         arg['numcalcs'] = ncalc
         self.ncalc = ncalc
         self.outdirprefix = outdirprefix
-        self.mtxt = mtxt
-        self.done = [False]*self.ncalc
+        self.txt = txt
+        self.done = [False] * self.ncalc
 
         self.calculators = []
         for i in range(ncalc):
-            arg['outdir'] = outdirprefix+'_%04d' % i
+            arg['outdir'] = '{0:s}_{1:04d}'.format(outdirprefix, i)
             arg['procrange'] = i
             esp = Espresso(**arg)
             self.calculators.append(esp)
             espressos.append(esp)
 
     def wait_for_total_energies(self):
-        s = open(self.mtxt, 'a')
+
+        s = open(self.txt, 'a')
         for i in range(self.ncalc):
             self.calculators[i].init_only(self.images[i])
             self.done[i] = False
@@ -71,15 +76,15 @@ class Multiespresso(object):
                 if self.calculators[i].recalculate:
                     if not self.done[i]:
                         a = self.calculators[i].cerr.readline()
-                        notdone |= (a!='' and a[:17]!='!    total energy')
-                        if a[:13]=='     stopping':
+                        notdone |= (a != '' and a[:17] != '!    total energy')
+                        if a[:13] == '     stopping':
                             raise RuntimeError('problem with calculator #{}'.format(i))
-                        elif a[:20]=='     convergence NOT':
+                        elif a[:20] == '     convergence NOT':
                             raise RuntimeError('calculator #{} did not converge'.format(i))
-                        elif a[1:17]!='    total energy':
+                        elif a[1:17] != '    total energy':
                             sys.stderr.write(a)
                         else:
-                            if a[0]!='!':
+                            if a[0] != '!':
                                 self.done[i] = False
                                 print('current free energy (calc. %3d; in scf cycle) :' % i, a.split()[-2], 'Ry', file=s)
                             else:
@@ -90,14 +95,16 @@ class Multiespresso(object):
         s.close()
 
     def set_images(self, images):
+
         if len(images) != self.ncalc:
             raise ValueError("number of images ({0}) doesn't match number of calculators ({1})".format(len(images), self.ncalc))
+
         for i in range(self.ncalc):
             images[i].set_calculator(self.calculators[i])
         self.images = images
 
     def set_neb(self, neb):
-        self.set_images(neb.images[1:len(neb.images)-1])
+        self.set_images(neb.images[1:len(neb.images) - 1])
         self.neb = neb
         self.neb.neb_orig_forces = self.neb.get_forces
         self.neb.get_forces = self.nebforce
