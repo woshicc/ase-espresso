@@ -10,7 +10,7 @@
 
 from __future__ import print_function, absolute_import
 
-from builtins import super, object
+from builtins import object
 
 import numpy as np
 
@@ -34,7 +34,6 @@ class Vibespresso(FileIOCalculator, object):
         prefix of the output of the calculations for different displacements
         """
 
-        # super().__init__(**kwargs)
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
