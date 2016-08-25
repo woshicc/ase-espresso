@@ -1082,20 +1082,25 @@ class Espresso(FileIOCalculator, object):
                 raise IOError('Missing pseudopotential file: {}'.format(fname))
         return parsed
 
-    def get_nvalence(self):
+    def get_nvalence(self, fext='.UPF'):
         '''
         Get the number of valence electrons from pseudopotential or paw setup
         '''
 
         symbols = [self.specdict[x].symbol for x in self.species]
-        parsed = self.parse_upf(symbols)
-
+        pattern = re.compile('z\s*_?valence', re.IGNORECASE)
         nel = dict()
-        for symbol, sdict in parsed.items():
-            for key, value in sdict.items():
-                match = re.match('z\s*_?valence', key)
-                if match:
-                    nel[symbol] = int(round(float(value)))
+        for symbol in symbols:
+            fname = os.path.join(self.psppath, symbol + fext)
+            with open(fname, 'r') as fupf:
+                for line in fupf:
+                    if pattern.search(line):
+                        if '=' in line:
+                            name, value = line.split('=')
+                            nel[symbol] = int(round(float(value.strip('"\n'))))
+                        else:
+                            lsplit = line.split()
+                            nel[symbol] = int(round(float(lsplit[0])))
 
         nvalence = np.zeros(len(self.specprops), np.int)
         for i, x in enumerate(self.specprops):
