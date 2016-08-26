@@ -3364,12 +3364,24 @@ class Espresso(FileIOCalculator, object):
 
 class iEspresso(Espresso):
 
-    def __init__(self, *args, **kwargs):
+    '''
+    Interactive Quantum Espresso calculator that requires a
+    version of the QE binary that supports feeding new coordinates
+    after each single point calcualtion.
+
+    Args:
+        timeout : int
+            Timeout for the pexpect.spawn method [in s] that will terminate
+            the 'expect' the full output in that time, otherwise an
+            exception is thrown
+    '''
+
+    def __init__(self, timeout=1800, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
+        self.timeout = timeout
         self._spawned = False
-        self.timeout = 200
 
     def initialize(self, atoms):
         '''
