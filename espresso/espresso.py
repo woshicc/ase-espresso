@@ -34,8 +34,6 @@ __version__ = '0.2.0'
 
 rydberg_over_bohr = Rydberg / Bohr
 
-GITREVISION = '$Id$'
-
 # ase controlled pw.x's register themselves here, so they can be
 # stopped automatically
 espresso_calculators = []
@@ -3351,7 +3349,6 @@ class Espresso(FileIOCalculator, object):
                          '# espresso dir         : {}'.format(exedir),
                          '# pseudo dir           : {}'.format(self.psppath),
                          '# ase-espresso version : {}'.format(self.get_version()),
-                         '# ase-espresso git rev : {}'.format(GITREVISION),
                          ])
         return out + '\n\n\n'
 
