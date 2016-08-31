@@ -79,6 +79,7 @@ class Espresso(FileIOCalculator, object):
         calculation ( 'relax' )
             relaxation mode:
             - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
+
         ion_dynamics ( 'ase3' )
             - 'ase3':
                 only possible with dynamic communication between Quantum Espresso and python
@@ -86,6 +87,7 @@ class Espresso(FileIOCalculator, object):
             - 'relax' and other Quantum Espresso standard relaxation modes:
                   Quantum Espresso own algorithms for structural optimization
                   are used
+
             Obtaining Quantum Espresso with the ase3 relaxation extensions is
             highly recommended, since it allows for using ase's optimizers without
             loosing efficiency:
@@ -148,6 +150,7 @@ class Espresso(FileIOCalculator, object):
         - 'mv','Marzari-Vanderbilt': Marzari-Vanderbilt cold smearing
         - 'gauss','gaussian': Gaussian smearing
         - 'mp','Methfessel-Paxton': Methfessel-Paxton
+
      sigma (0.1)
         smearing width in eV
      tot_charge (None)
