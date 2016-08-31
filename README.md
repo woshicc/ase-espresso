@@ -31,7 +31,7 @@ the most important ones include:
 - [pexpect]
 - [future]
 - [path.py]
-- [hostname]
+- [python-hostlist]
 
 The recommended installation method is with [pip]. The current
 version can be installed directly from [github]:
@@ -51,7 +51,7 @@ pip install ./ase-espresso
 [ase]: https://wiki.fysik.dtu.dk/ase/index.html
 [future]: http://python-future.org/
 [github]: https://github.com/lmmentel/ase-espresso
-[hostname]: https://www.nsc.liu.se/~kent/python-hostlist/
+[python-hostlist]: https://www.nsc.liu.se/~kent/python-hostlist/
 [numpy]: http://www.numpy.org/
 [path.py]: https://github.com/jaraco/path.py
 [pip]: https://pip.pypa.io/en/stable/
