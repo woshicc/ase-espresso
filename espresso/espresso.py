@@ -25,6 +25,7 @@ from collections import OrderedDict
 from io import open
 from path import Path
 
+import shlex
 import pexpect
 
 from ase.calculators.calculator import FileIOCalculator
@@ -883,8 +884,12 @@ class Espresso(FileIOCalculator, object):
                         raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
                     else:
                         with open(self.log, 'ab') as flog:
-                            flog.write(self.get_output_header())
-                            output = pexpect.run(command, logfile=flog, timeout=None)
+                            flog.write(self.get_output_header().encode('utf-8'))
+                            exitcode = subprocess.call(shlex.split(command),
+                                                       stdout=flog)
+                        if exitcode != 0:
+                            raise RuntimeError('something went wrong with execution:', exitcode)
+
                 else:
                     self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
                             self.myncpus, self.scratch,
@@ -906,7 +911,9 @@ class Espresso(FileIOCalculator, object):
 
                 with open(self.log, 'ab') as flog:
                     flog.write(self.get_output_header().encode('utf-8'))
-                    output = pexpect.run(command, logfile=flog, timeout=None)
+                    exitcode = subprocess.call(shlex.split(command),
+                                               stdout=flog)
+
             else:
                 self.scratch.chdir()
                 subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
@@ -3122,7 +3129,6 @@ class Espresso(FileIOCalculator, object):
             plot=[['fileout',self.topath(xsf)]],
             parallel=False)
 
-
     def extract_ae_charge_density(self, spin='both'):
         """
         Obtains the all-electron (PAW) charge density as a numpy array after a DFT calculation.
@@ -3151,12 +3157,12 @@ class Espresso(FileIOCalculator, object):
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='aecharge.log')
 
-
     def extract_noncollinear_xcmag(self):
         """
-        Obtains the xc magnetic field for a non-collinear system as a numpy array after a DFT calculation.
-        Returns (origin,cell,field).
+        Obtains the xc magnetic field for a non-collinear system as a numpy
+        array after a DFT calculation. Returns (origin,cell,field).
         """
+
         p = self.run_ppx('ncxcmag.inp',
             inputpp=[['plot_num',18]],
             piperead=True, parallel=False)
@@ -3173,7 +3179,6 @@ class Espresso(FileIOCalculator, object):
             inputpp=[['plot_num',18]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='ncxcmag.log')
-
 
     def extract_reduced_density_gradient(self):
         """
@@ -3196,7 +3201,6 @@ class Espresso(FileIOCalculator, object):
             inputpp=[['plot_num',19]],
             plot=[['fileout',self.topath(xsf)]],
             parallel=False, log='redgrad.log')
-
 
     def extract_middle_density_hessian_eig(self):
         """
@@ -3307,7 +3311,6 @@ class Espresso(FileIOCalculator, object):
             wf = vacuum_energy * Rydberg - fermi_energy
 
         return wf
-
 
     def generate_dummy_data(self):
         """
@@ -3465,7 +3468,7 @@ class iEspresso(Espresso):
                 os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
                 self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
 
-        else:
+        else:  # interactive
             self.localtmp.chdir()
 
             pwinp = self.localtmp.joinpath('pw.inp')
