@@ -8,9 +8,11 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 # ****************************************************************************
 
-from __future__ import print_function, absolute_import
+from __future__ import print_function, absolute_import, unicode_literals
 
 from builtins import (super, range, zip, round, int, object)
+
+from builtins import str as newstr
 
 import os
 import re
@@ -20,6 +22,7 @@ import shutil
 import subprocess
 import numpy as np
 from collections import OrderedDict
+from io import open
 from path import Path
 
 import pexpect
@@ -444,12 +447,8 @@ class Espresso(FileIOCalculator, object):
         self.xc = xc
         self.beefensemble = beefensemble
         self.printensemble = printensemble
-        if isinstance(smearing, str):
-            self.smearing = smearing
-            self.sigma = sigma
-        else:
-            self.smearing = smearing[0]
-            self.sigma = smearing[1]
+        self.smearing = smearing
+        self.sigma = sigma
         self.spinpol = spinpol
         self.noncollinear = noncollinear
         self.spinorbit = spinorbit
@@ -883,7 +882,7 @@ class Espresso(FileIOCalculator, object):
                     if self.ion_dynamics == 'ase3':
                         raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
                     else:
-                        with open(self.log, 'a') as flog:
+                        with open(self.log, 'ab') as flog:
                             flog.write(self.get_output_header())
                             output = pexpect.run(command, logfile=flog, timeout=None)
                 else:
@@ -905,8 +904,8 @@ class Espresso(FileIOCalculator, object):
             if self.calculation != 'hund':
                 self.scratch.chdir()
 
-                with open(self.log, 'a') as flog:
-                    flog.write(self.get_output_header())
+                with open(self.log, 'ab') as flog:
+                    flog.write(self.get_output_header().encode('utf-8'))
                     output = pexpect.run(command, logfile=flog, timeout=None)
             else:
                 self.scratch.chdir()
@@ -1030,7 +1029,7 @@ class Espresso(FileIOCalculator, object):
                 self.specprops.append((dic[key][1], pos[i]))
             else:
                 symcounter[symbols[i]] += 1
-                spec = symbols[i] + str(symcounter[symbols[i]])
+                spec = symbols[i] + newstr(symcounter[symbols[i]])
                 dic[key] = [i, spec]
                 self.species.append(spec)
                 self.specprops.append((spec, pos[i]))
@@ -1611,7 +1610,7 @@ class Espresso(FileIOCalculator, object):
             else:
                 print('K_POINTS crystal', file=finp)
                 nrows, ncols = kp.shape
-                print(nrows, file=finp)
+                print(newstr(nrows), file=finp)
                 w = 1.0 / nrows
                 for row in kp:
                     if ncols == 3:
@@ -3391,7 +3390,7 @@ class iEspresso(Espresso):
 
         if not self._initialized:
             self.create_outdir()
-            self.logfile = open(self.log, 'a')
+            self.logfile = open(self.log, 'ab')
 
         if self.psppath is None:
             if os.environ['ESP_PSP_PATH'] is not None:

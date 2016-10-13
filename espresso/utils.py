@@ -8,6 +8,8 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 # ****************************************************************************
 
+from __future__ import unicode_literals
+
 from collections import namedtuple
 import numpy as np
 from ase import constraints

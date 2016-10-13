@@ -79,10 +79,18 @@ def test_relax_co_ase_interactive_bfgs():
     minimizer = BFGS(co, logfile='minimizer.log', trajectory='relaxed.traj')
     minimizer.run(fmax=0.01)
 
-    print('ase(interactive) bfgs:')
-    print('energy: ', co.get_potential_energy())
-    print('positions: ', co.positions)
-    print('forces: ', co.get_forces())
+    ref_ene = -616.9017404193379
+
+    ref_pos = np.array([[1.19233393e+00, 2.50837254e-20, 0.00000000e+00],
+                        [1.48996586e-03, 0.00000000e+00, 0.00000000e+00]])
+
+    ref_for = np.array([[0.00162288, 0.0, 0.0],
+                        [-0.00162288, 0.0, 0.0]])
+
+    assert np.allclose(co.get_potential_energy(), ref_ene)
+    assert np.allclose(co.positions, ref_pos)
+    assert np.allclose(co.get_forces(), ref_for)
+
 
 test_relax_co_qe_bfgs()
 test_relax_co_ase_bfgs()
