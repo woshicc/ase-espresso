@@ -41,7 +41,18 @@ def working_directory(path):
         os.chdir(old_cwd)
 
 
-class SiteConfig(object):
+class Singleton(type):
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args,
+                                                                 **kwargs)
+        return cls._instances[cls]
+
+
+class SiteConfig(Singleton):
 
     '''
     Site configuration holding details about the execution environment
