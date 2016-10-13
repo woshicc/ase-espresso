@@ -1,0 +1,6 @@
+ase
+numpy
+pexpect
+future
+path.py
+python-hostlist
