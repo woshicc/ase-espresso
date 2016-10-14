@@ -5,6 +5,10 @@ from ase.units import Rydberg, Bohr
 from ase.vibrations import Vibrations
 from espresso import Espresso, Vibespresso
 
+REF_ENE = np.array([0.00000000+0.09469678j, 0.00000000+0.09468807j,
+                    0.00000000+0.01367736j, 0.05181212+0.j,
+                    0.05184354+0.j,         0.20154443+0.j])
+
 
 def test_co_espresso_vibrations():
 
@@ -26,6 +30,7 @@ def test_co_espresso_vibrations():
     vib = Vibrations(co, indices=range(len(co)), delta=0.01, nfree=2)
     vib.run()
 
+    assert np.allclose(vib.get_energies(), REF_ENE)
 
 def test_co_vibespresso_vibrations():
 
@@ -47,6 +52,7 @@ def test_co_vibespresso_vibrations():
     vib = Vibrations(co, indices=range(len(co)), delta=0.01, nfree=2)
     vib.run()
 
+    assert np.allclose(vib.get_energies(), REF_ENE)
 
 test_co_espresso_vibrations()
 test_co_vibespresso_vibrations()
