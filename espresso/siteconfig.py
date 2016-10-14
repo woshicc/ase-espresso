@@ -52,8 +52,8 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class SiteConfig(Singleton):
-
+class SiteConfig(object):
+    __metaclass__ = Singleton
     '''
     Site configuration holding details about the execution environment
     with methods for retrieving the details from systems variables and
