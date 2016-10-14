@@ -3430,7 +3430,7 @@ class iEspresso(Espresso):
                         self.child = pexpect.spawn(command)
                         self._spawned = True
                         self.child.logfile = self.logfile
-                        self.child.logfile.write(self.get_output_header())
+                        self.child.logfile.write(self.get_output_header().encode('utf-8'))
 
                         try:
                             i = self.child.expect(['!ASE\s*\n(.*\n){4}',
@@ -3479,7 +3479,7 @@ class iEspresso(Espresso):
                 self.child = pexpect.spawn(command)
                 self._spawned = True
                 self.child.logfile = self.logfile
-                self.child.logfile.write(self.get_output_header())
+                self.child.logfile.write(self.get_output_header().encode('utf-8'))
                 try:
                     i = self.child.expect(['!ASE', '     convergence NOT', '     stopping'],
                                           timeout=self.timeout)
