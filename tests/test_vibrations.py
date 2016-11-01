@@ -10,7 +10,9 @@ REF_ENE = np.array([0.00000000+0.09469678j, 0.00000000+0.09468807j,
                     0.05184354+0.j,         0.20154443+0.j])
 
 
-def test_co_espresso_vibrations():
+def test_co_espresso_vibrations(tmpdir):
+
+    tmpdir.chdir()
 
     co = Atoms('CO', positions=[[1.19382389081, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
@@ -32,7 +34,9 @@ def test_co_espresso_vibrations():
 
     assert np.allclose(vib.get_energies(), REF_ENE)
 
-def test_co_vibespresso_vibrations():
+def test_co_vibespresso_vibrations(tmpdir):
+
+    tmpdir.chdir()
 
     co = Atoms('CO', positions=[[1.19382389081, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
@@ -54,5 +58,3 @@ def test_co_vibespresso_vibrations():
 
     assert np.allclose(vib.get_energies(), REF_ENE)
 
-test_co_espresso_vibrations()
-test_co_vibespresso_vibrations()
