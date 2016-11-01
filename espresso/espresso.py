@@ -38,11 +38,6 @@ __version__ = '0.2.0'
 
 rydberg_over_bohr = Rydberg / Bohr
 
-# ase controlled pw.x's register themselves here, so they can be
-# stopped automatically
-espresso_calculators = []
-
-
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']
 
@@ -323,9 +318,6 @@ class Espresso(FileIOCalculator, object):
                  startingwfc=None,
                  ion_positions=None,
                  parflags=None,
-                 single_calculator=True,  # if True, only one espresso job will be running
-                 procrange=None,          # let this espresso calculator run only on a subset of the requested cpus
-                 numcalcs=None,           # used / set by multiespresso class
                  alwayscreatenewarrayforforces=True,
                  verbose='low',
                  # automatically generated list of parameters
@@ -488,7 +480,6 @@ class Espresso(FileIOCalculator, object):
             self.parflags = ''
         else:
             self.parflags = parflags
-        self.single_calculator = single_calculator
         self.txt = txt
 
         self.mypath = os.path.abspath(os.path.dirname(__file__))
@@ -605,20 +596,7 @@ class Espresso(FileIOCalculator, object):
         # Auto create variables from input
         self.input_update()
 
-        # Initialize lists of cpu subsets if needed
-        if procrange is None:
-            self.proclist = False
-        else:
-            self.proclist = True
-            procs = self.site.procs + []
-            procs.sort()
-            nprocs = len(procs)
-            self.myncpus = nprocs / numcalcs
-            i1 = self.myncpus * procrange
-            self.mycpus = self.localtmp + '/myprocs%{0:0>4d}.txt'.format(procrange)
-            with open(self.mycpus, 'w') as fcpu:
-                for i in range(i1, i1 + self.myncpus):
-                    fcpu.write(procs[i])
+
 
         if atoms is not None:
             atoms.set_calculator(self)
@@ -866,11 +844,6 @@ class Espresso(FileIOCalculator, object):
         '''
         Execute the expresso program `pw.x`
         '''
-
-        if self.single_calculator:
-            while len(espresso_calculators) > 0:
-                espresso_calculators.pop().stop()
-            espresso_calculators.append(self)
 
         if self.site.batchmode:
             self.localtmp.chdir()

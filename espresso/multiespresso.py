@@ -12,56 +12,83 @@ from __future__ import print_function, absolute_import
 
 import sys
 from .espresso import Espresso
+from .siteconfig import SiteConfig
 
 __version__ = '0.2.0'
 
 
-# keep track of ourselves so we can automatically stop us
-# when a new multi-espresso object is created
-espressos = []
-
-
-class Multiespresso(object):
-    """
+class NEBEspresso(object):
+    '''
     Special calculator running multiple Espresso calculators in parallel.
     Useful for e.g. nudged elastic band calculations.
-    """
-    def __init__(self, ncalc=1, outdirprefix='out', txt='multilog.txt',
+
+    Args:
+        images : list of ase.Atoms
+            Images along the reaction path as a list of ase.Atoms objects
+        outprefix : str, default=`neb`
+            Prefix of the output directories for images
+        log : str, default='neb_master.log'
+            Name of the log file
+    '''
+
+    def __init__(self, images, outprefix='neb', log='neb_master.log',
                  **kwargs):
-        """
-        In addition to the parameters of a standard espresso calculator,
-        the number ncalc (default 1) of espresso calculators to be spawned
-        should be specified. outdirprefix (default 'out') and
-        txt (default 'multilog.txt') are optional.
-        
-        Args:
-            ncalc : int, default=1
-                Number of Espresso calculators to be spwaned
-            outdirprefix : str, default='out'
-                Prefix for the output directories
-            txt : str, default='multilog.txt'
-                Filename for the text output
-        """
+        '''
+        Set the necessary parameters
+        '''
 
-        #stop old espresso calculators
-        while len(espressos) > 0:
-            espressos.pop().stop()
+        qe_args = kwargs.copy()
+        qe_args['single_calculator'] = False
 
-        arg = kwargs.copy()
-        arg['single_calculator'] = False
-        arg['numcalcs'] = ncalc
-        self.ncalc = ncalc
-        self.outdirprefix = outdirprefix
-        self.txt = txt
-        self.done = [False] * self.ncalc
+        self.images = images
+        self.nimages = len(self.images)
 
+        self.outprefix = outprefix
+        self.log = log
         self.calculators = []
-        for i in range(ncalc):
-            arg['outdir'] = '{0:s}_{1:04d}'.format(outdirprefix, i)
-            arg['procrange'] = i
-            esp = Espresso(**arg)
+
+        self.site = site
+
+    @property
+    def site(self):
+        return self._site
+
+    @site.setter
+    def site(self, value):
+        if value is None:
+            self._site = SiteConfig.check_scheduler()
+        else:
+            self._site = value
+
+
+
+        # Initialize lists of cpu subsets if needed
+        if procrange is None:
+            self.proclist = False
+        else:
+            self.proclist = True
+            procs = self.site.procs + []
+            procs.sort()
+            nprocs = len(procs)
+            self.myncpus = nprocs / numcalcs
+            i1 = self.myncpus * procrange
+            self.mycpus = self.localtmp + '/myprocs%{0:0>4d}.txt'.format(procrange)
+            with open(self.mycpus, 'w') as fcpu:
+                for i in range(i1, i1 + self.myncpus):
+                    fcpu.write(procs[i])
+
+
+    def _assign_calcs(self):
+
+        self.done = [False] * self.images
+
+
+        for i in range(self.nimages):
+            qe_args['outdir'] = '{0:s}_{1:04d}'.format(self.outprefix, i)
+            qe_args['procrange'] = i
+            esp = Espresso(**qe_args)
             self.calculators.append(esp)
-            espressos.append(esp)
+
 
     def wait_for_total_energies(self):
 

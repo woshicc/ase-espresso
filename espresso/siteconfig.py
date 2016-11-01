@@ -3,6 +3,7 @@
 from __future__ import division
 
 import contextlib
+import itertools as its
 import os
 import sys
 import tempfile
@@ -54,6 +55,7 @@ class Singleton(type):
 
 class SiteConfig(object):
     __metaclass__ = Singleton
+
     '''
     Site configuration holding details about the execution environment
     with methods for retrieving the details from systems variables and
@@ -168,12 +170,12 @@ class SiteConfig(object):
 
         self.nnodes = int(os.getenv('SLURM_JOB_NUM_NODES'))
         self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
-        jobnodelist = hostlist.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
+        self.nodelist = hostlist.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
 
-        self.hosts = [jobnodelist[i // self.tpn] for i in range(len(jobnodelist) * self.tpn)]
-        self.nprocs = len(self.hosts)
+        self.proclist = list(its.chain.from_iterable(its.repeat(x, self.tpn) for x in self.nodelist))
+        self.nprocs = len(self.proclist)
 
-        self.perHostMpiExec = ['mpirun', '-host', ','.join(jobnodelist),
+        self.perHostMpiExec = ['mpirun', '-host', ','.join(self.nodelist),
                                '-np', '{0:d}'.format(self.nnodes)]
         self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
         self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
