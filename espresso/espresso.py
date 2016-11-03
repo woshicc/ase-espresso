@@ -596,8 +596,6 @@ class Espresso(FileIOCalculator, object):
         # Auto create variables from input
         self.input_update()
 
-
-
         if atoms is not None:
             atoms.set_calculator(self)
 
@@ -666,6 +664,12 @@ class Espresso(FileIOCalculator, object):
 
         if not self._initialized:
             self.create_outdir()
+
+        # write the local hostfile
+        if self.site.usehostfile:
+            with open(self.site.get_hostfile(), 'wb') as fobj:
+                for proc in self.site.proclist:
+                    print(proc, file=fobj)
 
         if self.psppath is None:
             if os.environ['ESP_PSP_PATH'] is not None:

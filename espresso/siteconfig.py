@@ -10,7 +10,7 @@ import tempfile
 import functools
 from subprocess import call
 
-import hostlist
+import hostlist as hl
 from path import Path
 
 __version__ = '0.2.0'
@@ -69,7 +69,7 @@ class SiteConfig(object):
             Name of the envoronmental variable that defines the scratch path
     '''
 
-    def __init__(self, scheduler, scratchenv='SCRATCH'):
+    def __init__(self, scheduler, usehostfile=False, scratchenv='SCRATCH'):
 
         self.scheduler = scheduler
         self.scratchenv = scratchenv
@@ -77,8 +77,15 @@ class SiteConfig(object):
         self.global_scratch = None
         self.user_scratch = None
         self.submitdir = None
+        self.usehostfile = usehostfile
         self.jobid = None
+
         self.set_variables()
+
+        self.perHostMpiExec = ['mpirun', '-host', ','.join(self.nodelist),
+                               '-np', '{0:d}'.format(self.nnodes)]
+        self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
+        self.perSpecProcMpiExec = 'mpirun --hostfile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     def set_variables(self):
         '''
@@ -170,15 +177,10 @@ class SiteConfig(object):
 
         self.nnodes = int(os.getenv('SLURM_JOB_NUM_NODES'))
         self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
-        self.nodelist = hostlist.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
+        self.nodelist = hl.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
 
         self.proclist = list(its.chain.from_iterable(its.repeat(x, self.tpn) for x in self.nodelist))
         self.nprocs = len(self.proclist)
-
-        self.perHostMpiExec = ['mpirun', '-host', ','.join(self.nodelist),
-                               '-np', '{0:d}'.format(self.nnodes)]
-        self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
-        self.perSpecProcMpiExec = 'mpirun -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     def set_pbs_env(self):
         '''
@@ -212,7 +214,6 @@ class SiteConfig(object):
 
         self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(
             nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
-        self.perSpecProcMpiExec = 'mpiexec -machinefile {0:s} -np {1:d} -wdir {2:s} {3:s}'
 
     # methods for running espresso
 
@@ -271,3 +272,18 @@ class SiteConfig(object):
                 self.user_scratch.makedirs_p()
 
         return self.user_scratch.abspath()
+
+    def get_hostfile(self):
+
+        if self.localtmp is None:
+            raise RuntimeError('<localtmp> is not defined yet')
+        else:
+            return self.localtmp.joinpath('hostfile')
+
+
+    def __repr__(self):
+        return "%s(\n%s)" % (
+            (self.__class__.__name__),
+            ' '.join(["\t%s=%r,\n" % (key, getattr(self, key))
+                      for key in sorted(self.__dict__.keys())
+                      if not key.startswith('_')]))
