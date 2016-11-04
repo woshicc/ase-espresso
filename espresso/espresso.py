@@ -25,7 +25,6 @@ from collections import OrderedDict
 from io import open
 from path import Path
 
-import shlex
 import pexpect
 
 from ase.calculators.calculator import FileIOCalculator
@@ -667,7 +666,7 @@ class Espresso(FileIOCalculator, object):
 
         # write the local hostfile
         if self.site.usehostfile:
-            with open(self.site.get_hostfile(), 'wb') as fobj:
+            with open(self.site.get_hostfile(), 'w') as fobj:
                 for proc in self.site.proclist:
                     print(proc, file=fobj)
 
@@ -854,23 +853,18 @@ class Espresso(FileIOCalculator, object):
             Path.copy2(self.localtmp.joinpath('pw.inp'), self.scratch)
 
             if self.calculation != 'hund':
-                if not self.proclist:
-                    command = self.site.perProcMpiExec.format(self.scratch,
-                                'pw.x ' + self.parflags + ' -in pw.inp')
-                    if self.ion_dynamics == 'ase3':
-                        raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
-                    else:
-                        with open(self.log, 'ab') as flog:
-                            flog.write(self.get_output_header().encode('utf-8'))
-                            exitcode = subprocess.call(shlex.split(command),
-                                                       stdout=flog)
-                        if exitcode != 0:
-                            raise RuntimeError('something went wrong with execution:', exitcode)
 
+                command = self.site.get_proc_mpi_command(self.scratch,
+                                'pw.x ' + self.parflags + ' -in pw.inp')
+
+                if self.ion_dynamics == 'ase3':
+                    raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
                 else:
-                    self.cinp, self.cout, self.cerr = self.site.do_perSpecProcMpiExec(self.mycpus,
-                            self.myncpus, self.scratch,
-                            'pw.x '+self.parflags+' -in pw.inp|'+ 'espfilter '+str(self.natoms)+' '+self.log+'0')
+                    with open(self.log, 'ab') as flog:
+                        flog.write(self.get_output_header().encode('utf-8'))
+                        exitcode = subprocess.call(command, stdout=flog)
+                    if exitcode != 0:
+                        raise RuntimeError('something went wrong:', exitcode)
 
             else:  # calculation == 'hund'
                 self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
@@ -882,14 +876,13 @@ class Espresso(FileIOCalculator, object):
 
             pwinp = self.localtmp.joinpath('pw.inp')
             Path.copy(pwinp, self.scratch)
-            command = 'pw.x -in pw.inp'
+            command = ['pw.x', '-in', 'pw.inp']
             if self.calculation != 'hund':
                 self.scratch.chdir()
 
                 with open(self.log, 'ab') as flog:
                     flog.write(self.get_output_header().encode('utf-8'))
-                    exitcode = subprocess.call(shlex.split(command),
-                                               stdout=flog)
+                    exitcode = subprocess.call(command, stdout=flog)
 
             else:
                 self.scratch.chdir()
@@ -3395,49 +3388,52 @@ class iEspresso(Espresso):
         if self.site.batchmode:
             self.localtmp.chdir()
 
-            subprocess.call(self.site.perHostMpiExec +
-                            ['cp', '-u', str(self.localtmp.joinpath('pw.inp')), self.scratch])
+            cmd = self.site.get_host_mpi_command('cp -u {0:s} {1:s}'.format(
+                str(self.localtmp.joinpath('pw.inp')), self.scratch))
+            subprocess.call(cmd)
 
             if self.calculation != 'hund':
-                if not self.proclist:
-                    command = self.site.perProcMpiExec.format(self.scratch,
+
+                command = self.site.get_proc_mpi_command(self.scratch,
                                 'pw.x ' + self.parflags + ' -in pw.inp')
 
-                    if not self._spawned:
-                        self.child = pexpect.spawn(command)
-                        self._spawned = True
-                        self.child.logfile = self.logfile
-                        self.child.logfile.write(self.get_output_header().encode('utf-8'))
+                if not self._spawned:
+                    self.child = pexpect.spawn(command)
+                    self._spawned = True
+                    self.child.logfile = self.logfile
+                    self.child.logfile.write(self.get_output_header().encode('utf-8'))
 
-                        try:
-                            i = self.child.expect(['!ASE\s*\n(.*\n){4}',
-                                '     convergence NOT', '     stopping'],
-                                                  timeout=self.timeout)
-                            if i == 1:
-                                raise SCFMaxIterationsError()
-                            elif i == 2:
-                                raise SCFConvergenceError()
-                        except:
-                            print('# Exception was thrown by pexpect.expect')
-                            print(str(self.child))
+                    try:
+                        i = self.child.expect(['!ASE\s*\n(.*\n){4}',
+                            '     convergence NOT', '     stopping'],
+                                              timeout=self.timeout)
+                        if i == 1:
+                            raise SCFMaxIterationsError()
+                        elif i == 2:
+                            raise SCFConvergenceError()
+                    except:
+                        print('# Exception was thrown by pexpect.expect')
+                        print(str(self.child))
 
-                    else:  # QE process is already spawned 
+                else:  # QE process is already spawned 
 
-                        self.child.send('C\n')
-                        for atom in self.atoms:
-                            self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
+                    self.child.send('C\n')
+                    for atom in self.atoms:
+                        self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
 
-                        try:
-                            i = self.child.expect(['!ASE\s*\n(.*\n){4}', '     convergence NOT', '     stopping'],
-                                                  timeout=self.timeout)
-                            if i == 1:
-                                raise SCFMaxIterationsError()
-                            elif i == 2:
-                                raise SCFConvergenceError()
-                        except:
-                            print('# Exception was thrown by pexpect.expect')
-                            print(str(self.child))
-                        self.child.logfile.flush()
+                    try:
+                        i = self.child.expect(['!ASE\s*\n(.*\n){4}',
+                                               '     convergence NOT',
+                                               '     stopping'],
+                                              timeout=self.timeout)
+                        if i == 1:
+                            raise SCFMaxIterationsError()
+                        elif i == 2:
+                            raise SCFConvergenceError()
+                    except:
+                        print('# Exception was thrown by pexpect.expect')
+                        print(str(self.child))
+                    self.child.logfile.flush()
 
             else:  # calculation == 'hund'
                 self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
@@ -3450,7 +3446,7 @@ class iEspresso(Espresso):
 
             pwinp = self.localtmp.joinpath('pw.inp')
             Path.copy(pwinp, self.scratch)
-            command = 'pw.x -in pw.inp'
+            command = ['pw.x', '-in', 'pw.inp']
 
             if not self._spawned:
                 self.child = pexpect.spawn(command)

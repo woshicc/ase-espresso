@@ -5,6 +5,7 @@ from __future__ import division
 import contextlib
 import itertools as its
 import os
+import shlex
 import sys
 import tempfile
 import functools
@@ -82,11 +83,6 @@ class SiteConfig(object):
 
         self.set_variables()
 
-        self.perHostMpiExec = ['mpirun', '-host', ','.join(self.nodelist),
-                               '-np', '{0:d}'.format(self.nnodes)]
-        self.perProcMpiExec = 'mpirun -wdir {0:s} {1:s}'
-        self.perSpecProcMpiExec = 'mpirun --hostfile {0:s} -np {1:d} -wdir {2:s} {3:s}'
-
     def set_variables(self):
         '''
         Resolve the site attributes based on the scheduler used
@@ -163,15 +159,8 @@ class SiteConfig(object):
 
         self.batchmode = True
 
-        env = {'jobid': 'SLURM_JOB_ID',
-               'submitdir': 'SUBMITDIR'}
-
-        for name, var in env.items():
-            value = os.getenv(var)
-            if value is None:
-                raise OSError('variable ${} is undefined'.format(var))
-            else:
-                setattr(self, name, value)
+        self.jobid = os.getenv('SLURM_JOB_ID')
+        self.submitdir = Path(os.getenv('SUBMITDIR'))
 
         self.set_global_scratch()
 
@@ -190,15 +179,8 @@ class SiteConfig(object):
 
         self.batchmode = True
 
-        env = {'jobid': 'PBS_JOBID',
-               'submitdir': 'PBS_O_WORKDIR'}
-
-        for name, var in env.items():
-            value = os.getenv(var)
-            if value is None:
-                raise OSError('variable ${} undefined'.format(var))
-            else:
-                setattr(self, name, value)
+        self.jobid = os.getenv('PBS_JOBID')
+        self.submitdir = Path(os.getenv('PBS_O_WORKDIR'))
 
         self.set_global_scratch()
 
@@ -215,25 +197,6 @@ class SiteConfig(object):
         self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(
             nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
 
-    # methods for running espresso
-
-    def do_perProcMpiExec(self, workdir, program):
-
-        return os.popen2(self.perProcMpiExec.format(workdir, program))
-
-    def do_perProcMpiExec_outputonly(self, workdir, program):
-
-        return os.popen(self.perProcMpiExec.format(workdir, program), 'r')
-
-    def runonly_perProcMpiExec(self, workdir, program):
-
-        call(self.perProcMpiExec.format(workdir, program))
-
-    def do_perSpecProcMpiExec(self, machinefile, nproc, workdir, program):
-
-        return os.popen3(self.perSpecProcMpiExec.format(machinefile, nproc,
-                                                        workdir, program))
-
     def make_localtmp(self, workdir):
         '''
         Create a temporary local directory for the job
@@ -244,13 +207,11 @@ class SiteConfig(object):
         '''
 
         if workdir is None or len(workdir) == 0:
-            prefix = '_'.join(['qe', str(os.getuid()), str(self.jobid)])
-            self.localtmp = Path(tempfile.mkdtemp(prefix=prefix, suffix='_tmp',
-                                                  dir=self.submitdir))
+            self.localtmp = self.submitdir.joinpath('qe_' + str(self.jobid))
         else:
-            self.localtmp = Path(tempfile.mkdtemp(prefix=workdir,
-                                                  dir=self.submitdir))
+            self.localtmp = self.submitdir.joinpath(workdir + '_' + str(self.jobid))
 
+        self.localtmp.makedirs_p()
         return self.localtmp.abspath()
 
     def make_scratch(self):
@@ -266,8 +227,8 @@ class SiteConfig(object):
 
         with working_directory(str(self.localtmp)):
             if self.batchmode:
-                exitcode = call(self.perHostMpiExec +
-                                ['mkdir', '-p', str(self.user_scratch)])
+                cmd = self.get_host_mpi_command('mkdir -p {}'.format(str(self.user_scratch)))
+                call(cmd)
             else:
                 self.user_scratch.makedirs_p()
 
@@ -280,6 +241,25 @@ class SiteConfig(object):
         else:
             return self.localtmp.joinpath('hostfile')
 
+    def get_host_mpi_command(self, program):
+        'Return a command as list to execute `program` through MPI per host'
+
+        command = 'mpirun -host {} '.format(','.join(self.nodelist)) +\
+                  '-np {0:d} {1:s}'.format(self.nnodes, program)
+
+        return shlex.split(command)
+
+    def get_proc_mpi_command(self, workdir, program):
+        'Return a command as list to execute `program` through MPI per proc'
+
+        if self.usehostfile:
+            command = 'mpirun --hostfile {0:s} '.format(self.get_hostfile()) +\
+                      '-np {0:d} '.format(self.nprocs) +                      \
+                      '-wdir {0:s} {1:s}'.format(workdir, program)
+        else:
+            command = 'mpirun -wdir {0:s} {1:s}'.format(workdir, program)
+
+        return shlex.split(command)
 
     def __repr__(self):
         return "%s(\n%s)" % (
