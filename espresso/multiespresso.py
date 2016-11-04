@@ -19,30 +19,20 @@ from .siteconfig import SiteConfig
 __version__ = '0.2.0'
 
 
-def splitinto(l, k):
+def splitinto(l, n):
     '''
-    Split a list into `k` sublists of roughly equal size
+    Split a list into `n` sublists of roughly equal size
 
     Args:
         l : list
             List to be split
-        k : int
+        n : int
             number of sublists
     '''
 
-    if len(l) % k == 0:
-        n = len(l) // k
-    elif len(l) % k != 0 and len(l) > k:
-        n = len(l) // k + 1
-
-    if len(l) % n == 0:
-        splits = len(l) // n
-    elif len(l) % n != 0 and len(l) > n:
-        splits = len(l) // n + 1
-    else:
-        splits = 1
-
-    return [l[n * i:n * i + n] for i in range(splits)]
+    q, r = divmod(len(l), n)
+    indices = [q * i + min(i, r) for i in range(n + 1)]
+    return [l[indices[i]:indices[i + 1]] for i in range(n)]
 
 
 class NEBEspresso(object):
@@ -55,8 +45,10 @@ class NEBEspresso(object):
             Images along the reaction path as a list of ase.Atoms objects
         outprefix : str, default=`neb`
             Prefix of the output directories for images
-        log : str, default='neb_master.log'
+        masterlog : str, default='neb_master.log'
             Name of the log file
+        site : SiteConfig
+            SiteConfig object
     '''
 
     def __init__(self, images, outprefix='neb', masterlog='neb_master.log',
@@ -97,7 +89,7 @@ class NEBEspresso(object):
 
             site = copy.deepcopy(self.site)
 
-            site.proclsit = procs
+            site.proclist = procs
             site.nprocs = len(site.proclist)
             site.usehostfile = True
 
@@ -114,17 +106,6 @@ class NEBEspresso(object):
 
         for job in self.jobs:
             job['image'].set_calculator(job['calc'])
-
-    def write_hostfiles(self):
-
-        for job in self.jobs:
-
-            job['calc'].initialize(job['image'])
-
-        self.mycpus = self.localtmp + '/myprocs%{0:0>4d}.txt'.format(procrange)
-        with open(self.mycpus, 'w') as fcpu:
-            for i in range(i1, i1 + self.myncpus):
-                fcpu.write(procs[i])
 
     def wait_for_total_energies(self):
 
@@ -144,7 +125,7 @@ class NEBEspresso(object):
                 if job['calc'].recalculate:
 
                     if not job['done']:
-                        
+
                         a = self.calculators[i].cerr.readline()
                         running |= (a != '' and a[:17] != '!    total energy')
                         if a[:13] == '     stopping':
