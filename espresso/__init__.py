@@ -4,6 +4,6 @@ from __future__ import absolute_import
 
 from .espresso import Espresso, iEspresso
 from .vibespresso import Vibespresso
-
+from .multiespresso import NEBEspresso
 
 __version__ = '0.2.0'

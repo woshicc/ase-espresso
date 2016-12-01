@@ -13,7 +13,7 @@ from __future__ import print_function, absolute_import
 from io import open
 import copy
 import sys
-from .espresso import Espresso
+from .espresso import Espresso,iEspresso
 from .siteconfig import SiteConfig
 
 __version__ = '0.2.0'
@@ -51,7 +51,7 @@ class NEBEspresso(object):
             SiteConfig object
     '''
 
-    def __init__(self, images, outprefix='neb', masterlog='neb_master.log',
+    def __init__(self, neb, outprefix='neb', masterlog='neb_master.log',
                  site=None, **kwargs):
         '''
         Set the necessary parameters
@@ -59,8 +59,7 @@ class NEBEspresso(object):
 
         self.calc_args = kwargs
 
-        self.images = images
-        self.nimages = len(self.images)
+        self._set_neb(neb)
 
         self.outprefix = outprefix
         self.masterlog = masterlog
@@ -68,6 +67,9 @@ class NEBEspresso(object):
         self.jobs = []
 
         self.site = site
+
+	self._create_calculators()
+	self._associate_calculators()
 
     @property
     def site(self):
@@ -98,56 +100,60 @@ class NEBEspresso(object):
             calc_args['site'] = site
 
             self.jobs.append({'image': image,
-                              'calc': Espresso(**calc_args),
+                              'calc': iEspresso(**calc_args),
                               'done': False,
                               'procs': procs})
 
-    def _set_images(self):
+    def _associate_calculators(self):
 
         for job in self.jobs:
             job['image'].set_calculator(job['calc'])
 
     def wait_for_total_energies(self):
 
-        mlog = open(self.masterlog, 'ab')
+        #mlog = open(self.masterlog, 'ab')
 
         for job in self.jobs:
-            job['calc'].initialize(job['image'])
-            job['done'] = False
+	    job['calc'].initialize(job['image'])
+            job['calc'].calculate(job['image'])
+            #job['done'] = False
 
-        running = True
-        while running:
+        #running = True
+        #while running:
 
-            running = False
+            #running = False
 
-            for job in self.jobs:
+            #for job in self.jobs:
 
-                if job['calc'].recalculate:
+                #if job['calc'].recalculate:
 
-                    if not job['done']:
+                    #if not job['done']:
+			
+			
 
-                        a = self.calculators[i].cerr.readline()
-                        running |= (a != '' and a[:17] != '!    total energy')
-                        if a[:13] == '     stopping':
-                            raise RuntimeError('problem with calculator #{}'.format(i))
-                        elif a[:20] == '     convergence NOT':
-                            raise RuntimeError('calculator #{} did not converge'.format(i))
-                        elif a[1:17] != '    total energy':
-                            sys.stderr.write(a)
-                        else:
-                            if a[0] != '!':
-                                self.done[i] = False
-                                print('current free energy (calc. %3d; in scf cycle) :' % i, a.split()[-2], 'Ry', file=s)
-                            else:
-                                self.done[i] = True
-                                print('current free energy (calc. %3d; ionic step) :  ' % i, a.split()[-2], 'Ry', file=s)
-                            mlog.flush()
-        print('', file=mlog)
-        mlog.close()
+                        #a = self.calculators[i].cerr.readline()
+                        #running |= (a != '' and a[:17] != '!    total energy')
+                        #if a[:13] == '     stopping':
+                        #    raise RuntimeError('problem with calculator #{}'.format(i))
+                        #elif a[:20] == '     convergence NOT':
+                        #    raise RuntimeError('calculator #{} did not converge'.format(i))
+                        #elif a[1:17] != '    total energy':
+                        #    sys.stderr.write(a)
+                        #else:
+                        #    if a[0] != '!':
+                        #        self.done[i] = False
+                        #        print('current free energy (calc. %3d; in scf cycle) :' % i, a.split()[-2], 'Ry', file=s)
+                        #    else:
+                        #        self.done[i] = True
+                        #        print('current free energy (calc. %3d; ionic step) :  ' % i, a.split()[-2], 'Ry', file=s)
+                        #    mlog.flush()
+        #print('', file=mlog)
+        #mlog.close()
 
-    def set_neb(self, neb):
+    def _set_neb(self, neb):
 
-        self.set_images(neb.images[1:len(neb.images) - 1])
+        self.images = neb.images[1:len(neb.images) - 1]
+	self.nimages = len(self.images)
         self.neb = neb
         self.neb.neb_orig_forces = self.neb.get_forces
         self.neb.get_forces = self.nebforce

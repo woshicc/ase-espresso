@@ -168,7 +168,7 @@ class SiteConfig(object):
         self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
         self.nodelist = hl.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
 
-        self.proclist = list(its.chain.from_iterable(its.repeat(x, self.tpn) for x in self.nodelist))
+        self.proclist = list(its.chain.from_iterable(its.repeat(unicode(x), self.tpn) for x in self.nodelist))
         self.nprocs = len(self.proclist)
 
     def set_pbs_env(self):
@@ -256,10 +256,12 @@ class SiteConfig(object):
             command = 'mpirun --hostfile {0:s} '.format(self.get_hostfile()) +\
                       '-np {0:d} '.format(self.nprocs) +                      \
                       '-wdir {0:s} {1:s}'.format(workdir, program)
+	    print('Using hostfile',self.get_hostfile())
         else:
             command = 'mpirun -wdir {0:s} {1:s}'.format(workdir, program)
+	    print('Not Using hostfile',self.get_hostfile())
 
-        return shlex.split(command)
+        return command #shlex.split(command)
 
     def __repr__(self):
         return "%s(\n%s)" % (
