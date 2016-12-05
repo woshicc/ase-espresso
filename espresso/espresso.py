@@ -3395,7 +3395,7 @@ class iEspresso(Espresso):
             if self.calculation != 'hund':
 
                 command = self.site.get_proc_mpi_command(self.scratch,
-                                'pw.x ' + self.parflags + ' -in pw.inp')
+                                'pw.x ' + self.parflags + ' -in pw.inp', aslist=False)
 
                 if not self._spawned:
                     self.child = pexpect.spawn(command)

@@ -241,15 +241,18 @@ class SiteConfig(object):
         else:
             return self.localtmp.joinpath('hostfile')
 
-    def get_host_mpi_command(self, program):
+    def get_host_mpi_command(self, program, aslist=True):
         'Return a command as list to execute `program` through MPI per host'
 
         command = 'mpirun -host {} '.format(','.join(self.nodelist)) +\
                   '-np {0:d} {1:s}'.format(self.nnodes, program)
 
-        return shlex.split(command)
+        if aslist:
+            return shlex.split(command)
+        else:
+            return command
 
-    def get_proc_mpi_command(self, workdir, program):
+    def get_proc_mpi_command(self, workdir, program, aslist=True):
         'Return a command as list to execute `program` through MPI per proc'
 
         if self.usehostfile:
@@ -259,7 +262,10 @@ class SiteConfig(object):
         else:
             command = 'mpirun -wdir {0:s} {1:s}'.format(workdir, program)
 
-        return shlex.split(command)
+        if aslist:
+            return shlex.split(command)
+        else:
+            return command
 
     def __repr__(self):
         return "%s(\n%s)" % (
