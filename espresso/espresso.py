@@ -1289,7 +1289,7 @@ class Espresso(FileIOCalculator, object):
                 self.nvalence, self.nel = self.get_nvalence()
             for species in self.species:  # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
                 spec = self.specdict[species]
-                el = spec.s
+                el = spec.symbol
                 mag = spec.magmom / self.nel[el]
                 assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
                 print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
@@ -1303,7 +1303,7 @@ class Espresso(FileIOCalculator, object):
                 self.nvalence, self.nel = self.get_nvalence()
             for species in self.species:  # FOLLOW SAME ORDERING ROUTINE AS FOR PSP
                 spec = self.specdict[species]
-                el = spec.s
+                el = spec.symbol
                 mag = spec.magmom / self.nel[el]
                 assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
                 print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
@@ -1372,19 +1372,19 @@ class Espresso(FileIOCalculator, object):
             if self.U is not None:
                 for i, s in enumerate(self.species):
                     spec = self.specdict[s]
-                    el = spec.s
+                    el = spec.symbol
                     Ui = spec.U
                     print('  Hubbard_U('+str(i+1)+')='+num2str(Ui)+',', file=finp)
             if self.J is not None:
                 for i, s in enumerate(self.species):
                     spec = self.specdict[s]
-                    el = spec.s
+                    el = spec.symbol
                     Ji = spec.J
                     print('  Hubbard_J(1,'+str(i+1)+')='+num2str(Ji)+',', file=finp)
             if self.U_alpha is not None:
                 for i, s in enumerate(self.species):
                     spec = self.specdict[s]
-                    el = spec.s
+                    el = spec.symbol
                     U_alphai = spec.U_alpha
                     print('  Hubbard_alpha('+str(i+1)+')='+num2str(U_alphai)+',', file=finp)
 
@@ -3401,7 +3401,7 @@ class iEspresso(Espresso):
             if self.calculation != 'hund':
 
                 command = self.site.get_proc_mpi_command(self.scratch,
-                                'pw.x ' + self.parflags + ' -in pw.inp')
+                                'pw.x ' + self.parflags + ' -in pw.inp', aslist=False)
 
                 if not self._spawned:
                     self.child = pexpect.spawn(command)
