@@ -913,6 +913,7 @@ class Espresso(FileIOCalculator, object):
             pass
 
         if self.output is not None:
+            print('self.output.keys()',self.output.keys())
             if 'removewf' in list(self.output.keys()):
                 removewf = self.output['removewf']
             else:

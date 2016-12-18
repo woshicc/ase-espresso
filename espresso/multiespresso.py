@@ -41,8 +41,8 @@ class NEBEspresso(object):
     Useful for e.g. nudged elastic band calculations.
 
     Args:
-        images : list of ase.Atoms
-            Images along the reaction path as a list of ase.Atoms objects
+        neb : ase.neb.NEB
+            The nudged elastic band object to associate the calculator with
         outprefix : str, default=`neb`
             Prefix of the output directories for images
         masterlog : str, default='neb_master.log'
@@ -51,8 +51,7 @@ class NEBEspresso(object):
             SiteConfig object
     '''
 
-    def __init__(self, neb, outprefix='neb', masterlog='neb_master.log',
-                 site=None, **kwargs):
+    def __init__(self, neb, outprefix='neb',site=None, **kwargs):
         '''
         Set the necessary parameters
         '''
@@ -62,14 +61,13 @@ class NEBEspresso(object):
         self._set_neb(neb)
 
         self.outprefix = outprefix
-        self.masterlog = masterlog
 
         self.jobs = []
 
         self.site = site
 
-	self._create_calculators()
-	self._associate_calculators()
+        self._create_calculators()
+        self._associate_calculators()
 
     @property
     def site(self):
@@ -101,8 +99,7 @@ class NEBEspresso(object):
 
             self.jobs.append({'image': image,
                               'calc': iEspresso(**calc_args),
-                              'done': False,
-                              'procs': procs})
+                              })
 
     def _associate_calculators(self):
 
@@ -111,49 +108,13 @@ class NEBEspresso(object):
 
     def wait_for_total_energies(self):
 
-        #mlog = open(self.masterlog, 'ab')
-
         for job in self.jobs:
-	    job['calc'].initialize(job['image'])
             job['calc'].calculate(job['image'])
-            #job['done'] = False
-
-        #running = True
-        #while running:
-
-            #running = False
-
-            #for job in self.jobs:
-
-                #if job['calc'].recalculate:
-
-                    #if not job['done']:
-			
-			
-
-                        #a = self.calculators[i].cerr.readline()
-                        #running |= (a != '' and a[:17] != '!    total energy')
-                        #if a[:13] == '     stopping':
-                        #    raise RuntimeError('problem with calculator #{}'.format(i))
-                        #elif a[:20] == '     convergence NOT':
-                        #    raise RuntimeError('calculator #{} did not converge'.format(i))
-                        #elif a[1:17] != '    total energy':
-                        #    sys.stderr.write(a)
-                        #else:
-                        #    if a[0] != '!':
-                        #        self.done[i] = False
-                        #        print('current free energy (calc. %3d; in scf cycle) :' % i, a.split()[-2], 'Ry', file=s)
-                        #    else:
-                        #        self.done[i] = True
-                        #        print('current free energy (calc. %3d; ionic step) :  ' % i, a.split()[-2], 'Ry', file=s)
-                        #    mlog.flush()
-        #print('', file=mlog)
-        #mlog.close()
 
     def _set_neb(self, neb):
 
         self.images = neb.images[1:len(neb.images) - 1]
-	self.nimages = len(self.images)
+        self.nimages = len(self.images)
         self.neb = neb
         self.neb.neb_orig_forces = self.neb.get_forces
         self.neb.get_forces = self.nebforce
