@@ -37,7 +37,7 @@ def test_co_espresso_vibrations(tmpdir):
 
 def test_co_vibespresso_vibrations(tmpdir):
 
-    os.chdir(tmpdir)
+    tmpdir.chdir()
 
     co = Atoms('CO', positions=[[1.19382389081, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
@@ -58,7 +58,4 @@ def test_co_vibespresso_vibrations(tmpdir):
     vib.run()
 
     assert np.allclose(vib.get_energies(), REF_ENE)
-
-test_co_espresso_vibrations('vib')
-test_co_vibespresso_vibrations('vib')
 
