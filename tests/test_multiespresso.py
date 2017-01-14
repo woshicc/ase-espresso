@@ -1,28 +1,27 @@
-
-from espresso import Espresso, Multiespresso
-
+from espresso import NEBEspresso,iEspresso
 from ase.build import molecule
 from ase.neb import NEB
 from ase.optimize.fire import FIRE as QuasiNewton
+from asetools import smart_cell
+from ase.io.trajectory import Trajectory
+from ase.io import write,read
 
 # Optimise molecule
 initial = molecule('C2H6')
-initial.set_calculator(EMT())
-relax = QuasiNewton(initial)
-relax.run(fmax=0.05)
+smart_cell(initial,vac=4.0,h=0.01)
+write('initial.traj',initial)
 
 # Create final state
 final = initial.copy()
 final.positions[2:5] = initial.positions[[3, 4, 2]]
+write('final.traj',final)
 
 # Generate blank images
 images = [initial]
+nimage = 7
 
-for i in range(9):
+for i in range(nimage):
     images.append(initial.copy())
-
-for image in images:
-    image.set_calculator(Espresso())
 
 images.append(final)
 
@@ -30,8 +29,13 @@ images.append(final)
 neb = NEB(images)
 neb.interpolate()
 
-# Run NEB calculation
-qn = QuasiNewton(neb, trajectory='ethane_linear.traj',
-                 logfile='ethane_linear.log')
-qn.run(fmax=0.05)
+calcs = NEBEspresso(neb,kpts='gamma',pw=300,dw=4000)
 
+# Run NEB calculation
+qn = QuasiNewton(neb, logfile='ethane_linear.log')
+
+for j in range(nimage):
+  traj = Trajectory('neb%d.traj' % j, 'w', images[j+1])
+  qn.attach(traj)
+
+qn.run(fmax=0.05)

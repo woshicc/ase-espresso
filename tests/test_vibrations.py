@@ -4,6 +4,7 @@ from ase import Atoms
 from ase.units import Rydberg, Bohr
 from ase.vibrations import Vibrations
 from espresso import Espresso, Vibespresso
+import os
 
 REF_ENE = np.array([0.00000000+0.09469678j, 0.00000000+0.09468807j,
                     0.00000000+0.01367736j, 0.05181212+0.j,
@@ -12,7 +13,7 @@ REF_ENE = np.array([0.00000000+0.09469678j, 0.00000000+0.09468807j,
 
 def test_co_espresso_vibrations(tmpdir):
 
-    tmpdir.chdir()
+    os.chdir(tmpdir)
 
     co = Atoms('CO', positions=[[1.19382389081, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
