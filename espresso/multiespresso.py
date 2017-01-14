@@ -15,6 +15,7 @@ import copy
 import sys
 from .espresso import Espresso,iEspresso
 from .siteconfig import SiteConfig
+import threading
 
 __version__ = '0.2.0'
 
@@ -102,14 +103,17 @@ class NEBEspresso(object):
                               })
 
     def _associate_calculators(self):
-
         for job in self.jobs:
             job['image'].set_calculator(job['calc'])
 
     def wait_for_total_energies(self):
-
+        threads = []
         for job in self.jobs:
-            job['calc'].calculate(job['image'])
+           t = threading.Thread(target=job['calc'].calculate,args=(job['image'],))
+           threads.append(t)
+           t.start()
+        for t in threads:
+           t.join()
 
     def _set_neb(self, neb):
 
@@ -120,7 +124,6 @@ class NEBEspresso(object):
         self.neb.get_forces = self.nebforce
 
     def nebforce(self):
-
         self.wait_for_total_energies()
         return self.neb.neb_orig_forces()
 
