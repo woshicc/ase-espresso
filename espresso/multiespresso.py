@@ -12,8 +12,7 @@ from __future__ import print_function, absolute_import
 
 from io import open
 import copy
-import sys
-from .espresso import Espresso,iEspresso
+from .espresso import Espresso, iEspresso
 from .siteconfig import SiteConfig
 import threading
 
@@ -25,9 +24,9 @@ def splitinto(l, n):
     Split a list into `n` sublists of roughly equal size
 
     Args:
-        l : list
-            List to be split
-        n : int
+        l (`list`) :
+            list to be split
+        n (int) :
             number of sublists
     '''
 
@@ -42,17 +41,17 @@ class NEBEspresso(object):
     Useful for e.g. nudged elastic band calculations.
 
     Args:
-        neb : ase.neb.NEB
+        neb (`ase.neb.NEB`) :
             The nudged elastic band object to associate the calculator with
-        outprefix : str, default=`neb`
-            Prefix of the output directories for images
-        masterlog : str, default='neb_master.log'
-            Name of the log file
-        site : SiteConfig
-            SiteConfig object
+        outprefix (str) :
+            Prefix of the output directories for images, defaults to `neb`
+        masterlog (str)
+            Name of the log file, defaults to 'neb_master.log'
+        site (`siteconfig.SiteConfig`)
+            Site configuration object
     '''
 
-    def __init__(self, neb, outprefix='neb',site=None, **kwargs):
+    def __init__(self, neb, outprefix='neb', site=None, **kwargs):
         '''
         Set the necessary parameters
         '''
@@ -109,11 +108,11 @@ class NEBEspresso(object):
     def wait_for_total_energies(self):
         threads = []
         for job in self.jobs:
-           t = threading.Thread(target=job['calc'].calculate,args=(job['image'],))
-           threads.append(t)
-           t.start()
+            t = threading.Thread(target=job['calc'].calculate,args=(job['image'],))
+            threads.append(t)
+            t.start()
         for t in threads:
-           t.join()
+            t.join()
 
     def _set_neb(self, neb):
 
@@ -124,6 +123,7 @@ class NEBEspresso(object):
         self.neb.get_forces = self.nebforce
 
     def nebforce(self):
+        'Wait for the calcualtions to finish and the the NEB force'
         self.wait_for_total_energies()
         return self.neb.neb_orig_forces()
 

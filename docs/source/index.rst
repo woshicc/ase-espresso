@@ -16,9 +16,9 @@ files for `Quantum Espresso`_ only, there are alternative python interfaces for
 input file generation (or for running static calculations ionic step by ionic
 step):
 
-    - `ase_qe_intrfce <http://www.qe-forge.org/gf/project/ase_qe_intrfce/>`_,
-    - `PWscfInput <http://physics.ucf.edu/%7Edle/blog.php?id=2>`_,
-    - `qecalc <https://pypi.python.org/pypi/qecalc/0.3.0>`_.
+- `ase_qe_intrfce <http://www.qe-forge.org/gf/project/ase_qe_intrfce/>`_,
+- `PWscfInput <http://physics.ucf.edu/%7Edle/blog.php?id=2>`_,
+- `qecalc <https://pypi.python.org/pypi/qecalc/0.3.0>`_.
 
 
 .. _ase-espresso: https://github.com/vossjo/ase-espresso
@@ -40,4 +40,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

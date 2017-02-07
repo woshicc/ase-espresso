@@ -53,196 +53,276 @@ class Espresso(FileIOCalculator, object):
     """
     ASE interface for Quantum Espresso
 
-    Parameters (with defaults in parentheses):
-        atoms (None)
+    Args:
+        atoms (``ase.Atoms``) : 
             list of atoms object to be attached to calculator
             atoms.set_calculator can be used instead
-        pw (350.0)
-            plane-wave cut-off in eV
-        dw (10*pw)
-            charge-density cut-off in eV
-        fw (None)
-            plane-wave cutoff for evaluation of EXX in eV
-        nbands (-10)
-            number of bands, if negative: -n extra bands
-        kpts ( (1,1,1) )
-            k-point grid sub-divisions, k-point grid density,
-            explicit list of k-points, or simply 'gamma' for gamma-point only.
-        kptshift ( (0,0,0) )
-            shift of k-point grid
-        fft_grid ( None )
-            specify tuple of fft grid points (nr1, nr2, nr3) for q.e.
-            useful for series of calculations with changing cell size
-            (e.g. lattice constant optimization) uses q.e. default if not specified. [RK]
-        calculation ( 'relax' )
-            relaxation mode:
-            - 'relax', 'scf', 'nscf': corresponding Quantum Espresso standard modes
 
-        ion_dynamics ( 'ase3' )
-            - 'ase3':
-                only possible with dynamic communication between Quantum Espresso and python
-                in this case ASE updates coordinates during relaxation
-            - 'relax' and other Quantum Espresso standard relaxation modes:
-                  Quantum Espresso own algorithms for structural optimization
-                  are used
+        beefensemble (bool) :
+            calculate basis energies for ensemble error estimates based on
+            the BEEF-vdW functional, defaults to `False`
 
-            Obtaining Quantum Espresso with the ase3 relaxation extensions is
-            highly recommended, since it allows for using ase's optimizers without
-            loosing efficiency:
-                svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
-        fmax (0.05)
-            max force limit for Espresso-internal relaxation (eV/Angstrom)
-        constr_tol (None)
-            constraint tolerance for Espresso-internal relaxation
-        cell_dynamics (None)
-            algorithm (e.g. 'BFGS') to be used for Espresso-internal unit-cell optimization
-        press (None)
-            target pressure for such an optimization
-        dpress (None)
-            convergence limit towards target pressure
-        cell_factor (None)
+        calcstress (bool) :
+            If True, calculate stress, defaults to ``False``
+
+        calculation (str) :
+            Specifies the type of calcualtion, can be one of `relax`, `scf`, `nscf`
+            corresponding Quantum Espresso standard modes
+
+        cell_dofree (None) :
+            partially fix lattice vectors
+
+        cell_dynamics (str) :
+            algorithm (e.g. `BFGS`) to be used for Espresso-internal unit-cell optimization
+
+        cell_factor (float) :
             should be >>1 if unit-cell volume is expected to shrink a lot during
             relaxation (would be more efficient to start with a better guess)
-        cell_dofree (None)
-            partially fix lattice vectors
-        nosym (False)
-        noinv (False)
-        nosym_evc (False)
-     no_t_rev (False)
-        turn off corresp. symmetries
-     xc ('PBE')
-        xc-functional to be used
-     beefensemble (False)
-        calculate basis energies for ensemble error estimates based on
-        the BEEF-vdW functional
-     printensemble (False)
-        let Espresso itself calculate 2000 ensemble energies
-     psppath (None)
-        Directory containing the pseudo-potentials or paw-setups to be used.
-        The ase-espresso interface expects all pot. files to be of the type
-        element.UPF (e.g. H.UPF).
-        If None, the directory pointed to be ESP_PSP_PATH is used.
-     spinpol (False)
-        If True, calculation is spin-polarized
-     noncollinear (False)
-        Non-collinear magnetism.
-     spinorbit (False)
-        If True, spin-orbit coupling is considered.
-        Make sure to provide j-dependent pseudo-potentials in psppath
-        for those elements where spin-orbit coupling is important
-     outdir (None)
-        directory where Espresso's output is collected,
-        default: qe<random>
-     txt (None)
-        If not None, direct Espresso's output to a different file than
-        outdir/log
-     calcstress (False)
-        If True, calculate stress
-     occupations ('smearing')
-        Controls how Kohn-Sham states are occupied.
-        Possible values: 'smearing', 'fixed' (molecule or insulator),
-        or 'tetrahedra'.
-     smearing ('fd')
-        method for Fermi surface smearing
-        - 'fd','Fermi-Dirac': Fermi-Dirac
-        - 'mv','Marzari-Vanderbilt': Marzari-Vanderbilt cold smearing
-        - 'gauss','gaussian': Gaussian smearing
-        - 'mp','Methfessel-Paxton': Methfessel-Paxton
 
-     sigma (0.1)
-        smearing width in eV
-     tot_charge (None)
-        charge the unit cell,
-        +1 means 1 e missing, -1 means 1 extra e
-     charge (None)
-        overrides tot_charge (ase 3.7+ compatibility)
-     tot_magnetization (-1)
-        Fix total magnetization,
-        -1 means unspecified/free,
-        'hund' means Hund's rule for each atom
-     fix_magmom (False)
-        If True, fix total magnetization to current value.
-     isolated (None)
-        invoke an 'assume_isolated' method for screening long-range interactions
-        across 3D supercells, particularly electrostatics.
-        Very useful for charged molecules and charged surfaces,
-        but also improves convergence wrt. vacuum space for neutral molecules.
-        - 'makov-payne', 'mp': only cubic systems.
-        - 'dcc': don't use.
-        - 'martyna-tuckerman', 'mt': method of choice for molecules, works for any supercell geometry.
-        - 'esm': Effective Screening Medium Method for surfaces and interfaces.
-     U (None)
-        specify Hubbard U values (in eV)
-        U can be list: specify U for each atom
-        U can be a dictionary ( e.g. U={'Fe':3.5} )
-        U values are assigned to angular momentum channels
-        according to Espresso's hard-coded defaults
-        (i.e. l=2 for transition metals, l=1 for oxygen, etc.)
-     J (None)
-        specify exchange J values (in eV)
-        can be list or dictionary (see U parameter above)
-     U_alpha
-        U_alpha (in eV)
-        can be list or dictionary (see U parameter above)
-     U_projection_type ('atomic')
-        type of projectors for calculating density matrices in DFT+U schemes
-     nqx1, nqx2, nqx3 (all None)
-        3D mesh for q=k1-k2 sampling of Fock operator. Can be smaller
-        than number of k-points.
-     exx_fraction (None)
-        Default depends on hybrid functional chosen.
-     screening_parameter (0.106)
-        Screening parameter for HSE-like functionals.
-     exxdiv_treatment (gygi-baldereschi)
-        Method to treat Coulomb potential divergence for small q.
-     ecutvcut (0)
-        Cut-off for above.
-     dipole ( {'status':False} )
-        If 'status':True, turn on dipole correction; then by default, the
-        dipole correction is applied along the z-direction, and the dipole is
-        put in the center of the vacuum region (taking periodic boundary
-        conditions into account).
-        This can be overridden with:
-        - 'edir':1, 2, or 3 for x-, y-, or z-direction
-        - 'emaxpos':float percentage wrt. unit cell where dip. correction
-          potential will be max.
-        - 'eopreg':float percentage wrt. unit cell where potential decreases
-        - 'eamp':0 (by default) if non-zero overcompensate dipole: i.e. apply
-          a field
-     output ( {'disk_io':'default',  # how often espresso writes wavefunctions to disk
-               'avoidio':False,  # will overwrite disk_io parameter if True
-               'removewf':True,
-               'removesave':False,
-               'wf_collect':False} )
-        control how much io is used by espresso;
-        'removewf':True means wave functions are deleted in scratch area before
-        job is done and data is copied back to submission directory
-        'removesave':True means whole .save directory is deleted in scratch area
-     convergence ( {'energy':1e-6,
-                    'mixing':0.7,
-                    'maxsteps':100,
-                    'diag':'david'} )
-        Electronic convergence criteria and diag. and mixing algorithms.
-        Additionally, a preconditioner for the mixing algoritms can be
-        specified, e.g. 'mixing_mode':'local-TF' or 'mixing_mode':'TF'.
-     startingpot (None)
-        By default: 'atomic' (use superposition of atomic orbitals for
-        initial guess)
-        'file': construct potential from charge-density.dat
-        Can be used with load_chg and save_chg methods.
-     startingwfc (None)
-        By default: 'atomic'.
-        Other options: 'atomic+random' or 'random'.
-        'file': reload wave functions from other calculations.
-        See load_wf and save_wf methods.
-     parflags (None)
-        Parallelization flags for Quantum Espresso.
-        E.g. parflags='-npool 2' will distribute k-points (and spin if
-        spin-polarized) over two nodes.
-     verbose ('low')
-        Can be 'high' or 'low'
-     site (None)
-        Site configuration deifinig how to execute pw.x in batch environment
+        charge (None) :
+            overrides tot_charge (ase 3.7+ compatibility)
+
+        constr_tol (float) :
+            constraint tolerance for Espresso-internal relaxation
+
+        convergence (``dict``) :
+            Electronic convergence criteria and diag. and mixing algorithms.
+
+            Additionally, a preconditioner for the mixing algoritms can be
+            specified, e.g. ``'mixing_mode': 'local-TF'`` or ``'mixing_mode':'TF'``.
+
+            defaults to ``{'energy': 1e-6, 'mixing':0.7, 'maxsteps':100, 'diag':'david'}``
+
+        dipole (`dict`) :
+            If `status` is ``True``, turn on dipole correction; then by default, the
+            dipole correction is applied along the z-direction, and the dipole is
+            put in the center of the vacuum region (taking periodic boundary
+            conditions into account).
+
+            defaults to ``{'status': False}``
+
+            This can be overridden with
+            
+            - `edir` equal to 1, 2, or 3 for x-, y-, or z-direction
+            - `emaxpos`, float percentage wrt. unit cell where dip. correction
+              potential will be max.
+            - `eopreg`, float percentage wrt. unit cell where potential decreases
+            - `eamp` equal to 0 (by default) if non-zero overcompensate dipole: i.e. apply
+              a field
+
+        dpress (float) :
+            convergence limit towards target pressure
+
+        dw (float) :
+            charge-density cut-off in eV, defaults to 10.0 * `pw`
+
+        exx_fraction (float) :
+            Default depends on hybrid functional chosen.
+
+        exxdiv_treatment (str) :
+            Method to treat Coulomb potential divergence for small q, defaults to
+            `gygi-baldereschi`
+
+        ecutvcut (float) :
+            Cut-off for ``exxdiv_treatment``
+
+        fix_magmom (bool) :
+            If `True`, fix total magnetization to current value, defaults to `False`
+
+        fft_grid (tuple) :
+            a tuple of fft grid points ``(nr1, nr2, nr3)`` for q.e.
+            useful for series of calculations with changing cell size
+            (e.g. lattice constant optimization) uses q.e. default if not specified
+
+            If specified, sets the keywrds `nr1`, `nr2`, `nr3` in Quantum Espresso input 
+
+        fmax (float) :
+            max force limit for Espresso-internal relaxation (eV/Angstrom), defaults to 0.05
+
+        fw (float) :
+            plane-wave cutoff for evaluation of EXX in eV, defaults to ``None``
+
+        ion_dynamics (str) :
+            Type of relaxation, detaults to `ase3`.
+            
+            - `ase3` - only possible with dynamic communication between Quantum Espresso and python
+              in this case ASE updates coordinates during relaxation
+            - `relax` - and other Quantum Espresso standard relaxation modes;
+              Quantum Espresso own algorithms for structural optimization are used
+
+            Obtaining Quantum Espresso with the ase3 relaxation extensions is
+            highly recommended, since it allows for using ase's optimizers
+            without loosing efficiency
+
+            .. code-block:: bash
+               
+               svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
+
+        isolated (str) :
+            invoke an `assume_isolated` method for screening long-range interactions
+            across 3D supercells, particularly electrostatics.
+            Very useful for charged molecules and charged surfaces,
+            but also improves convergence wrt. vacuum space for neutral molecules.
+
+            - `makov-payne`, `mp` - only cubic systems.
+            - `dcc` - don't use.
+            - `martyna-tuckerman`, `mt` - method of choice for molecules, works for any supercell geometry.
+            - `esm` - Effective Screening Medium Method for surfaces and interfaces.
+
+        kpts (`tuple` or str) :
+            k-point grid sub-divisions, k-point grid density,
+            explicit list of k-points, or simply `gamma` for gamma-point only,
+            defaults to ``(1, 1, 1)``
+
+        kptshift (tuple) :
+            shift of k-point grid, defaults to ``(0, 0, 0)``
+
+        nbands (int) :
+            number of bands, if negative: -n extra bands, defaults to -10
+
+        noinv (False) : 
+
+        nosym (False) :
+
+        nosym_evc (False) :
+
+        no_t_rev (False) :
+            turn off corresp. symmetries
+
+        noncollinear (bool):
+            Non-collinear magnetism, defaults to `False`
+
+        nqx1 (int) :
+            3D mesh for q=k1-k2 sampling of Fock operator. Can be smaller
+            than number of k-points. Defaults to ``None``
+
+        nqx2 (int) :
+            3D mesh for q=k1-k2 sampling of Fock operator. Can be smaller
+            than number of k-points. Defaults to ``None``
+
+        nqx3 (int) :
+            3D mesh for q=k1-k2 sampling of Fock operator. Can be smaller
+            than number of k-points. Defaults to ``None``
+
+        occupations (str) :
+            Controls how Kohn-Sham states are occupied.
+            Possible values: `smearing`, `fixed` (molecule or insulator),
+            or `tetrahedra`.
+
+        outdir (str) :
+            directory where Espresso's output is collected,
+            defaults to `qe_$JOBID`
+
+        output (`dict`) :
+            control how much io is used by espresso
+
+            defaults to ``{'disk_io': 'default', 'avoidio': False, 'removewf': True,
+            'removesave': False, 'wf_collect': False}``
+
+            - `disk_io` - how often espresso writes wavefunctions to disk
+            - `avoidio` - will overwrite disk_io parameter if ``True``
+            - `removewf`- if ``True`` wave functions are deleted in scratch area before
+              job is done and data is copied back to submission directory
+            - `removesave` if ``True`` the whole ``.save`` directory is deleted in scratch area
+
+        parflags (None)
+            Parallelization flags for Quantum Espresso.
+            E.g. parflags='-npool 2' will distribute k-points (and spin if
+            spin-polarized) over two nodes.
+
+        press (float) :
+            target pressure
+
+        printensemble (bool) :
+            let Espresso itself calculate 2000 ensemble energies, defaults to `False`
+
+        psppath (str) :
+            Directory containing the pseudo-potentials or paw-setups to be used.
+            The ase-espresso interface expects all pot. files to be of the type
+            element.UPF (e.g. H.UPF).
+            If ``None``, the directory pointed to be ESP_PSP_PATH is used.
+
+        pw (float) :
+            plane-wave cut-off in eV, defaults to 350.0
+
+        screening_parameter (float) :
+            Screening parameter for HSE-like functional, defaults to 0.106
+
+        sigma (float) :
+            smearing width in eV, defaults to 0.1
+
+        site (`siteconfig.SiteConfig`) :
+            Site configuration deifinig how to execute pw.x in batch environment
+
+        smearing (str) :
+            method for Fermi surface smearing
+
+            - `fd`, `Fermi-Dirac` for Fermi-Dirac
+            - `mv`, `Marzari-Vanderbilt` for Marzari-Vanderbilt cold smearing
+            - `gauss`, `gaussian` for Gaussian smearing
+            - `mp`, `Methfessel-Paxton` for Methfessel-Paxton
+
+        spinorbit (bool) :
+            If True, spin-orbit coupling is considered.
+            Make sure to provide j-dependent pseudo-potentials in psppath
+            for those elements where spin-orbit coupling is important,
+            defaults to `False`
+
+        spinpol (bool) :
+            If `True`, calculation is spin-polarized, defaults to `False`
+
+        startingpot (str) :
+            Iinitial guess for the potential.
+
+            defaults to `atomic` - use superposition of atomic orbitals,
+            `file` - construct potential from `charge-density.dat`
+            Can be used with :py:meth:`load_chg` and :py:meth:`save_chg` methods.
+    
+        startingwfc (str) :
+            Initial guess for the wave function
+
+            defaults to `atomic`, other options: `atomic+random` or `random`,
+            `file` - reload wave functions from other calculations.
+            
+            See also:
+                :py:meth:`load_wf` and :py:meth:`save_wf` methods
+
+        U (`list` or `dict`) :
+            specify Hubbard U values (in eV)
+
+            - ``U`` can be specified as a list of values for each atom
+            - ``U`` can be specified as a dictionary, e.g. ``U={'Fe':3.5}``
+            
+            U values are assigned to angular momentum channels according to
+            Espresso's hard-coded defaults, i.e. l=2 for transition metals,
+            l=1 for oxygen, etc.
+
+        J (`list` or `dict`) :
+            specify exchange J values (in eV), see :py:attr:`U` parameter
+
+        U_alpha (`list` or `dict`) :
+            U_alpha (in eV), see :py:attr:`U` parameter
+
+        U_projection_type ('atomic')
+            type of projectors for calculating density matrices in DFT+U schemes
+
+        tot_charge (int) :
+            charge the unit cell, +1 means 1 e missing, -1 means 1 extra e
+
+        tot_magnetization (int or str) :
+            Fix total magnetization, -1 means unspecified/free,
+            `hund` means Hund's rule for each atom, defaults to -1
+
+        txt (str) :
+            If not `None`, direct Espresso's output to a different file than
+            `outdir/log`
+
+        verbose (str) :
+            verbosity level, can be `high` or `low`
+
+        xc (str) :
+            xc-functional to be used, defaults to `PBE`
+
     """
 
     implemented_properties = ['energy', 'forces', 'free_energy', 'magmom', 'magmoms', 'stress']
@@ -257,15 +337,15 @@ class Espresso(FileIOCalculator, object):
                  nbands=-10,
                  kpts=(1, 1, 1),
                  kptshift=(0, 0, 0),
-                 fft_grid=None,   # if specified, set the keywrds nr1, nr2, nr3 in q.e. input [RK]
+                 fft_grid=None,
                  calculation='relax',
                  ion_dynamics='ase3',
                  nstep=None,
                  constr_tol=None,
                  fmax=0.05,
                  cell_dynamics=None,
-                 press=None,    # target pressure
-                 dpress=None,   # convergence limit towards target pressure
+                 press=None,
+                 dpress=None,
                  cell_factor=None,
                  cell_dofree=None,
                  dontcalcforces=False,
@@ -298,14 +378,14 @@ class Espresso(FileIOCalculator, object):
                  screening_parameter=None,
                  exxdiv_treatment=None,
                  ecutvcut=None,
-                 tot_charge=None,         # +1 means 1 e missing, -1 means 1 extra e
-                 charge=None,             # overrides tot_charge (ase 3.7+ compatibility)
-                 tot_magnetization=-1,    # -1 means unspecified, 'hund' means Hund's rule for each atom
-                 occupations='smearing',  # 'smearing', 'fixed', 'tetrahedra'
+                 tot_charge=None,
+                 charge=None,
+                 tot_magnetization=-1,
+                 occupations='smearing',
                  dipole={'status': False},
                  field={'status': False},
-                 output={'disk_io': 'default',  # how often espresso writes wavefunctions to disk
-                         'avoidio': False,      # will overwrite disk_io parameter if True
+                 output={'disk_io': 'default',
+                         'avoidio': False,
                          'removewf': True,
                          'removesave': False,
                          'wf_collect': False},
@@ -824,13 +904,17 @@ class Espresso(FileIOCalculator, object):
         Define settings for the Quantum Espresso calculator object after it
         has been initialized. This is done in the following way::
 
-        >> calc = Espresso(...)
-        >> atoms = set.calculator(calc)
-        >> calc.set(xc='BEEF')
+        Example:
 
-        .. warning::
+            ::
 
-           No input validation is done
+              >>> calc = Espresso(...)
+              >>> atoms = set.calculator(calc)
+              >>> calc.set(xc='BEEF')
+
+        Warning:
+
+            No input validation is done
 
         '''
 
@@ -1022,21 +1106,21 @@ class Espresso(FileIOCalculator, object):
 
     def parse_upf(self, symbols, fext='.UPF'):
         '''
-        Parse the <PP_HEADER> section from the pseudopotential files in the
+        Parse the `<PP_HEADER>` section from the pseudopotential files in the
         Unified Pseudopotential Format (UPF)
 
         Args:
-            symbols : list of str
+            symbols (`list` of str) :
                 List of symbols for which the UPF files will be parsed
-            fext : str (default='.UPF')
-                File extension of the pseudopotential files
+            fext (str) : 
+                File extension of the pseudopotential files, defaults to `.UPF`
 
         Returns:
-            parsed : dict
-                Dictionary with filed parsed from the <PP_HEADER> section
+            parsed (`dict`) :
+                Dictionary with filed parsed from the `<PP_HEADER>` section
 
-        .. seealso::
-           `http://www.quantum-espresso.org/pseudopotentials/unified-pseudopotential-format/`_
+        See also:
+           `<http://www.quantum-espresso.org/pseudopotentials/unified-pseudopotential-format/>`_
 
         '''
 
@@ -1607,12 +1691,13 @@ class Espresso(FileIOCalculator, object):
         Read the forces from the PWSCF output file
 
         Args:
-            getall : bool
+            getall (bool) :
                 If ``True`` the forces for all relaxation steps are returned,
                 in other case only the last configuration is returned.
 
         Returns:
-            forceslist : numpy.array or list of numpy.array's
+            forceslist (`array_like` or `list` of `array_like`) :
+                Forces
         '''
 
         forceslist = []
@@ -1655,12 +1740,13 @@ class Espresso(FileIOCalculator, object):
         of such tuples
 
         Args:
-            all : bool
+            getall (bool) :
                 If ``True`` the forces for all relaxation steps are returned,
                 in other case only the last configuration is returned.
 
         Returns:
-            energylist : tuple or list of tuples
+            energylist (`tuple` or `list` of `tuple`) :
+                Energies
         '''
 
         with open(self.log, 'rU') as fout:
@@ -1689,12 +1775,12 @@ class Espresso(FileIOCalculator, object):
         Read unit cell parameters from the PWSCF output file
 
         Args:
-            getall : bool
+            getall (bool) :
                 If ``True`` the cells for all relaxation steps are returned,
                 in other case only the last cell is returned.
 
         Returns:
-            celllist : numpy.array or list of numpy.array's
+            celllist (`array_like` or `list` of `array_like`) :
                 Either a 3x3 array with unit cell parameters or list of such
                 arrays
         '''
@@ -1736,13 +1822,13 @@ class Espresso(FileIOCalculator, object):
         Read ion positions from the PWSCF output file
 
         Args:
-            getall : bool
+            getall (bool) :
                 If ``True`` the positions for all relaxation steps are
                 returned, in other case only the last consiguration is
                 returned.
 
         Returns:
-            positionslist : tuple or list of tuples
+            positionslist (`tuple` or `list` of `tuple`) : 
                 A tuple contains list of symbols and an array of ion positions
         '''
 
@@ -1780,12 +1866,13 @@ class Espresso(FileIOCalculator, object):
         Read the stress from the PWSCF output file
 
         Args:
-            getall : bool
+            getall (bool) :
                 If ``True`` the forces for all relaxation steps are returned,
                 in other case only the last configuration is returned.
 
         Returns:
-            stresslist : numpy.array or list of numpy.array's
+            stresslist (`array_like` or `list` of `array_like`) :
+                Stress
         '''
 
         stresslist = []
@@ -2308,19 +2395,19 @@ class Espresso(FileIOCalculator, object):
         """
         Calculate (projected) density of states.
 
-          - Emin,Emax,DeltaE define the energy window.
-          - nscf=True will cause a non-selfconsistent calculation to be performed
-            on top of a previous converged scf calculation, with the advantage
-            that more kpts and more nbands can be defined improving the quality/
-            increasing the energy range of the DOS.
-          - tetrahedra=True (in addition to nscf=True) means use tetrahedron
-            (i.e. smearing-free) method for DOS
-          - slab=True: use triangle method insead of tetrahedron method
-            (for 2D system perp. to z-direction)
-          - sigma != None sets/overrides the smearing to calculate the DOS
-            (also overrides tetrahedron/triangle settings)
-          - get_overlap_integrals=True: also return k-point- and band-resolved
-            projections (which are summed up and smeared to obtain the PDOS)
+        - Emin,Emax,DeltaE define the energy window.
+        - nscf=True will cause a non-selfconsistent calculation to be performed
+          on top of a previous converged scf calculation, with the advantage
+          that more kpts and more nbands can be defined improving the quality/
+          increasing the energy range of the DOS.
+        - tetrahedra=True (in addition to nscf=True) means use tetrahedron
+          (i.e. smearing-free) method for DOS
+        - slab=True: use triangle method insead of tetrahedron method
+          (for 2D system perp. to z-direction)
+        - sigma != None sets/overrides the smearing to calculate the DOS
+          (also overrides tetrahedron/triangle settings)
+        - get_overlap_integrals=True: also return k-point- and band-resolved
+          projections (which are summed up and smeared to obtain the PDOS)
 
         Returns an array containing the energy window,
         the DOS over the same range,
@@ -2333,8 +2420,10 @@ class Espresso(FileIOCalculator, object):
         first m with spin up, etc...
 
         Quantum Espresso with the tetrahedron method for PDOS can be obtained here:
+    
+        .. code-block:: bash
 
-            svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
+           svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
 
         """
 
@@ -3293,18 +3382,19 @@ class Espresso(FileIOCalculator, object):
         occupationssave = self.occupations
         self.occupations = 'fixed'
         #avoid espresso performing diagonalization
-        self.convergence = {'maxsteps':-1,
-                            'diag':'cg',
-                            'diago_cg_max_iter':-1,
-                            'energy':1e80}
+        self.convergence = {'maxsteps': -1,
+                            'diag': 'cg',
+                            'diago_cg_max_iter': -1,
+                            'energy': 1e80}
         if not hasattr(self, 'natoms'):
             self.atoms2species()
             self.natoms = len(self.atoms)
         self.write_input(filename='nonsense.inp',
-                            calculation='nscf', overridekpts=(1,1,1),
-                            overridekptshift=(0,0,0), overridenbands=1,
-                            suppressforcecalc=True)
-        self.run_espressox('pw.x', 'nonsense.inp', 'nonsense.log', parallel=False)
+                         calculation='nscf', overridekpts=(1, 1, 1),
+                         overridekptshift=(0, 0, 0), overridenbands=1,
+                         suppressforcecalc=True)
+        self.run_espressox('pw.x', 'nonsense.inp', 'nonsense.log',
+                           parallel=False)
         self.occupations = occupationssave
         del self.convergence
         self.convergence = convsave
@@ -3342,10 +3432,10 @@ class iEspresso(Espresso):
     after each single point calcualtion.
 
     Args:
-        timeout : int
+        timeout (int) :
             Timeout for the pexpect.spawn method [in s] that will terminate
-            the 'expect' the full output in that time, otherwise an
-            exception is thrown
+            the `expect` the full output in that time, otherwise an
+            exception is thrown, defaults to 1800 s
     '''
 
     def __init__(self, timeout=1800, *args, **kwargs):
@@ -3365,7 +3455,7 @@ class iEspresso(Espresso):
             self.create_outdir()
             self.logfile = open(self.log, 'ab')
 
-	# write the local hostfile
+        # write the local hostfile
         if self.site.usehostfile:
             with open(self.site.get_hostfile(), 'w') as fobj:
                 for proc in self.site.proclist:

@@ -63,10 +63,10 @@ class SiteConfig(object):
     creating directories
 
     Args:
-        scheduler : str
-            Name of the scheduler, curretly supports only 'SLURM' and
-            'PBS'/'TORQUE'
-        scratchenv : str
+        scheduler (str) :
+            Name of the scheduler, curretly supports only `SLURM` and
+            `PBS`/`TORQUE`
+        scratchenv (str) :
             Name of the envoronmental variable that defines the scratch path
     '''
 
@@ -124,8 +124,9 @@ class SiteConfig(object):
 
         - `batchmode` is False
         - `jobid` is set to the PID
-        - 'global_scratch' checks for scratch under `self.scratchenv` if it is
+        - `global_scratch` checks for scratch under `self.scratchenv` if it is
           not defined used current directory
+
         '''
 
         self.batchmode = False
@@ -168,7 +169,8 @@ class SiteConfig(object):
         self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
         self.nodelist = hl.expand_hostlist(os.getenv('SLURM_JOB_NODELIST'))
 
-        self.proclist = list(its.chain.from_iterable(its.repeat(x, self.tpn) for x in self.nodelist))
+        self.proclist = list(its.chain.from_iterable(its.repeat(x, self.tpn)
+                             for x in self.nodelist))
         self.nprocs = len(self.proclist)
 
     def set_pbs_env(self):
@@ -202,7 +204,7 @@ class SiteConfig(object):
         Create a temporary local directory for the job
 
         Args:
-            workdir : str
+            workdir (str) :
                 Name of the working directory for the run
         '''
 
@@ -248,9 +250,9 @@ class SiteConfig(object):
                   '-np {0:d} {1:s}'.format(self.nnodes, program)
 
         if aslist:
-             return shlex.split(command)
+            return shlex.split(command)
         else:
-             return command
+            return command
 
     def get_proc_mpi_command(self, workdir, program, aslist=True):
         'Return a command as list to execute `program` through MPI per proc'
@@ -259,15 +261,15 @@ class SiteConfig(object):
             command = 'mpirun --hostfile {0:s} '.format(self.get_hostfile()) +\
                       '-np {0:d} '.format(self.nprocs) +                      \
                       '-wdir {0:s} {1:s}'.format(workdir, program)
-            print('Using hostfile',self.get_hostfile())
+            # should be logged print('Using hostfile',self.get_hostfile())
         else:
             command = 'mpirun -wdir {0:s} {1:s}'.format(workdir, program)
-            print('Not Using hostfile',self.get_hostfile())
+            # should be logged print('Not Using hostfile', self.get_hostfile())
 
         if aslist:
-             return shlex.split(command)
+            return shlex.split(command)
         else:
-             return command
+            return command
 
     def __repr__(self):
         return "%s(\n%s)" % (
