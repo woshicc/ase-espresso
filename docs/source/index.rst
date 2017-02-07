@@ -32,7 +32,7 @@ Contents:
    :maxdepth: 2
 
    Installation <install>
-   API Reference <_reference/modules>
+   API Reference <api>
 
 Indices and tables
 ==================
