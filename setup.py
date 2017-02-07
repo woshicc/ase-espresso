@@ -21,14 +21,16 @@ VERSION = '0.3.0'
 CLASSIFIERS = ['Development Status :: 3 - Alpha',
                'Environment :: Console',
                'Intended Audience :: Science/Research',
-               'License :: OSI Approved :: MIT License',
+               'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
                'Natural Language :: English',
                'Programming Language :: Python',
                'Programming Language :: Python :: 2',
+               'Programming Language :: Python :: 3',
                'Topic :: Scientific/Engineering :: Chemistry',
                'Topic :: Scientific/Engineering :: Physics']
 
 SCRIPTS = ['scripts/pwlog2traj']
+
 
 def readme():
     '''Return the contents of the README.md file.'''
@@ -37,6 +39,7 @@ def readme():
 
 extensions = [Extension('espfilter', sources=['c-src/espfilter.c']),
               Extension('cubecutperiodic', sources=['c-src/cubecutperiodic.c'])]
+
 
 def setup_package():
 
@@ -53,6 +56,7 @@ def setup_package():
           scripts=SCRIPTS,
           ext_modules=extensions,
     )
+
 
 if __name__ == "__main__":
     setup_package()
