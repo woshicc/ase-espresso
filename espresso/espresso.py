@@ -35,8 +35,6 @@ from .siteconfig import SiteConfig, preserve_cwd
 
 __version__ = '0.2.0'
 
-rydberg_over_bohr = Rydberg / Bohr
-
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']
 
@@ -54,7 +52,7 @@ class Espresso(FileIOCalculator, object):
     ASE interface for Quantum Espresso
 
     Args:
-        atoms (``ase.Atoms``) : 
+        atoms (``ase.Atoms``) :
             list of atoms object to be attached to calculator
             atoms.set_calculator can be used instead
 
@@ -66,18 +64,20 @@ class Espresso(FileIOCalculator, object):
             If True, calculate stress, defaults to ``False``
 
         calculation (str) :
-            Specifies the type of calcualtion, can be one of `relax`, `scf`, `nscf`
-            corresponding Quantum Espresso standard modes
+            Specifies the type of calcualtion, can be one of `relax`, `scf`,
+            `nscf` corresponding Quantum Espresso standard modes
 
         cell_dofree (None) :
             partially fix lattice vectors
 
         cell_dynamics (str) :
-            algorithm (e.g. `BFGS`) to be used for Espresso-internal unit-cell optimization
+            algorithm (e.g. `BFGS`) to be used for Espresso-internal unit-cell
+            optimization
 
         cell_factor (float) :
-            should be >>1 if unit-cell volume is expected to shrink a lot during
-            relaxation (would be more efficient to start with a better guess)
+            should be >>1 if unit-cell volume is expected to shrink a lot
+            during relaxation (would be more efficient to start with a better
+            guess)
 
         charge (None) :
             overrides tot_charge (ase 3.7+ compatibility)
@@ -89,20 +89,21 @@ class Espresso(FileIOCalculator, object):
             Electronic convergence criteria and diag. and mixing algorithms.
 
             Additionally, a preconditioner for the mixing algoritms can be
-            specified, e.g. ``'mixing_mode': 'local-TF'`` or ``'mixing_mode':'TF'``.
+            specified, e.g. ``'mixing_mode': 'local-TF'`` or
+            ``'mixing_mode': 'TF'``.
 
             defaults to ``{'energy': 1e-6, 'mixing':0.7, 'maxsteps':100, 'diag':'david'}``
 
         dipole (`dict`) :
-            If `status` is ``True``, turn on dipole correction; then by default, the
-            dipole correction is applied along the z-direction, and the dipole is
-            put in the center of the vacuum region (taking periodic boundary
-            conditions into account).
+            If `status` is ``True``, turn on dipole correction; then by
+            default, the dipole correction is applied along the z-direction,
+            and the dipole is put in the center of the vacuum region (taking
+            periodic boundary conditions into account).
 
             defaults to ``{'status': False}``
 
             This can be overridden with
-            
+
             - `edir` equal to 1, 2, or 3 for x-, y-, or z-direction
             - `emaxpos`, float percentage wrt. unit cell where dip. correction
               potential will be max.
@@ -120,54 +121,62 @@ class Espresso(FileIOCalculator, object):
             Default depends on hybrid functional chosen.
 
         exxdiv_treatment (str) :
-            Method to treat Coulomb potential divergence for small q, defaults to
-            `gygi-baldereschi`
+            Method to treat Coulomb potential divergence for small q,
+            defaults to `gygi-baldereschi`
 
         ecutvcut (float) :
             Cut-off for ``exxdiv_treatment``
 
         fix_magmom (bool) :
-            If `True`, fix total magnetization to current value, defaults to `False`
+            If `True`, fix total magnetization to current value,
+            defaults to `False`
 
         fft_grid (tuple) :
             a tuple of fft grid points ``(nr1, nr2, nr3)`` for q.e.
             useful for series of calculations with changing cell size
-            (e.g. lattice constant optimization) uses q.e. default if not specified
+            (e.g. lattice constant optimization) uses Quantum Esoresso default
+            if not specified
 
             If specified, sets the keywrds `nr1`, `nr2`, `nr3` in Quantum Espresso input 
 
         fmax (float) :
-            max force limit for Espresso-internal relaxation (eV/Angstrom), defaults to 0.05
+            max force limit for Espresso-internal relaxation (eV/Angstrom),
+            defaults to 0.05
 
         fw (float) :
             plane-wave cutoff for evaluation of EXX in eV, defaults to ``None``
 
         ion_dynamics (str) :
             Type of relaxation, detaults to `ase3`.
-            
-            - `ase3` - only possible with dynamic communication between Quantum Espresso and python
-              in this case ASE updates coordinates during relaxation
+
+            - `ase3` - only possible with dynamic communication between
+              Quantum Espresso and python in this case ASE updates coordinates
+              during relaxation
             - `relax` - and other Quantum Espresso standard relaxation modes;
-              Quantum Espresso own algorithms for structural optimization are used
+              Quantum Espresso own algorithms for structural optimization are
+              used
 
             Obtaining Quantum Espresso with the ase3 relaxation extensions is
             highly recommended, since it allows for using ase's optimizers
             without loosing efficiency
 
             .. code-block:: bash
-               
+
                svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
 
         isolated (str) :
-            invoke an `assume_isolated` method for screening long-range interactions
-            across 3D supercells, particularly electrostatics.
+            invoke an `assume_isolated` method for screening long-range
+            interactions across 3D supercells, particularly electrostatics.
             Very useful for charged molecules and charged surfaces,
-            but also improves convergence wrt. vacuum space for neutral molecules.
+            but also improves convergence wrt. vacuum space for neutral
+            molecules.
 
             - `makov-payne`, `mp` - only cubic systems.
             - `dcc` - don't use.
-            - `martyna-tuckerman`, `mt` - method of choice for molecules, works for any supercell geometry.
-            - `esm` - Effective Screening Medium Method for surfaces and interfaces.
+            - `martyna-tuckerman`, `mt` - method of choice for molecules,
+              works for any supercell geometry.
+            - `esm` - Effective Screening Medium Method for surfaces and
+              interfaces.
 
         kpts (`tuple` or str) :
             k-point grid sub-divisions, k-point grid density,
@@ -180,7 +189,7 @@ class Espresso(FileIOCalculator, object):
         nbands (int) :
             number of bands, if negative: -n extra bands, defaults to -10
 
-        noinv (False) : 
+        noinv (False) :
 
         nosym (False) :
 
@@ -216,14 +225,16 @@ class Espresso(FileIOCalculator, object):
         output (`dict`) :
             control how much io is used by espresso
 
-            defaults to ``{'disk_io': 'default', 'avoidio': False, 'removewf': True,
-            'removesave': False, 'wf_collect': False}``
+            defaults to ``{'disk_io': 'default', 'avoidio': False,
+            'removewf': True, 'removesave': False, 'wf_collect': False}``
 
             - `disk_io` - how often espresso writes wavefunctions to disk
             - `avoidio` - will overwrite disk_io parameter if ``True``
-            - `removewf`- if ``True`` wave functions are deleted in scratch area before
-              job is done and data is copied back to submission directory
-            - `removesave` if ``True`` the whole ``.save`` directory is deleted in scratch area
+            - `removewf`- if ``True`` wave functions are deleted in scratch
+              area before job is done and data is copied back to submission
+              directory
+            - `removesave` if ``True`` the whole ``.save`` directory is
+              deleted in scratch area
 
         parflags (None)
             Parallelization flags for Quantum Espresso.
@@ -234,10 +245,11 @@ class Espresso(FileIOCalculator, object):
             target pressure
 
         printensemble (bool) :
-            let Espresso itself calculate 2000 ensemble energies, defaults to `False`
+            let Espresso itself calculate 2000 ensemble energies,
+            defaults to `False`
 
         psppath (str) :
-            Directory containing the pseudo-potentials or paw-setups to be used.
+            Directory containing the pseudo-potentials or paw-setups to be used
             The ase-espresso interface expects all pot. files to be of the type
             element.UPF (e.g. H.UPF).
             If ``None``, the directory pointed to be ESP_PSP_PATH is used.
@@ -252,7 +264,8 @@ class Espresso(FileIOCalculator, object):
             smearing width in eV, defaults to 0.1
 
         site (`siteconfig.SiteConfig`) :
-            Site configuration deifinig how to execute pw.x in batch environment
+            Site configuration deifinig how to execute pw.x in batch
+            environment
 
         smearing (str) :
             method for Fermi surface smearing
@@ -276,14 +289,15 @@ class Espresso(FileIOCalculator, object):
 
             defaults to `atomic` - use superposition of atomic orbitals,
             `file` - construct potential from `charge-density.dat`
-            Can be used with :py:meth:`load_chg` and :py:meth:`save_chg` methods.
-    
+            Can be used with :py:meth:`load_chg` and :py:meth:`save_chg`
+            methods.
+
         startingwfc (str) :
             Initial guess for the wave function
 
             defaults to `atomic`, other options: `atomic+random` or `random`,
             `file` - reload wave functions from other calculations.
-            
+
             See also:
                 :py:meth:`load_wf` and :py:meth:`save_wf` methods
 
@@ -292,7 +306,7 @@ class Espresso(FileIOCalculator, object):
 
             - ``U`` can be specified as a list of values for each atom
             - ``U`` can be specified as a dictionary, e.g. ``U={'Fe':3.5}``
-            
+
             U values are assigned to angular momentum channels according to
             Espresso's hard-coded defaults, i.e. l=2 for transition metals,
             l=1 for oxygen, etc.
@@ -304,7 +318,8 @@ class Espresso(FileIOCalculator, object):
             U_alpha (in eV), see :py:attr:`U` parameter
 
         U_projection_type ('atomic')
-            type of projectors for calculating density matrices in DFT+U schemes
+            type of projectors for calculating density matrices in DFT+U
+            schemes
 
         tot_charge (int) :
             charge the unit cell, +1 means 1 e missing, -1 means 1 extra e
@@ -325,7 +340,8 @@ class Espresso(FileIOCalculator, object):
 
     """
 
-    implemented_properties = ['energy', 'forces', 'free_energy', 'magmom', 'magmoms', 'stress']
+    implemented_properties = ['energy', 'forces', 'free_energy', 'magmom',
+                              'magmoms', 'stress']
 
     default_parameters = []
 
@@ -1255,29 +1271,31 @@ class Espresso(FileIOCalculator, object):
                         self.output['disk_io'] = 'none'
                 if 'disk_io' in list(self.output.keys()):
                     if self.output['disk_io'] in ['high', 'low', 'none']:
-                        print('  disk_io=\'' + self.output['disk_io'] + '\',', file=finp)
+                        print('  disk_io=\'' + self.output['disk_io'] + '\',',
+                              file=finp)
 
                 if 'wf_collect' in list(self.output.keys()):
                     if self.output['wf_collect']:
                         print('  wf_collect=.true.,', file=finp)
         if self.ion_dynamics != 'ase3':
-            # we basically ignore convergence of total energy differences between
-            # ionic steps and only consider fmax as in ase
+            # we basically ignore convergence of total energy differences
+            # between ionic steps and only consider fmax as in ase
             print('  etot_conv_thr=1d0,', file=finp)
-            print('  forc_conv_thr='+num2str(self.fmax/rydberg_over_bohr)+',', file=finp)
+            print('  forc_conv_thr=' + num2str(self.fmax / (Rydberg / Bohr)) +
+                  ',', file=finp)
 
-        #turn on fifo communication if espsite.py is set up that way
+        # turn on fifo communication if espsite.py is set up that way
         if hasattr(self.site, 'fifo'):
             if self.site.fifo:
                 print('  ase_fifo=.true.,', file=finp)
 
         # automatically generated parameters
         if self.iprint is not None:
-            print('  iprint='+str(self.iprint)+',', file=finp)
+            print('  iprint=' + str(self.iprint) + ',', file=finp)
         if self.tstress is not None:
-            print('  tstress='+bool2str(self.tstress)+',', file=finp)
+            print('  tstress=' + bool2str(self.tstress) + ',', file=finp)
         if self.tprnfor is not None:
-            print('  tprnfor='+bool2str(self.tprnfor)+',', file=finp)
+            print('  tprnfor=' + bool2str(self.tprnfor) + ',', file=finp)
         if self.dt is not None:
             print('  dt='+num2str(self.dt)+',', file=finp)
         if self.lkpoint_dir is not None:
