@@ -25,7 +25,7 @@ else:
 MOCK_MODULES = ['argparse', 'seaborn', 'numpy',
                 'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors',
                 'matplotlib.cm', 'scipy', 'scipy.optimize',
-                'scipy.interpolate', 'pandas']
+                'scipy.interpolate', 'pandas', 'path']
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
