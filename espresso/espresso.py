@@ -694,6 +694,8 @@ class Espresso(FileIOCalculator, object):
         if atoms is not None:
             atoms.set_calculator(self)
 
+        self.parameters = dict()
+
     @property
     def site(self):
         return self._site
@@ -3560,7 +3562,7 @@ class iEspresso(Espresso):
 
             pwinp = self.localtmp.joinpath('pw.inp')
             Path.copy(pwinp, self.scratch)
-            command = ['pw.x', '-in', 'pw.inp']
+            command = ' '.join(['pw.x', '-in', 'pw.inp'])
 
             if not self._spawned:
                 self.child = pexpect.spawn(command)
