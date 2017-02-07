@@ -1,8 +1,6 @@
 # ase-espresso
 
-<a href='http://ase-espresso.readthedocs.io/en/latest/?badge=latest'>
-    <img src='https://readthedocs.org/projects/ase-espresso/badge/?version=latest' alt='Documentation Status' />
-</a>
+[![Documentation](https://readthedocs.org/projects/ase-espresso/badge/?version=latest)](http://ase-espresso.readthedocs.io/en/latest/?badge=latest)
 
 [ase-espresso](https://github.com/lmmentel/ase-espresso) provides a Python interface compatible with
 [Atomic Simulation Environment (ASE)][ase] for manging calculations with the [Quantum Espresso] code.
