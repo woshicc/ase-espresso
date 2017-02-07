@@ -1,5 +1,7 @@
 # ase-espresso
 
+[![Documentation Status](https://readthedocs.org/projects/ase-espresso/badge/?version=latest)](http://ase-espresso.readthedocs.io/en/latest/?badge=latest)
+
 [ase-espresso](https://github.com/lmmentel/ase-espresso) provides a Python interface compatible with
 [Atomic Simulation Environment (ASE)][ase] for manging calculations with the [Quantum Espresso] code.
 
@@ -65,7 +67,9 @@ pip install ./ase-espresso
 
 ## Documentation
 
-Documentation of the package can be generated using [sphinx]
+The documentation is hosted on [ase-espresso.readthedocs.io](http://ase-espresso.readthedocs.io/en/latest/).
+
+You can also generate the documentation locally using [sphinx]
 by going to the ``docs`` directory and typing:
 
 ```bash
