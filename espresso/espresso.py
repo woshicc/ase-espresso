@@ -876,10 +876,9 @@ class Espresso(FileIOCalculator, object):
 
             pwinp = self.localtmp.joinpath('pw.inp')
             Path.copy(pwinp, self.scratch)
-            command = ' '.join(['pw.x', '-in', 'pw.inp'])
+            command = ['pw.x', '-in', 'pw.inp']
             if self.calculation != 'hund':
                 self.scratch.chdir()
-
                 with open(self.log, 'ab') as flog:
                     flog.write(self.get_output_header().encode('utf-8'))
                     exitcode = subprocess.call(command, stdout=flog)
@@ -1577,13 +1576,14 @@ class Espresso(FileIOCalculator, object):
         else:
             if kp.ndim == 1:
                 print('K_POINTS automatic', file=finp)
-                print(kp[0], kp[1], kp[2], file=finp, end=' ')
+                print('{0:d} {1:d} {2:d} '.format(
+                            *kp), file=finp, end=' ')
                 if overridekptshift is None:
-                    print(self.kptshift[0], self.kptshift[1],
-                          self.kptshift[2], file=finp)
+                    print('{0:d} {1:d} {2:d} '.format(
+                            *self.kptshift), file=finp)
                 else:
-                    print(overridekptshift[0], overridekptshift[1],
-                          overridekptshift[2], file=finp)
+                    print('{0:d} {1:d} {2:d} '.format(
+                            *overridekptshift), file=finp)
             else:
                 print('K_POINTS crystal', file=finp)
                 nrows, ncols = kp.shape
