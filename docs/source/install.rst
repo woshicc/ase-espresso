@@ -11,23 +11,18 @@ Dependencies
 Installation
 ============
 
-.. warning::
-
-   The instructions below are only valid for the branch lmmfixes_. For
-   instructions regarding the version from vossjo_ please refer to the wiki_.
-
-The recommended installation method is with pip_. The current
-branch (lmmfixes_) can be installed directly from github_:
+The recommended installation method is with pip_ and can be installed directly from the
+`ase_espresso repository <https://github.com/lmmentel/ase-espresso>`_:
 
 .. code-block:: bash
 
-   pip install https://github.com/lmmentel/ase-espresso/archive/lmmfixes.zip
+   pip install git+git://github.com/lmmentel/ase-espresso.git
 
 or cloned first
 
 .. code-block:: bash
 
-   git clone https://github.com/lmmentel/ase-espresso.git -b lmmfixes
+   git clone https://github.com/lmmentel/ase-espresso.git
 
 and installed via
 
@@ -53,8 +48,8 @@ by extending the ``PATH`` variable with the location of your `Quantum Espresso`_
 
    export PATH=$PATH:/path/to/your/quantum-espresso/executables
 
-Another thing that is required is setting the environmental vaiable with the path
-to the directory containing pseudopotentials
+Another thing that is required is setting the environmental variable with the path
+to the directory containing pseudopotential files
 
 .. code-block:: bash
 
@@ -62,10 +57,9 @@ to the directory containing pseudopotentials
 
 
 .. _ASE: https://wiki.fysik.dtu.dk/ase/index.html
-.. _github: https:github.com
-.. _lmmfixes: https://github.com/lmmentel/ase-espresso/tree/lmmfixes
+.. _github: https://github.com
 .. _pip: https://pip.pypa.io/en/stable/
 .. _vossjo: https://github.com/vossjo/ase-espresso
 .. _wiki: https://github.com/vossjo/ase-espresso/wiki
-.. _ase-espresso: https://github.com/vossjo/ase-espresso
+.. _ase-espresso: https://github.com/lmmentel/ase-espresso
 .. _Quantum Espresso: http://www.quantum-espresso.org/
