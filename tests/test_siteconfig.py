@@ -6,10 +6,17 @@ from espresso.siteconfig import SiteConfig
 
 
 def test_pbs_exceptions(tmpdir):
+    'check if an exception is raised when `scratchenv` variable is undefined'
 
     tmpdir.chdir()
+    pytest.raises(OSError, SiteConfig, 'PBS', scratchenv='MYSCRATCH0000')
 
-    pytest.raises(OSError, SiteConfig, 'PBS', 'MYSCRATCH0000')
+
+def test_slurm_exceptions(tmpdir):
+    'check if an exception is raised when `scratchenv` variable is undefined'
+
+    tmpdir.chdir()
+    pytest.raises(OSError, SiteConfig, 'SLURM', scratchenv='MYSCRATCH0000')
 
 
 def test_pbs_variables(tmpdir):

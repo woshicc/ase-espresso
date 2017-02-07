@@ -160,10 +160,10 @@ class SiteConfig(object):
 
         self.batchmode = True
 
+        self.set_global_scratch()
+
         self.jobid = os.getenv('SLURM_JOB_ID')
         self.submitdir = Path(os.getenv('SUBMITDIR'))
-
-        self.set_global_scratch()
 
         self.nnodes = int(os.getenv('SLURM_JOB_NUM_NODES'))
         self.tpn = int(os.getenv('SLURM_TASKS_PER_NODE').split('(')[0])
@@ -181,10 +181,10 @@ class SiteConfig(object):
 
         self.batchmode = True
 
+        self.set_global_scratch()
+
         self.jobid = os.getenv('PBS_JOBID')
         self.submitdir = Path(os.getenv('PBS_O_WORKDIR'))
-
-        self.set_global_scratch()
 
         nodefile = os.getenv('PBS_NODEFILE')
         with open(nodefile, 'r') as nf:
