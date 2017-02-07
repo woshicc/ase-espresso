@@ -18,24 +18,31 @@ import inspect
 import sphinx_bootstrap_theme
 
 if sys.version_info.major == 3:
-    from unittest.mock import Mock
+    from unittest.mock import MagicMock
 else:
-    from mock import Mock
+    from mock import Mock as MagicMock
 
-MOCK_MODULES = ['ase', 'ase.calculators', 'ase.calculators.calculator',
-                'ase.units', 'argparse', 'hostlist', 'seaborn', 'numpy',
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+
+MOCK_MODULES = ['argparse', 'hostlist', 'seaborn',
                 'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors',
                 'matplotlib.cm', 'scipy', 'scipy.optimize',
                 'scipy.interpolate', 'pandas', 'path', 'pexpect']
 
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-__location__ = os.path.join(os.getcwd(), os.path.dirname(
-    inspect.getfile(inspect.currentframe())))
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if not on_rtd:
+    __location__ = os.path.join(os.getcwd(), os.path.dirname(
+        inspect.getfile(inspect.currentframe())))
 
-module_dir = os.path.join(__location__, "../../espresso")
-sys.path.insert(0, os.path.abspath(os.path.basename(module_dir)))
+    module_dir = os.path.join(__location__, "../../espresso")
+    sys.path.insert(0, os.path.abspath(os.path.basename(module_dir)))
 
 autosummary_generate = True
 

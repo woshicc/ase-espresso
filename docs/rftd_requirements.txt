@@ -1,2 +1,3 @@
 ase
+numpy
 sphinx_bootstrap_theme
