@@ -22,7 +22,8 @@ if sys.version_info.major == 3:
 else:
     from mock import Mock
 
-MOCK_MODULES = ['argparse', 'seaborn', 'numpy',
+MOCK_MODULES = ['ase', 'ase.calculators', 'ase.calculators.calculator',
+                'ase.units', 'argparse', 'hostlist', 'seaborn', 'numpy',
                 'matplotlib', 'matplotlib.pyplot', 'matplotlib.colors',
                 'matplotlib.cm', 'scipy', 'scipy.optimize',
                 'scipy.interpolate', 'pandas', 'path', 'pexpect']
