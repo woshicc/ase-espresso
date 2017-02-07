@@ -17,7 +17,7 @@ import numpy as np
 from ase.calculators.calculator import FileIOCalculator
 from .espresso import Espresso
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 
 class Vibespresso(FileIOCalculator, object):
