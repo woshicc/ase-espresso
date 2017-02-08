@@ -35,7 +35,7 @@ KEYWORDS = 'chemistry physics quantum mechanics solid state'
 
 def readme():
     'Return the contents of the README.md file.'
-    with open('README.md') as freadme:
+    with open('README.rst') as freadme:
         return freadme.read()
 
 
