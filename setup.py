@@ -29,7 +29,8 @@ DEPENDENCIES = ['ase',
                 'numpy',
                 'path.py',
                 'pexpect',
-                'python-hostlist'],
+                'python-hostlist']
+KEYWORDS = 'chemistry physics quantum mechanics solid state'
 
 
 def readme():
@@ -47,6 +48,7 @@ def setup_package():
           author=AUTHOR,
           author_email=EMAIL,
           license=LICENSE,
+          keywords=KEYWORDS,
           long_description=readme(),
           classifiers=CLASSIFIERS,
           packages=['espresso'],
