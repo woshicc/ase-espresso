@@ -35,7 +35,7 @@ from ase.units import Hartree, Rydberg, Bohr
 from .utils import speciestuple, num2str, bool2str, convert_constraints
 from .siteconfig import SiteConfig, preserve_cwd
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']

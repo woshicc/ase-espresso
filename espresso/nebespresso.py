@@ -18,7 +18,7 @@ from .espresso import Espresso, iEspresso
 from .siteconfig import SiteConfig
 import threading
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 
 def splitinto(l, n):
