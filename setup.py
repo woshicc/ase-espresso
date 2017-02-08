@@ -5,10 +5,7 @@
     Setup file for the ase-espresso package.
 """
 
-from distutils.core import setup, Extension
-from distutils import ccompiler
-import shutil
-import os
+from setuptools import setup
 
 MAIN_PACKAGE = "espresso"
 DESCRIPTION = "Python API for the Quantum Espresso software"
@@ -17,7 +14,6 @@ URL = "https://github.com/lmmentel/ase-espresso"
 AUTHOR = "Lukasz Mentel"
 EMAIL = "lmmentel@gmail.com"
 VERSION = '0.3.0'
-
 CLASSIFIERS = ['Development Status :: 3 - Alpha',
                'Environment :: Console',
                'Intended Audience :: Science/Research',
@@ -28,17 +24,18 @@ CLASSIFIERS = ['Development Status :: 3 - Alpha',
                'Programming Language :: Python :: 3',
                'Topic :: Scientific/Engineering :: Chemistry',
                'Topic :: Scientific/Engineering :: Physics']
-
-SCRIPTS = ['scripts/pwlog2traj']
+DEPENDENCIES = ['ase',
+                'future',
+                'numpy',
+                'path.py',
+                'pexpect',
+                'python-hostlist'],
 
 
 def readme():
-    '''Return the contents of the README.md file.'''
+    'Return the contents of the README.md file.'
     with open('README.md') as freadme:
         return freadme.read()
-
-extensions = [Extension('espfilter', sources=['c-src/espfilter.c']),
-              Extension('cubecutperiodic', sources=['c-src/cubecutperiodic.c'])]
 
 
 def setup_package():
@@ -53,9 +50,8 @@ def setup_package():
           long_description=readme(),
           classifiers=CLASSIFIERS,
           packages=['espresso'],
-          scripts=SCRIPTS,
-          ext_modules=extensions,
-    )
+          install_requires=DEPENDENCIES,
+          )
 
 
 if __name__ == "__main__":
