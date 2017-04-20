@@ -786,12 +786,6 @@ class Espresso(FileIOCalculator, object):
             if self.site.usehostfile:
                 self.site.write_local_hostfile()
 
-        # write the local hostfile
-        #if self.site.usehostfile:
-        #    with open(self.site.get_hostfile(), 'w') as fobj:
-        #        for proc in self.site.proclist:
-        #            print(proc, file=fobj)
-
         self.set_pseudo_path()
         self.atoms = atoms.copy()
         self.natoms = len(self.atoms)
@@ -3488,14 +3482,9 @@ class iEspresso(Espresso):
 
         if not self._initialized:
             self.create_outdir()
+            self.logfile = open(self.log, 'ab')
             if self.site.usehostfile:
                 self.site.write_local_hostfile()
-
-        # write the local hostfile
-        #if self.site.usehostfile:
-        #    with open(self.site.get_hostfile(), 'w') as fobj:
-        #        for proc in self.site.proclist:
-        #            print(proc, file=fobj)
 
         self.set_pseudo_path()
         self.atoms = atoms.copy()
