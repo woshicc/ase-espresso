@@ -26,6 +26,7 @@ import numpy as np
 from collections import OrderedDict
 from io import open
 from path import Path
+import logging
 
 import pexpect
 
@@ -36,6 +37,9 @@ from .utils import speciestuple, num2str, bool2str, convert_constraints
 from .siteconfig import SiteConfig, preserve_cwd
 
 __version__ = '0.3.1'
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']
@@ -139,7 +143,7 @@ class Espresso(FileIOCalculator, object):
             (e.g. lattice constant optimization) uses Quantum Esoresso default
             if not specified
 
-            If specified, sets the keywrds `nr1`, `nr2`, `nr3` in Quantum Espresso input 
+            If specified, sets the keywrds `nr1`, `nr2`, `nr3` in Quantum Espresso input
 
         fmax (float) :
             max force limit for Espresso-internal relaxation (eV/Angstrom),
@@ -521,6 +525,7 @@ class Espresso(FileIOCalculator, object):
             self.ion_dynamics = None
         else:
             self.ion_dynamics = ion_dynamics
+
         self.nstep = nstep
         self.constr_tol = constr_tol
         self.fmax = fmax
@@ -544,10 +549,12 @@ class Espresso(FileIOCalculator, object):
         self.spinorbit = spinorbit
         self.fix_magmom = fix_magmom
         self.isolated = isolated
+
         if charge is None:
             self.tot_charge = tot_charge
         else:
             self.tot_charge = charge
+
         self.tot_magnetization = tot_magnetization
         self.occupations = occupations
         self.outdir = outdir
@@ -755,20 +762,11 @@ class Espresso(FileIOCalculator, object):
     def get_version(self):
         return __version__
 
-    def initialize(self, atoms):
+    def set_pseudo_path(self):
         '''
-        Create the scratch directories and pw.inp input file and
-        prepare for writing the input file
+        Check if the pseudopotential path is defined and set it from
+        the environmental variable `ESP_PSP_PATH` if necessary
         '''
-
-        if not self._initialized:
-            self.create_outdir()
-
-        # write the local hostfile
-        if self.site.usehostfile:
-            with open(self.site.get_hostfile(), 'w') as fobj:
-                for proc in self.site.proclist:
-                    print(proc, file=fobj)
 
         if self.psppath is None:
             if os.environ['ESP_PSP_PATH'] is not None:
@@ -777,14 +775,29 @@ class Espresso(FileIOCalculator, object):
                 raise ValueError('Unable to find pseudopotential path.'
                     'Consider setting <ESP_PSP_PATH> environment variable')
 
-        self.atoms = atoms.copy()
+    def initialize(self, atoms):
+        '''
+        Create the scratch directories and pw.inp input file and
+        prepare for writing the input file
+        '''
 
+        if not self._initialized:
+            self.create_outdir()
+            if self.site.usehostfile:
+                self.site.write_local_hostfile()
+
+        # write the local hostfile
+        #if self.site.usehostfile:
+        #    with open(self.site.get_hostfile(), 'w') as fobj:
+        #        for proc in self.site.proclist:
+        #            print(proc, file=fobj)
+
+        self.set_pseudo_path()
+        self.atoms = atoms.copy()
+        self.natoms = len(self.atoms)
         self.atoms2species()
 
-        self.natoms = len(self.atoms)
-
         self.check_spinpol()
-
         self._initialized = True
 
     def calculate(self, atoms, properties=['energy']):
@@ -1132,7 +1145,7 @@ class Espresso(FileIOCalculator, object):
         Args:
             symbols (`list` of str) :
                 List of symbols for which the UPF files will be parsed
-            fext (str) : 
+            fext (str) :
                 File extension of the pseudopotential files, defaults to `.UPF`
 
         Returns:
@@ -1850,7 +1863,7 @@ class Espresso(FileIOCalculator, object):
                 returned.
 
         Returns:
-            positionslist (`tuple` or `list` of `tuple`) : 
+            positionslist (`tuple` or `list` of `tuple`) :
                 A tuple contains list of symbols and an array of ion positions
         '''
 
@@ -2442,7 +2455,7 @@ class Espresso(FileIOCalculator, object):
         first m with spin up, etc...
 
         Quantum Espresso with the tetrahedron method for PDOS can be obtained here:
-    
+
         .. code-block:: bash
 
            svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
@@ -3475,29 +3488,21 @@ class iEspresso(Espresso):
 
         if not self._initialized:
             self.create_outdir()
-            self.logfile = open(self.log, 'ab')
+            if self.site.usehostfile:
+                self.site.write_local_hostfile()
 
         # write the local hostfile
-        if self.site.usehostfile:
-            with open(self.site.get_hostfile(), 'w') as fobj:
-                for proc in self.site.proclist:
-                    print(proc, file=fobj)
+        #if self.site.usehostfile:
+        #    with open(self.site.get_hostfile(), 'w') as fobj:
+        #        for proc in self.site.proclist:
+        #            print(proc, file=fobj)
 
-        if self.psppath is None:
-            if os.environ['ESP_PSP_PATH'] is not None:
-                self.psppath = os.environ['ESP_PSP_PATH']
-            else:
-                raise ValueError('Unable to find pseudopotential path.'
-                    'Consider setting <ESP_PSP_PATH> environment variable')
-
+        self.set_pseudo_path()
         self.atoms = atoms.copy()
-
+        self.natoms = len(self.atoms)
         self.atoms2species()
 
-        self.natoms = len(self.atoms)
-
         self.check_spinpol()
-
         self._initialized = True
 
     @preserve_cwd
@@ -3533,7 +3538,7 @@ class iEspresso(Espresso):
                         print('# Exception was thrown by pexpect.expect')
                         print(str(self.child))
 
-                else:  # QE process is already spawned 
+                else:  # QE process is already spawned
 
                     self.child.send('C\n')
                     for atom in self.atoms:
@@ -3582,7 +3587,7 @@ class iEspresso(Espresso):
                     print('# Exception was thrown by pexpect.expect')
                     print(str(self.child))
 
-            else:  # QE process is already spawned 
+            else:  # QE process is already spawned
 
                 self.child.send('C\n')
                 for atom in self.atoms:
