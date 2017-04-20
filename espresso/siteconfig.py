@@ -286,8 +286,8 @@ class SiteConfig(object):
     def write_local_hostfile(self):
         'write the local hostfile'
 
-        with open(self.site.get_hostfile(), 'w') as fobj:
-            for proc in self.site.proclist:
+        with open(self.get_hostfile(), 'w') as fobj:
+            for proc in self.proclist:
                 print(proc, file=fobj)
 
     def __repr__(self):
