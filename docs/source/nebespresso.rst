@@ -19,9 +19,15 @@ Ethene methylation over H-SAPO-5
    initial = ase.io.read('SAPO-5-CH3--ethene.traj')
    final = ase.io.read('H-SAPO-5--propene.traj')
 
-   calc = iEspresso(pw=600, dw=7000, calculation='relax', ion_dynamics='ase3')
-
    images = [initial]
    for _ in range(5):
-       images.append(initial.copy())
+       image = initial.copy()
+       image.set_calculator(iEspresso(pw=600, dw=7000, calculation='relax', ion_dynamics='ase3'))
+       images.append(image)
+   images.append(final)
 
+   neb = NEBEspresso(images, ouuprefix='neb')
+   neb.interpolate()
+
+   optimizer = LBFGS(neb, trajectory='neb.traj', logfile='optimizer.log')
+   optimizer.run(fmax=0.05)
