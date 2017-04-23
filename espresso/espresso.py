@@ -947,9 +947,8 @@ class Espresso(FileIOCalculator, object):
 
         for key, value in list(kwargs.items()):
             setattr(self, key, value)
-            if key == 'outdir':
-                self.create_outdir()
 
+        self._initialized = False
         self.input_update()
         self.recalculate = True
 
