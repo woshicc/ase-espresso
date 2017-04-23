@@ -36,13 +36,13 @@ MOCK_MODULES = ['argparse', 'hostlist', 'seaborn',
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
+
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     __location__ = os.path.join(os.getcwd(), os.path.dirname(
-        inspect.getfile(inspect.currentframe())))
-
-    module_dir = os.path.join(__location__, "../../espresso")
-    sys.path.insert(0, os.path.abspath(os.path.basename(module_dir)))
+      inspect.getfile(inspect.currentframe())))
+    module_dir = os.path.normpath(os.path.join(__location__, "../../"))
+    sys.path.insert(0, os.path.abspath(module_dir))
 
 autosummary_generate = True
 
@@ -60,6 +60,7 @@ autosummary_generate = True
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
