@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from ase.lattice import bulk
+from ase.build import bulk
 from ase.units import Rydberg, Bohr
 from espresso import Espresso
 
@@ -84,7 +84,7 @@ def test_al_scf_david():
 
     calc.calculate(al)
 
-    assert np.allclose(al.get_potential_energy(), -74.4445296961)
+    assert np.allclose(al.get_potential_energy(), -74.44991079398747)
     assert np.allclose(al.get_forces(), np.zeros(3))
     assert np.allclose(al.get_stress(), np.array([-0.02784864, -0.02784864,
                                                   -0.02784864, -0.0, -0.0, -0.0]))
@@ -116,6 +116,7 @@ def test_si_scf_cg():
 
     calc.calculate(si)
 
+    assert np.allclose(si.get_potential_energy(), -152.90087195020132)
 
 test_al_scf_david()
 test_si_scf_cg()

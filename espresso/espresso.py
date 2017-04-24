@@ -139,7 +139,7 @@ class Espresso(FileIOCalculator, object):
             (e.g. lattice constant optimization) uses Quantum Esoresso default
             if not specified
 
-            If specified, sets the keywrds `nr1`, `nr2`, `nr3` in Quantum Espresso input 
+            If specified, sets the keywrds `nr1`, `nr2`, `nr3` in Quantum Espresso input
 
         fmax (float) :
             max force limit for Espresso-internal relaxation (eV/Angstrom),
@@ -871,7 +871,7 @@ class Espresso(FileIOCalculator, object):
         Read the output file and set the attributes
         '''
 
-        self.energy_zero, self.energy_free = self.read_energies()
+        self.energy_zero, self.energy_free = self.read_energies(getall=False)
         self.forces = self.read_forces()
         self.stress = self.read_stress()
         positions = self.read_positions()
@@ -1132,7 +1132,7 @@ class Espresso(FileIOCalculator, object):
         Args:
             symbols (`list` of str) :
                 List of symbols for which the UPF files will be parsed
-            fext (str) : 
+            fext (str) :
                 File extension of the pseudopotential files, defaults to `.UPF`
 
         Returns:
@@ -1763,7 +1763,7 @@ class Espresso(FileIOCalculator, object):
 
         Args:
             getall (bool) :
-                If ``True`` the forces for all relaxation steps are returned,
+                If ``True`` the energies for all relaxation steps are returned,
                 in other case only the last configuration is returned.
 
         Returns:
@@ -1771,21 +1771,22 @@ class Espresso(FileIOCalculator, object):
                 Energies
         '''
 
-        with open(self.log, 'rU') as fout:
+        with open(self.log, 'r', newline=None) as fout:
             lines = fout.readlines()
 
         energylinenos = [no for no, line in enumerate(lines) if
-                ('!' in line and 'total energy' in line)]
+                         ('!' in line and 'total energy' in line)]
 
         tslinenos = [no for no, line in enumerate(lines) if
-                ('     smearing contrib. (-TS)' in line)]
+                     ('     smearing contrib. (-TS)' in line)]
 
-        energies = [float(lines[no].split()[-2])*Rydberg for no in energylinenos]
-        free_energies = [float(lines[no].split()[-2])*Rydberg for no in tslinenos]
+        free_energies = [float(lines[no].split()[-2]) * Rydberg
+                         for no in energylinenos]
+        ts = [float(lines[no].split()[-2]) * Rydberg for no in tslinenos]
+        energies = [fe - sm for fe, sm in zip(free_energies, ts)]
+        del lines
 
         energylist = list(zip(energies, free_energies))
-
-        del lines
 
         if getall:
             return energylist
@@ -1850,7 +1851,7 @@ class Espresso(FileIOCalculator, object):
                 returned.
 
         Returns:
-            positionslist (`tuple` or `list` of `tuple`) : 
+            positionslist (`tuple` or `list` of `tuple`) :
                 A tuple contains list of symbols and an array of ion positions
         '''
 
@@ -1859,8 +1860,10 @@ class Espresso(FileIOCalculator, object):
         with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
-        carteslinenos = [no for no, line in enumerate(lines) if 'Cartesian axes' in line]
-        crystallinenos = [no for no, line in enumerate(lines) if 'ATOMIC_POSITIONS (crystal)' in line]
+        carteslinenos = [no for no, line in enumerate(lines)
+                         if 'Cartesian axes' in line]
+        crystallinenos = [no for no, line in enumerate(lines)
+                          if 'ATOMIC_POSITIONS (crystal)' in line]
 
         for no in carteslinenos:
             positions = np.zeros((self.natoms, 3), dtype=float)
@@ -2442,7 +2445,7 @@ class Espresso(FileIOCalculator, object):
         first m with spin up, etc...
 
         Quantum Espresso with the tetrahedron method for PDOS can be obtained here:
-    
+
         .. code-block:: bash
 
            svn co --username anonymous http://qeforge.qe-forge.org/svn/q-e/branches/espresso-dynpy-beef
@@ -3533,7 +3536,7 @@ class iEspresso(Espresso):
                         print('# Exception was thrown by pexpect.expect')
                         print(str(self.child))
 
-                else:  # QE process is already spawned 
+                else:  # QE process is already spawned
 
                     self.child.send('C\n')
                     for atom in self.atoms:
@@ -3582,7 +3585,7 @@ class iEspresso(Espresso):
                     print('# Exception was thrown by pexpect.expect')
                     print(str(self.child))
 
-            else:  # QE process is already spawned 
+            else:  # QE process is already spawned
 
                 self.child.send('C\n')
                 for atom in self.atoms:
