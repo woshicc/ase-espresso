@@ -1335,7 +1335,7 @@ class Espresso(FileIOCalculator, object):
         print('  ntyp='+str(self.nspecies)+',', file=finp)
         if self.tot_charge is not None:
             print('  tot_charge='+num2str(self.tot_charge)+',', file=finp)
-        if self.calculation!='hund':
+        if self.calculation != 'hund':
             inimagscale = 1.0
         else:
             inimagscale = 0.9
@@ -1350,10 +1350,10 @@ class Espresso(FileIOCalculator, object):
                 from .atomic_configs import hundmag
                 self.totmag = sum([hundmag(x) for x in self.atoms.get_chemical_symbols()])
             print('  tot_magnetization='+num2str(self.totmag*inimagscale)+',', file=finp)
-        print('  ecutwfc='+num2str(self.pw/Rydberg)+',', file=finp)
-        print('  ecutrho='+num2str(self.dw/Rydberg)+',', file=finp)
+        print('  ecutwfc=' + num2str(self.pw / Rydberg) + ',', file=finp)
+        print('  ecutrho=' + num2str(self.dw / Rydberg) + ',', file=finp)
         if self.fw is not None:
-            print('  ecutfock='+num2str(self.fw/Rydberg)+',', file=finp)
+            print('  ecutfock=' + num2str(self.fw / Rydberg) + ',', file=finp)
         #temporarily (and optionally) change number of bands for nscf calc.
         if overridenbands is not None:
             if self.nbands is None:
