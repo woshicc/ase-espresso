@@ -40,7 +40,7 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     __location__ = os.path.join(os.getcwd(), os.path.dirname(
-      inspect.getfile(inspect.currentframe())))
+        inspect.getfile(inspect.currentframe())))
     module_dir = os.path.normpath(os.path.join(__location__, "../../"))
     sys.path.insert(0, os.path.abspath(module_dir))
 
