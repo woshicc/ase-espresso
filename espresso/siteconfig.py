@@ -9,7 +9,7 @@
 # or http://www.gnu.org/copyleft/gpl.txt .
 # ****************************************************************************
 
-from __future__ import division
+from __future__ import division, print_function
 
 import contextlib
 import itertools as its
@@ -138,6 +138,7 @@ class SiteConfig(object):
 
         '''
 
+        self.scheduler = None
         self.batchmode = False
         self.submitdir = Path(os.path.dirname(os.path.realpath(sys.argv[0])))
         self.jobid = os.getpid()
@@ -167,6 +168,7 @@ class SiteConfig(object):
         enviromental variables associated with SLURM scheduler
         '''
 
+        self.scheduler = 'slurm'
         self.batchmode = True
 
         self.set_global_scratch()
@@ -188,6 +190,7 @@ class SiteConfig(object):
         enviromental variables associated with PBS/TORQUE scheduler
         '''
 
+        self.scheduler = 'pbs'
         self.batchmode = True
 
         self.set_global_scratch()
@@ -227,8 +230,8 @@ class SiteConfig(object):
 
     def make_scratch(self):
         '''
-        Create a user scratch dir on each node (in the global scratch area)
-        in batchmode or a single local scratch directory otherwise
+        Create a user scratch dir on each node (in the global scratch
+        area) in batchmode or a single local scratch directory otherwise
         '''
 
         prefix = '_'.join(['qe', str(os.getuid()), str(self.jobid)])
@@ -279,6 +282,13 @@ class SiteConfig(object):
             return shlex.split(command)
         else:
             return command
+
+    def write_local_hostfile(self):
+        'write the local hostfile'
+
+        with open(self.get_hostfile(), 'w') as fobj:
+            for proc in self.proclist:
+                print(proc, file=fobj)
 
     def __repr__(self):
         return "%s(\n%s)" % (

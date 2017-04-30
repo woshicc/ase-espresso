@@ -12,11 +12,14 @@
 
 from __future__ import print_function, absolute_import
 
-from io import open
 import copy
+import threading
+
+from ase.neb import NEB
+
 from .espresso import Espresso, iEspresso
 from .siteconfig import SiteConfig
-import threading
+
 
 __version__ = '0.3.1'
 
@@ -37,16 +40,80 @@ def splitinto(l, n):
     return [l[indices[i]:indices[i + 1]] for i in range(n)]
 
 
-class NEBEspresso(object):
+class NEBEspresso(NEB):
+
+    def __init__(self, images, site=None, outprefix='neb', **neb_kwargs):
+
+        super().__init__(images, **neb_kwargs)
+
+        self.site = site
+        self.outprefix = outprefix
+        self.jobs = []
+        self.initialize()
+
+    @property
+    def site(self):
+        return self._site
+
+    @site.setter
+    def site(self, value):
+        if value is None:
+            self._site = SiteConfig.check_scheduler()
+            if self._site.scheduler is None:
+                raise NotImplementedError('Interactive NEB is not supported yet')
+        else:
+            self._site = value
+
+    def wait_for_total_energies(self):
+        '''
+        Calculalte the energy for each thread in a separate theead and
+        wait until all the calcualtions are finished.
+        '''
+
+        threads = [threading.Thread(target=self.images[i]._calc.calculate,
+                                    args=(self.images[i],))
+                   for i in range(1, self.nimages - 1)]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    def get_forces(self):
+
+        self.wait_for_total_energies()
+        return super().get_forces()
+
+    def initialize(self):
+        'Create the calculator instances'
+
+        imageprocs = splitinto(self.site.proclist, len(self.images) - 2)
+        images = self.images[1:self.nimages - 1]
+
+        for i, (image, procs) in enumerate(zip(images, imageprocs)):
+
+            site = copy.deepcopy(self.site)
+
+            site.proclist = procs
+            site.nprocs = len(site.proclist)
+            site.usehostfile = True
+
+            image._calc.set(outdir='{0:s}_{1:04d}'.format(self.outprefix, i),
+                            site=site)
+
+
+class NEBEspressoOld(object):
     '''
     Special calculator running multiple Espresso calculators in parallel.
     Useful for e.g. nudged elastic band calculations.
 
     Args:
         neb (`ase.neb.NEB`) :
-            The nudged elastic band object to associate the calculator with
+            The nudged elastic band object to associate the calculator
+            with
         outprefix (str) :
-            Prefix of the output directories for images, defaults to `neb`
+            Prefix of the output directories for images, defaults to
+            `neb`
         masterlog (str)
             Name of the log file, defaults to 'neb_master.log'
         site (`siteconfig.SiteConfig`)
@@ -58,16 +125,13 @@ class NEBEspresso(object):
         Set the necessary parameters
         '''
 
-        self.calc_args = kwargs
-
-        self._set_neb(neb)
-
+        self.site = site
         self.outprefix = outprefix
+        self.calc_args = kwargs
 
         self.jobs = []
 
-        self.site = site
-
+        self._set_neb(neb)
         self._create_calculators()
         self._associate_calculators()
 
@@ -79,8 +143,18 @@ class NEBEspresso(object):
     def site(self, value):
         if value is None:
             self._site = SiteConfig.check_scheduler()
+            if self._site.scheduler is None:
+                raise NotImplementedError('Interactive NEB is not supported yet')
         else:
             self._site = value
+
+    def _set_neb(self, neb):
+
+        self.images = neb.images[1:len(neb.images) - 1]
+        self.nimages = len(self.images)
+        self.neb = neb
+        self.neb.neb_orig_forces = self.neb.get_forces
+        self.neb.get_forces = self.nebforce
 
     def _create_calculators(self):
         'Create the calculator instances'
@@ -108,21 +182,19 @@ class NEBEspresso(object):
             job['image'].set_calculator(job['calc'])
 
     def wait_for_total_energies(self):
+        '''
+        Calculalte the energy for each thread in a separate theead and
+        wait until all the calcualtions are finished.
+        '''
+
         threads = []
         for job in self.jobs:
-            t = threading.Thread(target=job['calc'].calculate,args=(job['image'],))
+            t = threading.Thread(target=job['calc'].calculate,
+                                 args=(job['image'],))
             threads.append(t)
             t.start()
         for t in threads:
             t.join()
-
-    def _set_neb(self, neb):
-
-        self.images = neb.images[1:len(neb.images) - 1]
-        self.nimages = len(self.images)
-        self.neb = neb
-        self.neb.neb_orig_forces = self.neb.get_forces
-        self.neb.get_forces = self.nebforce
 
     def nebforce(self):
         'Wait for the calcualtions to finish and the the NEB force'

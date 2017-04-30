@@ -32,6 +32,7 @@ Contents:
    :maxdepth: 2
 
    Installation <install>
+   NEBEspresso <nebespresso>
    API Reference <api>
 
 Indices and tables
