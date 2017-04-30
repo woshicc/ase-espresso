@@ -17,7 +17,7 @@ import numpy as np
 from ase import constraints
 
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 
 speciestuple = namedtuple('speciestuple',

@@ -20,7 +20,7 @@ from ase.neb import NEB
 from .siteconfig import SiteConfig
 
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 
 def splitinto(l, n):

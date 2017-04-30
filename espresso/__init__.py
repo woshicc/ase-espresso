@@ -15,4 +15,4 @@ from .espresso import Espresso, iEspresso
 from .vibespresso import Vibespresso
 from .nebespresso import NEBEspresso
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'

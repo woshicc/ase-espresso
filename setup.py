@@ -13,7 +13,7 @@ LICENSE = "GPLv3"
 URL = "https://github.com/lmmentel/ase-espresso"
 AUTHOR = "Lukasz Mentel"
 EMAIL = "lmmentel@gmail.com"
-VERSION = '0.3.1'
+VERSION = '0.3.2'
 CLASSIFIERS = ['Development Status :: 3 - Alpha',
                'Environment :: Console',
                'Intended Audience :: Science/Research',
