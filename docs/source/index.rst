@@ -18,7 +18,9 @@ step):
 
 - `ase_qe_intrfce <http://www.qe-forge.org/gf/project/ase_qe_intrfce/>`_,
 - `PWscfInput <http://physics.ucf.edu/%7Edle/blog.php?id=2>`_,
-- `qecalc <https://pypi.python.org/pypi/qecalc/0.3.0>`_.
+- `qecalc <https://pypi.python.org/pypi/qecalc/0.3.0>`_,
+- `qecalc by P. T. Jochym <https://github.com/jochym/qecalc>`_,
+- `espresso <https://github.com/zhongnanxu/espresso>`_,
 
 
 .. _ase-espresso: https://github.com/vossjo/ase-espresso
