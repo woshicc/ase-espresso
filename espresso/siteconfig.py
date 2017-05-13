@@ -103,6 +103,8 @@ class SiteConfig(object):
             self.set_slurm_env()
         elif self.scheduler.lower() in ['pbs', 'torque']:
             self.set_pbs_env()
+        elif self.scheduler.lower() in ['ll', 'loadleveler']:
+            self.set_ll_env()
 
     @classmethod
     def check_scheduler(cls):
@@ -210,6 +212,26 @@ class SiteConfig(object):
 
         self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(
             nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
+
+    def set_ll_env(self):
+        '''
+        Set the attributes necessary to run the job based on the
+        enviromental variables associated with IBM LoadLeveler scheduler
+        '''
+
+        self.scheduler = 'loadleveler'
+        self.batchmode = True
+
+        self.set_global_scratch()
+
+        self.jobid = os.getenv('LOADL_STEP_ID')
+        self.submitdir = Path(os.getenv('LOADL_STEP_INITDIR'))
+
+        nodefile = os.getenv('LOADL_HOSTFILE')
+        with open(nodefile, 'r') as nf:
+            self.hosts = [x.strip() for x in nf.readlines()]
+
+        self.proclist = os.getenv('LOADL_PROCESSOR_LIST')
 
     def make_localtmp(self, workdir):
         '''
