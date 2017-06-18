@@ -713,6 +713,8 @@ class Espresso(FileIOCalculator, object):
     def site(self, value):
         if value is None:
             self._site = SiteConfig.check_scheduler()
+        elif isinstance(value, str):
+            self._site = SiteConfig(value)
         else:
             self._site = value
 
