@@ -105,6 +105,8 @@ class SiteConfig(object):
             self.set_pbs_env()
         elif self.scheduler.lower() in ['ll', 'loadleveler']:
             self.set_ll_env()
+        elif self.scheduler.lower() == 'sge':
+            self.set_sge_env()
 
     @classmethod
     def check_scheduler(cls):
@@ -231,7 +233,36 @@ class SiteConfig(object):
         with open(nodefile, 'r') as nf:
             self.hosts = [x.strip() for x in nf.readlines()]
 
+        self.nprocs = len(self.hosts)
+
         self.proclist = os.getenv('LOADL_PROCESSOR_LIST')
+
+    def set_sge_env(self):
+        '''
+        Set the attributes necessary to run the job based on the
+        enviromental variables associated with SGE scheduler
+        '''
+
+        self.scheduler = 'sge'
+        self.batchmode = True
+
+        self.set_global_scratch()
+
+        self.jobid = os.getenv('JOB_ID')
+        self.submitdir = Path(os.getenv('SGE_O_WORKDIR'))
+
+        nodefile = os.getenv('PE_HOSTFILE')
+        with open(nodefile, 'r') as nf:
+            self.hosts = [x.strip() for x in nf.readlines()]
+
+        self.nprocs = len(self.hosts)
+        uniqnodes = sorted(set(self.hosts))
+
+        self.perHostMpiExec = ['mpirun', '-host', ','.join(uniqnodes),
+                               '-np', '{0:d}'.format(len(uniqnodes))]
+
+        self.perProcMpiExec = 'mpiexec -machinefile {nf:s} -np {np:s}'.format(
+            nf=nodefile, np=str(self.nprocs)) + ' -wdir {0:s} {1:s}'
 
     def make_localtmp(self, workdir):
         '''
