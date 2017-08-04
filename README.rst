@@ -32,10 +32,10 @@ important ones include:
    `ase <https://wiki.fysik.dtu.dk/ase/index.html>`__ guidelines
    regarding calculator objects to support full compatibility with
    `ase <https://wiki.fysik.dtu.dk/ase/index.html>`__
--  most of the system call are now handled by
+-  most of the system calls are now handled by
    `pexpect <https://pexpect.readthedocs.io/en/stable>`__ and
    `subprocess <https://docs.python.org/2/library/subprocess.html>`__
-   instead of the old ``os.system``, ``os.popen()``, ``os.popen2()``,
+   instead of the  ``os.system``, ``os.popen()``, ``os.popen2()``,
    ``os.popen3()``
 -  tests were added
 -  code style and readability were improved
