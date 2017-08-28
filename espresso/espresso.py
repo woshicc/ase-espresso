@@ -1733,10 +1733,10 @@ class Espresso(FileIOCalculator, object):
         with open(self.log, 'rU') as fout:
             lines = fout.readlines()
 
-        forcestart = '     Forces acting on atoms (Ry/au):'
+        forcestart = re.compile(r'     Forces acting on atoms \((?:cartesian axes, )?Ry/au\):')
         forceend = '     Total force = '
 
-        startlnos = [no for no, line in enumerate(lines) if forcestart in line]
+        startlnos = [no for no, line in enumerate(lines) if forcestart.match(line)]
         endlnos = [no for no, line in enumerate(lines) if forceend in line]
 
         forcelinenos = zip(startlnos, endlnos)
@@ -1754,10 +1754,13 @@ class Espresso(FileIOCalculator, object):
 
         del lines
 
-        if getall:
-            return forceslist
+        if len(forceslist) > 0:
+            if getall:
+                return forceslist
+            else:
+                return forceslist[-1]
         else:
-            return forceslist[-1]
+            raise ValueError('No forces found in pw log')
 
     def read_energies(self, getall=False):
         '''
