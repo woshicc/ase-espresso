@@ -90,6 +90,15 @@ class SiteConfig(object):
         self.usehostfile = usehostfile
         self.jobid = None
 
+        # default values for the attributes that will be gathered
+        self.batchmode = None
+        self.nnodes = None
+        self.nodelist = None
+        self.proclist = None
+        self.hosts = None
+        self.nprocs = None
+        self.tpn = None
+
         self.set_variables()
 
     def set_variables(self):
