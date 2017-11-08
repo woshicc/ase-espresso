@@ -12,7 +12,9 @@ from ase.optimize import BFGS
 from espresso import Espresso, iEspresso
 
 
-def test_relax_co_qe_bfgs():
+def test_relax_co_qe_bfgs(tmpdir):
+
+    tmpdir.chdir()
 
     co = Atoms('CO', [[2.256 * Bohr, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
@@ -35,7 +37,9 @@ def test_relax_co_qe_bfgs():
     print('forces: ', co.get_forces())
 
 
-def test_relax_co_ase_bfgs():
+def test_relax_co_ase_bfgs(tmpdir):
+
+    tmpdir.chdir()
 
     co = Atoms('CO', [[2.256 * Bohr, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
@@ -60,7 +64,9 @@ def test_relax_co_ase_bfgs():
     print('forces: ', co.get_forces())
 
 
-def test_relax_co_ase_interactive_bfgs():
+def test_relax_co_ase_interactive_bfgs(tmpdir):
+
+    tmpdir.chdir()
 
     co = Atoms('CO', [[2.256 * Bohr, 0.0, 0.0], [0.0, 0.0, 0.0]])
     co.set_cell(np.ones(3) * 12.0 * Bohr)
@@ -90,11 +96,6 @@ def test_relax_co_ase_interactive_bfgs():
     assert np.allclose(co.get_potential_energy(), ref_ene)
     #assert np.allclose(co.positions, ref_pos)
     #assert np.allclose(co.get_forces(), ref_for)
- 
+
     print(co.positions)
     print(co.get_forces())
-
-
-#test_relax_co_qe_bfgs()
-#test_relax_co_ase_bfgs()
-test_relax_co_ase_interactive_bfgs()
