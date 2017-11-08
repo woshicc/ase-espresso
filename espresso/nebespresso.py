@@ -59,7 +59,7 @@ class NEBEspresso(NEB):
         if value is None:
             self._site = SiteConfig.check_scheduler()
             if self._site.scheduler is None:
-                raise NotImplementedError('Interactive NEB is not supported yet')
+                raise NotImplementedError('Interactive NEB is not supported')
         else:
             self._site = value
 
