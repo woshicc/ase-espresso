@@ -11,7 +11,9 @@ from ase.units import Rydberg, Bohr
 from espresso import Espresso
 
 
-def test_al_scf_david():
+def test_al_scf_david(tmpdir):
+
+    tmpdir.chdir()
 
     al = bulk('Al', 'fcc', 7.5 * Bohr)
     kpts = np.asarray([[0.0625000, 0.0625000, 0.0625000, 1.00],
@@ -90,7 +92,9 @@ def test_al_scf_david():
                                                   -0.02784864, -0.0, -0.0, -0.0]))
 
 
-def test_si_scf_cg():
+def test_si_scf_cg(tmpdir):
+
+    tmpdir.chdir()
 
     si = bulk('Si', 'fcc', 10.2 * Bohr)
 
@@ -117,6 +121,3 @@ def test_si_scf_cg():
     calc.calculate(si)
 
     assert np.allclose(si.get_potential_energy(), -152.90087195020132)
-
-test_al_scf_david()
-test_si_scf_cg()
