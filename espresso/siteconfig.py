@@ -20,6 +20,7 @@ import tempfile
 import functools
 from subprocess import call
 
+from six import with_metaclass
 import hostlist as hl
 from path import Path
 
@@ -57,15 +58,12 @@ class Singleton(type):
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args,
-                                                                 **kwargs)
-        return cls._instances[cls]
+        if cls not in Singleton._instances:
+            Singleton._instances[cls] = type.__call__(*args, **kwargs)
+        return Singleton._instances[cls]
 
 
-class SiteConfig(object):
-    __metaclass__ = Singleton
-
+class SiteConfig(with_metaclass(Singleton, object)):
     '''
     Site configuration holding details about the execution environment
     with methods for retrieving the details from systems variables and
