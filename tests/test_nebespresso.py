@@ -12,7 +12,9 @@ from ase.optimize.fire import FIRE as QuasiNewton
 from asetools import smart_cell
 
 
-def test_ethene_rotation():
+def test_ethene_rotation(tmpdir):
+
+    tmpdir.chdir()
 
     # Optimise molecule
     initial = molecule('C2H6')
@@ -48,5 +50,3 @@ def test_ethene_rotation():
     nt = NEBTools(neb.images)
     print('fmax: ', nt.get_fmax())
     print('Ef, dE: ', nt.get_barrier())
-
-test_ethene_rotation()
