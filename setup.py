@@ -29,7 +29,8 @@ DEPENDENCIES = ['ase',
                 'numpy',
                 'path.py',
                 'pexpect',
-                'python-hostlist']
+                'python-hostlist',
+                'six']
 KEYWORDS = 'chemistry physics quantum mechanics solid state'
 
 
