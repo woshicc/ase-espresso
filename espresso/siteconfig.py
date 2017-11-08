@@ -84,22 +84,22 @@ class SiteConfig(with_metaclass(Singleton, object)):
     def __init__(self, scheduler=None, usehostfile=False,
                  scratchenv='SCRATCH'):
 
+        self.global_scratch = None
         self.scheduler = scheduler
         self.scratchenv = scratchenv
         self.localtmp = None
-        self.global_scratch = None
-        self.user_scratch = None
         self.submitdir = None
         self.usehostfile = usehostfile
-        self.jobid = None
+        self.user_scratch = None
 
         # default values for the attributes that will be gathered
         self.batchmode = None
+        self.hosts = None
+        self.jobid = None
         self.nnodes = None
         self.nodelist = None
-        self.proclist = None
-        self.hosts = None
         self.nprocs = None
+        self.proclist = None
         self.tpn = None
 
         self.set_variables()
