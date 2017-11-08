@@ -15,7 +15,6 @@ import contextlib
 import itertools as its
 import os
 import shlex
-import sys
 import tempfile
 import functools
 from subprocess import call
@@ -59,8 +58,13 @@ class Singleton(type):
 
     def __call__(cls, *args, **kwargs):
         if cls not in Singleton._instances:
-            Singleton._instances[cls] = type.__call__(*args, **kwargs)
+            Singleton._instances[cls] = type.__call__(cls, *args, **kwargs)
         return Singleton._instances[cls]
+
+    def __erase(self):
+        'Reset the internal state, mainly for testing purposes'
+
+        Singleton._instances = {}
 
 
 class SiteConfig(with_metaclass(Singleton, object)):
@@ -77,7 +81,8 @@ class SiteConfig(with_metaclass(Singleton, object)):
             Name of the envoronmental variable that defines the scratch path
     '''
 
-    def __init__(self, scheduler, usehostfile=False, scratchenv='SCRATCH'):
+    def __init__(self, scheduler=None, usehostfile=False,
+                 scratchenv='SCRATCH'):
 
         self.scheduler = scheduler
         self.scratchenv = scratchenv
@@ -147,7 +152,7 @@ class SiteConfig(with_metaclass(Singleton, object)):
 
         self.scheduler = None
         self.batchmode = False
-        self.submitdir = Path(os.path.dirname(os.path.realpath(sys.argv[0])))
+        self.submitdir = Path(os.path.abspath(os.getcwd()))
         self.jobid = os.getpid()
 
         if os.getenv(self.scratchenv) is not None:
@@ -161,12 +166,12 @@ class SiteConfig(with_metaclass(Singleton, object)):
         scratch = os.getenv(self.scratchenv)
 
         if scratch is None:
-            raise OSError('variable ${} is undefied'.format(scratch))
+            raise OSError('SHELL variable {} is undefied'.format(self.scratchenv))
         else:
             if os.path.exists(scratch):
                 self.global_scratch = Path(scratch)
             else:
-                raise OSError('scratch directory <{}> defined with ${} does not exist'.format(
+                raise OSError('scratch directory <{}> defined with {} does not exist'.format(
                     scratch, self.scratchenv))
 
     def set_slurm_env(self):

@@ -37,11 +37,13 @@ def test_pbs_variables(tmpdir):
 
     site = SiteConfig('PBS')
 
-    assert site.global_scratch == str(tmpdir)
     assert site.jobid == '12345678'
     assert site.submitdir == str(tmpdir)
     assert site.nprocs == 32
     assert site.hosts == nodes
+    assert site.global_scratch == str(tmpdir)
+
+    site.__class__._Singleton__erase()
 
 
 def test_slurm_variables(tmpdir):
@@ -49,15 +51,17 @@ def test_slurm_variables(tmpdir):
     tmpdir.chdir()
 
     os.environ['SCRATCH'] = str(tmpdir)
-    os.environ['SLURM_JOB_ID'] = '12345678'
+    os.environ['SLURM_JOB_ID'] = '87654321'
     os.environ['SUBMITDIR'] = str(tmpdir)
     os.environ['SLURM_JOB_NUM_NODES'] = '2'
-    os.environ['SLURM_TASKS_PER_NODE'] = '16'
+    os.environ['SLURM_TASKS_PER_NODE'] = '12'
     os.environ['SLURM_JOB_NODELIST'] = 'node-0,node-1'
 
     site = SiteConfig('SLURM')
 
-    assert site.global_scratch == str(tmpdir)
-    assert site.jobid == '12345678'
+    assert site.jobid == '87654321'
     assert site.submitdir == str(tmpdir)
-    assert site.nprocs == 32
+    assert site.nprocs == 24
+    assert site.global_scratch == str(tmpdir)
+
+    site.__class__._Singleton__erase()
