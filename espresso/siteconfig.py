@@ -23,7 +23,7 @@ from six import with_metaclass
 import hostlist as hl
 from path import Path
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 
 
 def preserve_cwd(function):
