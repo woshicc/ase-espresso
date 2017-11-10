@@ -867,6 +867,8 @@ class Espresso(FileIOCalculator, object):
         self.results = {'energy': self.read_energies()[0],
                         'forces': self.read_forces(),
                         'stress': self.read_stress(),
+                        'absolute magnetization': self.read_magnetizations()[0],
+                        'total magnetization': self.read_magnetizations()[1],
                         #'dipole': self.get_dipole(),
                         #'charges': self.get_charges(),
                         #'magmom': 0.0,
@@ -1938,6 +1940,30 @@ class Espresso(FileIOCalculator, object):
         else:
             return stresslist[-1]
 
+    def read_magnetizations(self, getall=False):
+        'Read the total and absolute magnetizations from the pw.x log file'
+
+        start = '!    total energy'
+        end = '     convergence has'
+
+        mags = dict()
+        mags['total magnetization'] = []
+        mags['absolute magnetization'] = []
+
+        with open(self.log, 'rU') as fobj:
+            for line in fobj:
+                if start in line:
+                    while end not in line:
+                        line = next(fobj)
+                        for mag in mags.keys():
+                            if mag in line:
+                                mags[mag].append(float(line.split()[3]))
+        if getall:
+            return mags
+        else:
+            return [mags[k][-1] if mags[k] else 0.0 for k in
+                    sorted(mags.keys())]
+
     def topath(self, filename):
         if os.path.isabs(filename):
             return filename
@@ -2187,30 +2213,11 @@ class Espresso(FileIOCalculator, object):
         self.update(atoms)
         return self.results['stress']
 
-    def get_magnetization(self):
-        """
-        Returns total and absolute magnetization after SCF run.
-        Units are Bohr magnetons per unit cell, directly read PWscf log.
-        Returns (0,0) if no magnetization is found in log.
-        """
-        p1 = os.popen('grep "total magnetization" '+self.log+' | tail -1','r')
-        s1 = p1.readlines()
-        p1.close()
-        p2 = os.popen('grep "absolute magnetization" '+self.log+' | tail -1','r')
-        s2 = p2.readlines()
-        p2.close()
+    def get_magnetization(self, atoms=None):
 
-        if len(s1) == 0:
-            assert len(s2) == 0
-            return (0,0)
-        else:
-            assert len(s1) == 1
-            assert len(s2) == 1
-            s1_ = s1[0].split("=")[-1]
-            totmag = float(s1_.split("Bohr")[0])
-            s2_ = s2[0].split("=")[-1]
-            absmag = float(s2_.split("Bohr")[0])
-            return(totmag, absmag)
+        self.update(atoms)
+        return [self.results['absolute magnetization'],
+                self.results['total magnetization']]
 
     def get_smearing_contribution(self):
         return self.ST
