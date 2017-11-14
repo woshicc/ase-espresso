@@ -2213,11 +2213,15 @@ class Espresso(FileIOCalculator, object):
         self.update(atoms)
         return self.results['stress']
 
-    def get_magnetization(self, atoms=None):
+    def get_absolute_magnetization(self, atoms=None):
 
         self.update(atoms)
-        return [self.results['absolute magnetization'],
-                self.results['total magnetization']]
+        return self.results.get('absolute magnetization', None)
+
+    def get_total_magnetization(self, atoms=None):
+
+        self.update(atoms)
+        return self.results.get('total magnetization', None)
 
     def get_smearing_contribution(self):
         return self.ST
