@@ -1521,7 +1521,8 @@ class Espresso(FileIOCalculator, object):
         for attr in sys_str_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}=\'{1:s}\','.format(attr, value), file=finp)
+                print("  {0:s}='{1:s}',".format(attr, value), file=finp)
+               # print('  {0:s}=\'{1:s}\','.format(attr, value), file=finp)
 
         sys_bool_attrs = ['nosym', 'noinv', 'nosym_evc', 'no_t_rev', 'force_symmorphic',
                           'use_all_frac', 'one_atom_occupations', 'starting_spin_angle',
