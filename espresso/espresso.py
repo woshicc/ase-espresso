@@ -3,7 +3,7 @@
 # ****************************************************************************
 # Original work Copyright (C) 2013-2015 SUNCAT
 # Modified work Copyright 2015-2017 Lukasz Mentel
-#
+# Minor Modification by Sandip De Copyleft 2021
 # This file is distributed under the terms of the
 # GNU General Public License. See the file 'COPYING'
 # in the root directory of the present distribution,
@@ -502,6 +502,7 @@ class Espresso(FileIOCalculator, object):
                  w_2=None,
                  wmass=None,
                  press_conv_thr=None,
+                 vdw_corr=None,
                  site=None,
                  ):
 
@@ -674,7 +675,7 @@ class Espresso(FileIOCalculator, object):
         self.w_2 = w_2
         self.wmass = wmass
         self.press_conv_thr = press_conv_thr
-
+        self.vdw_corr=vdw_corr
         # internal attributes
 
         self._initialized = False
@@ -1516,11 +1517,11 @@ class Espresso(FileIOCalculator, object):
             if value is not None:
                 print('  {0:s}={1:s},'.format(attr, num2str(value)), file=finp)
 
-        sys_str_attrs = ['exxdiv_treatment']
+        sys_str_attrs = ['exxdiv_treatment','vdw_corr']
         for attr in sys_str_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:s},'.format(attr, value), file=finp)
+                print("  {0:s}='{1:s}',".format(attr, value), file=finp)
 
         sys_bool_attrs = ['nosym', 'noinv', 'nosym_evc', 'no_t_rev', 'force_symmorphic',
                           'use_all_frac', 'one_atom_occupations', 'starting_spin_angle',
