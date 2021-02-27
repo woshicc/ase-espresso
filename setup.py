@@ -7,7 +7,7 @@
 
 from setuptools import setup
 
-MAIN_PACKAGE = "espresso"
+MAIN_PACKAGE = "aseqe"
 DESCRIPTION = "Python API for the Quantum Espresso software"
 LICENSE = "GPLv3"
 URL = "https://github.com/lmmentel/ase-espresso"
