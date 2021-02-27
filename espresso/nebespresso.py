@@ -20,11 +20,11 @@ from ase.neb import NEB
 from .siteconfig import SiteConfig
 
 
-__version__ = '0.3.3'
+__version__ = "0.3.3"
 
 
 def splitinto(l, n):
-    '''
+    """
     Split a list into `n` sublists of roughly equal size
 
     Args:
@@ -32,16 +32,15 @@ def splitinto(l, n):
             list to be split
         n (int) :
             number of sublists
-    '''
+    """
 
     q, r = divmod(len(l), n)
     indices = [q * i + min(i, r) for i in range(n + 1)]
-    return [l[indices[i]:indices[i + 1]] for i in range(n)]
+    return [l[indices[i] : indices[i + 1]] for i in range(n)]
 
 
 class NEBEspresso(NEB):
-
-    def __init__(self, images, site=None, outprefix='neb', **neb_kwargs):
+    def __init__(self, images, site=None, outprefix="neb", **neb_kwargs):
 
         super().__init__(images, **neb_kwargs)
 
@@ -59,19 +58,22 @@ class NEBEspresso(NEB):
         if value is None:
             self._site = SiteConfig.check_scheduler()
             if self._site.scheduler is None:
-                raise NotImplementedError('Interactive NEB is not supported')
+                raise NotImplementedError("Interactive NEB is not supported")
         else:
             self._site = value
 
     def wait_for_total_energies(self):
-        '''
+        """
         Calculalte the energy for each thread in a separate theead and
         wait until all the calcualtions are finished.
-        '''
+        """
 
-        threads = [threading.Thread(target=self.images[i]._calc.calculate,
-                                    args=(self.images[i],))
-                   for i in range(1, self.nimages - 1)]
+        threads = [
+            threading.Thread(
+                target=self.images[i]._calc.calculate, args=(self.images[i],)
+            )
+            for i in range(1, self.nimages - 1)
+        ]
 
         for t in threads:
             t.start()
@@ -84,10 +86,10 @@ class NEBEspresso(NEB):
         return super().get_forces()
 
     def initialize(self):
-        'Create the calculator instances'
+        "Create the calculator instances"
 
         imageprocs = splitinto(self.site.proclist, len(self.images) - 2)
-        images = self.images[1:self.nimages - 1]
+        images = self.images[1 : self.nimages - 1]
 
         for i, (image, procs) in enumerate(zip(images, imageprocs)):
 
@@ -97,5 +99,4 @@ class NEBEspresso(NEB):
             site.nprocs = len(site.proclist)
             site.usehostfile = True
 
-            image._calc.set(outdir='{0:s}_{1:04d}'.format(self.outprefix, i),
-                            site=site)
+            image._calc.set(outdir="{0:s}_{1:04d}".format(self.outprefix, i), site=site)

@@ -19,7 +19,7 @@ import numpy as np
 from ase.calculators.calculator import FileIOCalculator
 from .espresso import Espresso
 
-__version__ = '0.3.3'
+__version__ = "0.3.3"
 
 
 class Vibespresso(FileIOCalculator, object):
@@ -29,7 +29,8 @@ class Vibespresso(FileIOCalculator, object):
     calculations are then initialized with the Kohn-Sham potential of
     the first calculation to speed up vibrational calculations.
     """
-    def __init__(self, outdirprefix='out', **kwargs):
+
+    def __init__(self, outdirprefix="out", **kwargs):
         """
         In addition to the parameters of a standard espresso calculator,
         outdirprefix (default: 'out') can be specified, which will be the
@@ -39,7 +40,7 @@ class Vibespresso(FileIOCalculator, object):
         self.arg = kwargs.copy()
         self.outdirprefix = outdirprefix
         self.counter = 0
-        self.equilibriumdensity = outdirprefix + '_equi.tgz'
+        self.equilibriumdensity = outdirprefix + "_equi.tgz"
         self.firststep = True
         self.ready = False
 
@@ -58,7 +59,7 @@ class Vibespresso(FileIOCalculator, object):
 
     def runcalc(self, atoms):
         if not self.ready:
-            self.arg['outdir'] = self.outdirprefix + '_%04d' % self.counter
+            self.arg["outdir"] = self.outdirprefix + "_%04d" % self.counter
             self.counter += 1
             if self.firststep:
                 self.esp = Espresso(**self.arg)
@@ -67,7 +68,7 @@ class Vibespresso(FileIOCalculator, object):
                 self.esp.save_chg(self.equilibriumdensity)
                 self.firststep = False
             else:
-                self.arg['startingpot'] = 'file'
+                self.arg["startingpot"] = "file"
                 self.esp = Espresso(**self.arg)
                 self.esp.set_atoms(atoms)
                 self.esp.initialize(atoms)
@@ -88,7 +89,7 @@ class Vibespresso(FileIOCalculator, object):
         return self.esp.forces
 
     def get_name(self):
-        return 'VibEspresso'
+        return "VibEspresso"
 
     def get_version(self):
         return __version__

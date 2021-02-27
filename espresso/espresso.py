@@ -12,7 +12,7 @@
 
 from __future__ import print_function, absolute_import, unicode_literals
 
-from builtins import (super, range, zip, round, int, object)
+from builtins import super, range, zip, round, int, object
 
 from builtins import str as newstr
 
@@ -36,13 +36,19 @@ from ase.units import Hartree, Rydberg, Bohr
 from .utils import speciestuple, num2str, bool2str, convert_constraints
 from .siteconfig import SiteConfig, preserve_cwd
 
-__version__ = '0.3.3'
+__version__ = "0.3.3"
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
-all_changes = ['positions', 'numbers', 'cell', 'pbc',
-               'initial_charges', 'initial_magmoms']
+all_changes = [
+    "positions",
+    "numbers",
+    "cell",
+    "pbc",
+    "initial_charges",
+    "initial_magmoms",
+]
 
 
 class SCFConvergenceError(Exception):
@@ -346,165 +352,171 @@ class Espresso(FileIOCalculator, object):
 
     """
 
-    implemented_properties = ['energy', 'forces', 'free_energy', 'magmom',
-                              'magmoms', 'stress']
+    implemented_properties = [
+        "energy",
+        "forces",
+        "free_energy",
+        "magmom",
+        "magmoms",
+        "stress",
+    ]
 
     default_parameters = []
 
-    def __init__(self,
-                 atoms=None,
-                 pw=350.0,
-                 dw=None,
-                 fw=None,
-                 nbands=-10,
-                 kpts=(1, 1, 1),
-                 kptshift=(0, 0, 0),
-                 fft_grid=None,
-                 calculation='relax',
-                 ion_dynamics='ase3',
-                 nstep=None,
-                 constr_tol=None,
-                 fmax=0.05,
-                 cell_dynamics=None,
-                 press=None,
-                 dpress=None,
-                 cell_factor=None,
-                 cell_dofree=None,
-                 dontcalcforces=False,
-                 nosym=False,
-                 noinv=False,
-                 nosym_evc=False,
-                 no_t_rev=False,
-                 xc='PBE',
-                 beefensemble=False,
-                 printensemble=False,
-                 psppath=None,
-                 spinpol=False,
-                 noncollinear=False,
-                 spinorbit=False,
-                 outdir=None,
-                 txt=None,
-                 calcstress=False,
-                 smearing='fd',
-                 sigma=0.1,
-                 fix_magmom=False,
-                 isolated=None,
-                 U=None,
-                 J=None,
-                 U_alpha=None,
-                 U_projection_type='atomic',
-                 nqx1=None,
-                 nqx2=None,
-                 nqx3=None,
-                 exx_fraction=None,
-                 screening_parameter=None,
-                 exxdiv_treatment=None,
-                 ecutvcut=None,
-                 tot_charge=None,
-                 charge=None,
-                 tot_magnetization=-1,
-                 occupations='smearing',
-                 dipole={'status': False},
-                 field={'status': False},
-                 output={'disk_io': 'default',
-                         'avoidio': False,
-                         'removewf': True,
-                         'removesave': False,
-                         'wf_collect': False},
-                 convergence={'energy': 1e-6,
-                              'mixing': 0.7,
-                              'maxsteps': 100,
-                              'diag': 'david'},
-                 startingpot=None,
-                 startingwfc=None,
-                 ion_positions=None,
-                 parflags=None,
-                 alwayscreatenewarrayforforces=True,
-                 verbose='low',
-                 # automatically generated list of parameters
-                 # some coincide with ase-style names
-                 iprint=None,
-                 tstress=None,
-                 tprnfor=None,
-                 dt=None,
-                 lkpoint_dir=None,
-                 max_seconds=None,
-                 etot_conv_thr=None,
-                 forc_conv_thr=None,
-                 tefield=None,
-                 dipfield=None,
-                 lelfield=None,
-                 nberrycyc=None,
-                 lorbm=None,
-                 lberry=None,
-                 gdir=None,
-                 nppstr=None,
-                 nbnd=None,
-                 ecutwfc=None,
-                 ecutrho=None,
-                 ecutfock=None,
-                 force_symmorphic=None,
-                 use_all_frac=None,
-                 one_atom_occupations=None,
-                 starting_spin_angle=None,
-                 degauss=None,
-                 nspin=None,
-                 ecfixed=None,
-                 qcutz=None,
-                 q2sigma=None,
-                 x_gamma_extrapolation=None,
-                 lda_plus_u=None,
-                 lda_plus_u_kind=None,
-                 edir=None,
-                 emaxpos=None,
-                 eopreg=None,
-                 eamp=None,
-                 clambda=None,
-                 report=None,
-                 lspinorb=None,
-                 esm_w=None,
-                 esm_efield=None,
-                 esm_nfit=None,
-                 london=None,
-                 london_s6=None,
-                 london_rcut=None,
-                 xdm=None,
-                 xdm_a1=None,
-                 xdm_a2=None,
-                 electron_maxstep=None,
-                 scf_must_converge=None,
-                 conv_thr=None,
-                 adaptive_thr=None,
-                 conv_thr_init=None,
-                 conv_thr_multi=None,
-                 mixing_beta=None,
-                 mixing_ndim=None,
-                 mixing_fixed_ns=None,
-                 ortho_para=None,
-                 diago_thr_init=None,
-                 diago_cg_maxiter=None,
-                 diago_david_ndim=None,
-                 diago_full_acc=None,
-                 efield=None,
-                 tqr=None,
-                 remove_rigid_rot=None,
-                 tempw=None,
-                 tolp=None,
-                 delta_t=None,
-                 nraise=None,
-                 refold_pos=None,
-                 upscale=None,
-                 bfgs_ndim=None,
-                 trust_radius_max=None,
-                 trust_radius_min=None,
-                 trust_radius_ini=None,
-                 w_1=None,
-                 w_2=None,
-                 wmass=None,
-                 press_conv_thr=None,
-                 vdw_corr=None,
-                 site=None,
-                 ):
+    def __init__(
+        self,
+        atoms=None,
+        pw=350.0,
+        dw=None,
+        fw=None,
+        nbands=-10,
+        kpts=(1, 1, 1),
+        kptshift=(0, 0, 0),
+        fft_grid=None,
+        calculation="relax",
+        ion_dynamics="ase3",
+        nstep=None,
+        constr_tol=None,
+        fmax=0.05,
+        cell_dynamics=None,
+        press=None,
+        dpress=None,
+        cell_factor=None,
+        cell_dofree=None,
+        dontcalcforces=False,
+        nosym=False,
+        noinv=False,
+        nosym_evc=False,
+        no_t_rev=False,
+        xc="PBE",
+        beefensemble=False,
+        printensemble=False,
+        psppath=None,
+        spinpol=False,
+        noncollinear=False,
+        spinorbit=False,
+        outdir=None,
+        txt=None,
+        calcstress=False,
+        smearing="fd",
+        sigma=0.1,
+        fix_magmom=False,
+        isolated=None,
+        U=None,
+        J=None,
+        U_alpha=None,
+        U_projection_type="atomic",
+        nqx1=None,
+        nqx2=None,
+        nqx3=None,
+        exx_fraction=None,
+        screening_parameter=None,
+        exxdiv_treatment=None,
+        ecutvcut=None,
+        tot_charge=None,
+        charge=None,
+        tot_magnetization=-1,
+        occupations="smearing",
+        dipole={"status": False},
+        field={"status": False},
+        output={
+            "disk_io": "default",
+            "avoidio": False,
+            "removewf": True,
+            "removesave": False,
+            "wf_collect": False,
+        },
+        convergence={"energy": 1e-6, "mixing": 0.7, "maxsteps": 100, "diag": "david"},
+        startingpot=None,
+        startingwfc=None,
+        ion_positions=None,
+        parflags=None,
+        alwayscreatenewarrayforforces=True,
+        verbose="low",
+        # automatically generated list of parameters
+        # some coincide with ase-style names
+        iprint=None,
+        tstress=None,
+        tprnfor=None,
+        dt=None,
+        lkpoint_dir=None,
+        max_seconds=None,
+        etot_conv_thr=None,
+        forc_conv_thr=None,
+        tefield=None,
+        dipfield=None,
+        lelfield=None,
+        nberrycyc=None,
+        lorbm=None,
+        lberry=None,
+        gdir=None,
+        nppstr=None,
+        nbnd=None,
+        ecutwfc=None,
+        ecutrho=None,
+        ecutfock=None,
+        force_symmorphic=None,
+        use_all_frac=None,
+        one_atom_occupations=None,
+        starting_spin_angle=None,
+        degauss=None,
+        nspin=None,
+        ecfixed=None,
+        qcutz=None,
+        q2sigma=None,
+        x_gamma_extrapolation=None,
+        lda_plus_u=None,
+        lda_plus_u_kind=None,
+        edir=None,
+        emaxpos=None,
+        eopreg=None,
+        eamp=None,
+        clambda=None,
+        report=None,
+        lspinorb=None,
+        esm_w=None,
+        esm_efield=None,
+        esm_nfit=None,
+        london=None,
+        london_s6=None,
+        london_rcut=None,
+        xdm=None,
+        xdm_a1=None,
+        xdm_a2=None,
+        electron_maxstep=None,
+        scf_must_converge=None,
+        conv_thr=None,
+        adaptive_thr=None,
+        conv_thr_init=None,
+        conv_thr_multi=None,
+        mixing_beta=None,
+        mixing_ndim=None,
+        mixing_fixed_ns=None,
+        ortho_para=None,
+        diago_thr_init=None,
+        diago_cg_maxiter=None,
+        diago_david_ndim=None,
+        diago_full_acc=None,
+        efield=None,
+        tqr=None,
+        remove_rigid_rot=None,
+        tempw=None,
+        tolp=None,
+        delta_t=None,
+        nraise=None,
+        refold_pos=None,
+        upscale=None,
+        bfgs_ndim=None,
+        trust_radius_max=None,
+        trust_radius_min=None,
+        trust_radius_ini=None,
+        w_1=None,
+        w_2=None,
+        wmass=None,
+        press_conv_thr=None,
+        vdw_corr=None,
+        site=None,
+    ):
 
         self.pw = pw
         self.dw = dw
@@ -514,7 +526,9 @@ class Espresso(FileIOCalculator, object):
             self.dw = 10.0 * self.pw
 
         if self.dw < self.pw:
-            raise ValueError('<dw> smaller than <pw>: {0:.2f} < {1:.2f}'.format(self.dw, self.pw))
+            raise ValueError(
+                "<dw> smaller than <pw>: {0:.2f} < {1:.2f}".format(self.dw, self.pw)
+            )
 
         self.nbands = nbands
         self.kpts = kpts
@@ -522,7 +536,7 @@ class Espresso(FileIOCalculator, object):
         self.fft_grid = fft_grid  # RK
         self.calculation = calculation
 
-        if self.calculation in ['scf', 'nscf', 'bands', 'hund']:
+        if self.calculation in ["scf", "nscf", "bands", "hund"]:
             self.ion_dynamics = None
         else:
             self.ion_dynamics = ion_dynamics
@@ -582,7 +596,7 @@ class Espresso(FileIOCalculator, object):
         self.ecutvcut = ecutvcut
         self.newforcearray = alwayscreatenewarrayforforces
         if parflags is None:
-            self.parflags = ''
+            self.parflags = ""
         else:
             self.parflags = parflags
         self.txt = txt
@@ -675,7 +689,7 @@ class Espresso(FileIOCalculator, object):
         self.w_2 = w_2
         self.wmass = wmass
         self.press_conv_thr = press_conv_thr
-        self.vdw_corr=vdw_corr
+        self.vdw_corr = vdw_corr
         # internal attributes
 
         self._initialized = False
@@ -722,7 +736,7 @@ class Espresso(FileIOCalculator, object):
         return self.get_name()
 
     def get_name(self):
-        return 'QE-ASE interface'
+        return "QE-ASE interface"
 
     @property
     def kpts(self):
@@ -730,25 +744,28 @@ class Espresso(FileIOCalculator, object):
 
     @kpts.setter
     def kpts(self, value):
-        '''
+        """
         Resolve the `kpts` and store as an attribute
-        '''
+        """
 
         if isinstance(value, str):
 
-            if value.lower() == 'gamma':
+            if value.lower() == "gamma":
                 self._kpts = value.lower()
             else:
-                raise ValueError('wrong <kpts>: {}'.format(value))
+                raise ValueError("wrong <kpts>: {}".format(value))
 
         elif isinstance(value, (float, int)):
 
             if self.atoms is not None:
                 from ase.calculators.calculator import kptdensity2monkhorstpack
+
                 self._kpts = kptdensity2monkhorstpack(self.atoms, value)
             else:
-                raise ValueError('cannot calculate the Monkhorst-Pack grid '
-                                 'without the <atoms> object specified')
+                raise ValueError(
+                    "cannot calculate the Monkhorst-Pack grid "
+                    "without the <atoms> object specified"
+                )
         elif isinstance(value, (list, tuple)):
 
             self._kpts = np.asarray(value)
@@ -758,29 +775,31 @@ class Espresso(FileIOCalculator, object):
             self._kpts = value
 
         else:
-            raise ValueError('unknown <kpts> type: {}'.format(type(value)))
+            raise ValueError("unknown <kpts> type: {}".format(type(value)))
 
     def get_version(self):
         return __version__
 
     def set_pseudo_path(self):
-        '''
+        """
         Check if the pseudopotential path is defined and set it from
         the environmental variable `ESP_PSP_PATH` if necessary
-        '''
+        """
 
         if self.psppath is None:
-            if os.environ['ESP_PSP_PATH'] is not None:
-                self.psppath = os.environ['ESP_PSP_PATH']
+            if os.environ["ESP_PSP_PATH"] is not None:
+                self.psppath = os.environ["ESP_PSP_PATH"]
             else:
-                raise ValueError('Unable to find pseudopotential path.'
-                    'Consider setting <ESP_PSP_PATH> environment variable')
+                raise ValueError(
+                    "Unable to find pseudopotential path."
+                    "Consider setting <ESP_PSP_PATH> environment variable"
+                )
 
     def initialize(self, atoms):
-        '''
+        """
         Create the scratch directories and pw.inp input file and
         prepare for writing the input file
-        '''
+        """
 
         if not self._initialized:
             self.create_outdir()
@@ -795,10 +814,10 @@ class Espresso(FileIOCalculator, object):
         self.check_spinpol()
         self._initialized = True
 
-    def calculate(self, atoms, properties=['energy']):
-        '''
+    def calculate(self, atoms, properties=["energy"]):
+        """
         Run the calculation and retrieve the results
-        '''
+        """
 
         if atoms is not None:
             self.atoms = atoms.copy()
@@ -834,52 +853,57 @@ class Espresso(FileIOCalculator, object):
                 self.recalculate = True
 
             x = atoms.cell - self.atoms.cell
-            if np.max(x) > 1E-13 or np.min(x) < -1E-13:
+            if np.max(x) > 1e-13 or np.min(x) < -1e-13:
                 self.stop()
                 self.recalculate = True
-            if (atoms.get_atomic_numbers()!=self.atoms.get_atomic_numbers()).any():
+            if (atoms.get_atomic_numbers() != self.atoms.get_atomic_numbers()).any():
                 self.stop()
                 self.nvalence = None
                 self.nel = None
                 self.recalculate = True
             x = atoms.positions - self.atoms.positions
-            if np.max(x) > 1E-13 or np.min(x) < -1E-13 or (not self.started and not self.got_energy):
+            if (
+                np.max(x) > 1e-13
+                or np.min(x) < -1e-13
+                or (not self.started and not self.got_energy)
+            ):
                 self.recalculate = True
         self.atoms = atoms.copy()
 
     def update(self, atoms):
-        '''
+        """
         Check if the atoms object has changes and perform a calcualtion
         when it does
-        '''
+        """
 
         if self.atoms is None:
             self.set_atoms(atoms)
 
-        if self.calculation_required(atoms, ['energy']):
+        if self.calculation_required(atoms, ["energy"]):
             self.calculate(atoms)
             self.recalculate = False
 
     def set_results(self, atoms):
-        '''
+        """
         Read the results from the file and populate the `results` dictionary
-        '''
+        """
 
-        self.results = {'energy': self.read_energies()[0],
-                        'forces': self.read_forces(),
-                        'stress': self.read_stress(),
-                        'absolute magnetization': self.read_magnetizations()[0],
-                        'total magnetization': self.read_magnetizations()[1],
-                        #'dipole': self.get_dipole(),
-                        #'charges': self.get_charges(),
-                        #'magmom': 0.0,
-                        #'magmoms': np.zeros(len(atoms))
-                        }
+        self.results = {
+            "energy": self.read_energies()[0],
+            "forces": self.read_forces(),
+            "stress": self.read_stress(),
+            "absolute magnetization": self.read_magnetizations()[0],
+            "total magnetization": self.read_magnetizations()[1],
+            #'dipole': self.get_dipole(),
+            #'charges': self.get_charges(),
+            #'magmom': 0.0,
+            #'magmoms': np.zeros(len(atoms))
+        }
 
     def read(self):
-        '''
+        """
         Read the output file and set the attributes
-        '''
+        """
 
         self.energy_zero, self.energy_free = self.read_energies(getall=False)
         self.forces = self.read_forces()
@@ -888,49 +912,51 @@ class Espresso(FileIOCalculator, object):
         cell = self.read_cell()
 
     def input_update(self):
-        '''
+        """
         Run initialization functions, such that this can be called if variables
         in espresso are changes using set or directly.
-        '''
+        """
 
         if self.dipole is None:
-            self.dipole = {'status': False}
+            self.dipole = {"status": False}
         if self.field is None:
-            self.field = {'status': False}
+            self.field = {"status": False}
 
         if self.convergence is None:
             self.conv_thr = 1.0e-6 / Rydberg
         else:
-            if 'energy' in list(self.convergence.keys()):
-                self.conv_thr = self.convergence['energy'] / Rydberg
+            if "energy" in list(self.convergence.keys()):
+                self.conv_thr = self.convergence["energy"] / Rydberg
             else:
                 self.conv_thr = 1.0e-6 / Rydberg
 
         if self.beefensemble:
-            if self.xc.upper().find('BEEF') < 0:
-                raise KeyError("ensemble-energies only work with xc=BEEF or variants of it!")
+            if self.xc.upper().find("BEEF") < 0:
+                raise KeyError(
+                    "ensemble-energies only work with xc=BEEF or variants of it!"
+                )
 
         self.started = False
         self.got_energy = False
 
     def create_outdir(self):
-        '''
+        """
         Create the necessary directory structure to run the calculation and
         assign file names
-        '''
+        """
 
         self.localtmp = self.site.make_localtmp(self.outdir)
         self.scratch = self.site.make_scratch()
 
         if self.txt is None:
-            self.log = self.localtmp.joinpath('log')
+            self.log = self.localtmp.joinpath("log")
         else:
             self.log = self.localtmp.joinpath(self.txt)
 
         atexit.register(self.clean)
 
     def set(self, **kwargs):
-        '''
+        """
         Define settings for the Quantum Espresso calculator object after it
         has been initialized. This is done in the following way::
 
@@ -946,7 +972,7 @@ class Espresso(FileIOCalculator, object):
 
             No input validation is done
 
-        '''
+        """
 
         for key, value in list(kwargs.items()):
             setattr(self, key, value)
@@ -957,53 +983,86 @@ class Espresso(FileIOCalculator, object):
 
     @preserve_cwd
     def run(self):
-        '''
+        """
         Execute the expresso program `pw.x`
-        '''
+        """
 
         if self.site.batchmode:
             self.localtmp.chdir()
-            Path.copy2(self.localtmp.joinpath('pw.inp'), self.scratch)
+            Path.copy2(self.localtmp.joinpath("pw.inp"), self.scratch)
 
-            if self.calculation != 'hund':
+            if self.calculation != "hund":
 
-                command = self.site.get_proc_mpi_command(self.scratch,
-                                'pw.x ' + self.parflags + ' -in pw.inp')
+                command = self.site.get_proc_mpi_command(
+                    self.scratch, "pw.x " + self.parflags + " -in pw.inp"
+                )
 
-                if self.ion_dynamics == 'ase3':
-                    raise ValueError('use interactive version <iEspresso> for ion_dynamics="ase3"')
+                if self.ion_dynamics == "ase3":
+                    raise ValueError(
+                        'use interactive version <iEspresso> for ion_dynamics="ase3"'
+                    )
                 else:
-                    with open(self.log, 'ab') as flog:
-                        flog.write(self.get_output_header().encode('utf-8'))
+                    with open(self.log, "ab") as flog:
+                        flog.write(self.get_output_header().encode("utf-8"))
                         exitcode = subprocess.call(command, stdout=flog)
                     if exitcode != 0:
-                        raise RuntimeError('something went wrong:', exitcode)
+                        raise RuntimeError("something went wrong:", exitcode)
 
             else:  # calculation == 'hund'
-                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
-                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
-                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+                self.site.runonly_perProcMpiExec(
+                    self.scratch, " pw.x -in pw.inp >>" + self.log
+                )
+                os.system(
+                    "sed s/occupations.*/occupations=\\'fixed\\',/ <"
+                    + self.localtmp
+                    + "/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="
+                    + num2str(self.conv_thr)
+                    + ",/ | sed s/tot_magnetization.*/tot_magnetization="
+                    + num2str(self.totmag)
+                    + ",/ >"
+                    + self.localtmp
+                    + "/pw2.inp"
+                )
+                os.system(
+                    self.site.perHostMpiExec
+                    + " cp "
+                    + self.localtmp
+                    + "/pw2.inp "
+                    + self.scratch
+                )
+                self.cinp, self.cout = self.site.do_perProcMpiExec(
+                    self.scratch, "pw.x " + self.parflags + " -in pw2.inp"
+                )
 
         else:  # not in batchmode
 
-            pwinp = self.localtmp.joinpath('pw.inp')
+            pwinp = self.localtmp.joinpath("pw.inp")
             Path.copy(pwinp, self.scratch)
-            command = ['pw.x', '-in', 'pw.inp']
-            if self.calculation != 'hund':
+            command = ["pw.x", "-in", "pw.inp"]
+            if self.calculation != "hund":
                 self.scratch.chdir()
-                with open(self.log, 'ab') as flog:
-                    flog.write(self.get_output_header().encode('utf-8'))
+                with open(self.log, "ab") as flog:
+                    flog.write(self.get_output_header().encode("utf-8"))
                     exitcode = subprocess.call(command, stdout=flog)
 
             else:
                 self.scratch.chdir()
-                subprocess.call('pw.x -in pw.inp >> ' + self.log, shell=True)
+                subprocess.call("pw.x -in pw.inp >> " + self.log, shell=True)
 
-                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                shutil.copy(os.path.join(self.localtmp, 'pw2.inp'), self.scratch)
+                os.system(
+                    "sed s/occupations.*/occupations=\\'fixed\\',/ <"
+                    + self.localtmp
+                    + "/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="
+                    + num2str(self.conv_thr)
+                    + ",/ | sed s/tot_magnetization.*/tot_magnetization="
+                    + num2str(self.totmag)
+                    + ",/ >"
+                    + self.localtmp
+                    + "/pw2.inp"
+                )
+                shutil.copy(os.path.join(self.localtmp, "pw2.inp"), self.scratch)
                 self.scratch.chdir()
-                self.cinp, self.cout = os.popen2('pw.x -in pw2.inp')
+                self.cinp, self.cout = os.popen2("pw.x -in pw2.inp")
 
             self._running = True
 
@@ -1013,9 +1072,9 @@ class Espresso(FileIOCalculator, object):
             self._running = False
 
     def clean(self):
-        '''
+        """
         Remove the temporary files and directories
-        '''
+        """
 
         os.chdir(self.site.submitdir)
 
@@ -1025,19 +1084,19 @@ class Espresso(FileIOCalculator, object):
             pass
 
         if self.output is not None:
-            if 'removewf' in list(self.output.keys()):
-                removewf = self.output['removewf']
+            if "removewf" in list(self.output.keys()):
+                removewf = self.output["removewf"]
             else:
                 removewf = True
-            if 'removesave' in list(self.output.keys()):
-                removesave = self.output['removesave']
+            if "removesave" in list(self.output.keys()):
+                removesave = self.output["removesave"]
             else:
                 removesave = False
         else:
             removewf = True
             removesave = False
 
-        toremove = ['*.wfc*', '*.update', '*.igk*', '*.hub']
+        toremove = ["*.wfc*", "*.update", "*.igk*", "*.hub"]
         if removewf:
             for pattern in toremove:
                 for fil in self.scratch.files(pattern):
@@ -1048,17 +1107,19 @@ class Espresso(FileIOCalculator, object):
 
         self.scratch.rmtree_p()
 
-        if hasattr(self.site, 'mpdshutdown') and 'QEASE_MPD_ISSHUTDOWN' not in list(os.environ.keys()):
-            os.environ['QEASE_MPD_ISSHUTDOWN'] = 'yes'
+        if hasattr(self.site, "mpdshutdown") and "QEASE_MPD_ISSHUTDOWN" not in list(
+            os.environ.keys()
+        ):
+            os.environ["QEASE_MPD_ISSHUTDOWN"] = "yes"
             os.system(self.site.mpdshutdown)
 
     def atoms2species(self):
-        '''
+        """
         Define several properties of the quantum espresso species from the ase
         atoms object. Takes into account that different spins (or different U
         etc.) on same kind of chemical elements are considered different
         species in quantum espresso
-        '''
+        """
 
         symbols = self.atoms.get_chemical_symbols()
         masses = np.nan_to_num(self.atoms.get_masses())
@@ -1102,7 +1163,9 @@ class Espresso(FileIOCalculator, object):
             else:
                 U_alphalist = list(self.U_alpha)
                 if len(U_alphalist) < len(symbols):
-                    U_alphalist += list(np.zeros(len(symbols) - len(U_alphalist), np.float))
+                    U_alphalist += list(
+                        np.zeros(len(symbols) - len(U_alphalist), np.float)
+                    )
         else:
             U_alphalist = np.zeros(len(symbols), np.float)
 
@@ -1113,7 +1176,12 @@ class Espresso(FileIOCalculator, object):
         for s in symbols:
             symcounter[s] = 0
         for i in range(len(symbols)):
-            key = symbols[i] + '_m%.14eU%.14eJ%.14eUa%.14e' % (magmoms[i], Ulist[i], Jlist[i], U_alphalist[i])
+            key = symbols[i] + "_m%.14eU%.14eJ%.14eUa%.14e" % (
+                magmoms[i],
+                Ulist[i],
+                Jlist[i],
+                U_alphalist[i],
+            )
             if key in list(dic.keys()):
                 self.specprops.append((dic[key][1], pos[i]))
             else:
@@ -1126,15 +1194,17 @@ class Espresso(FileIOCalculator, object):
         self.nspecies = len(self.species)
         self.specdict = {}
         for i, s in list(dic.values()):
-            self.specdict[s] = speciestuple(s.strip('0123456789'),  # chemical symbol w/o index
-                                            masses[i],
-                                            magmoms[i],
-                                            Ulist[i],
-                                            Jlist[i],
-                                            U_alphalist[i])
+            self.specdict[s] = speciestuple(
+                s.strip("0123456789"),  # chemical symbol w/o index
+                masses[i],
+                magmoms[i],
+                Ulist[i],
+                Jlist[i],
+                U_alphalist[i],
+            )
 
-    def parse_upf(self, symbols, fext='.UPF'):
-        '''
+    def parse_upf(self, symbols, fext=".UPF"):
+        """
         Parse the `<PP_HEADER>` section from the pseudopotential files in the
         Unified Pseudopotential Format (UPF)
 
@@ -1151,41 +1221,43 @@ class Espresso(FileIOCalculator, object):
         See also:
            `<http://www.quantum-espresso.org/pseudopotentials/unified-pseudopotential-format/>`_
 
-        '''
+        """
 
-        pat = re.compile(r'(?P<block><PP_HEADER)\s+(?P<entries>.*?)/>',
-                         flags=re.DOTALL | re.IGNORECASE)
+        pat = re.compile(
+            r"(?P<block><PP_HEADER)\s+(?P<entries>.*?)/>",
+            flags=re.DOTALL | re.IGNORECASE,
+        )
 
         parsed = OrderedDict()
         for symbol in symbols:
             parsed[symbol] = dict()
             fname = os.path.join(self.psppath, symbol + fext)
             if os.path.exists(fname):
-                with open(fname, 'r') as pspfile:
+                with open(fname, "r") as pspfile:
                     match = pat.search(pspfile.read())
                 if match:
                     for line in [s.strip() for s in match.group("entries").split("\n")]:
                         key, value = line.split("=")
                         parsed[symbol][key] = value.strip('"')
             else:
-                raise IOError('Missing pseudopotential file: {}'.format(fname))
+                raise IOError("Missing pseudopotential file: {}".format(fname))
         return parsed
 
-    def get_nvalence(self, fext='.UPF'):
-        '''
+    def get_nvalence(self, fext=".UPF"):
+        """
         Get the number of valence electrons from pseudopotential or paw setup
-        '''
+        """
 
         symbols = [self.specdict[x].symbol for x in self.species]
-        pattern = re.compile('z\s*_?valence', re.IGNORECASE)
+        pattern = re.compile("z\s*_?valence", re.IGNORECASE)
         nel = dict()
         for symbol in symbols:
             fname = os.path.join(self.psppath, symbol + fext)
-            with open(fname, 'r') as fupf:
+            with open(fname, "r") as fupf:
                 for line in fupf:
                     if pattern.search(line):
-                        if '=' in line:
-                            name, value = line.split('=')
+                        if "=" in line:
+                            name, value = line.split("=")
                             nel[symbol] = int(round(float(value.strip('"\n'))))
                         else:
                             lsplit = line.split()
@@ -1201,10 +1273,12 @@ class Espresso(FileIOCalculator, object):
         Option 'all' gives all numbers of steps in log,
         not only for the latest scf."""
         if all:
-            tail = 'tail'
+            tail = "tail"
         else:
-            tail = 'tail -1'
-        p = os.popen('grep "convergence has been achieved in" '+self.log+' | '+tail, 'r')
+            tail = "tail -1"
+        p = os.popen(
+            'grep "convergence has been achieved in" ' + self.log + " | " + tail, "r"
+        )
         s = p.readlines()
         p.close()
         if not all:
@@ -1214,21 +1288,21 @@ class Espresso(FileIOCalculator, object):
         else:
             out = []
             for s_ in s:
-                tmp = s_.split('in')
-                out.append(int(tmp[-1].split('iterations')[0]))
+                tmp = s_.split("in")
+                out.append(int(tmp[-1].split("iterations")[0]))
             return out
 
     def get_number_of_bfgs_steps(self):
         """Get total number of internal BFGS steps."""
-        p = os.popen('grep "bfgs converged in" '+self.log+' | tail -1', 'r')
+        p = os.popen('grep "bfgs converged in" ' + self.log + " | tail -1", "r")
         s = p.readlines()
         p.close()
         assert len(s) < 2
         if len(s) == 0:
             return None
         else:
-            tmp = s[0].split('and')
-            return int(tmp[-1].split('bfgs')[0])
+            tmp = s[0].split("and")
+            return int(tmp[-1].split("bfgs")[0])
 
     def get_forces(self, atoms):
         self.update(atoms)
@@ -1237,133 +1311,156 @@ class Espresso(FileIOCalculator, object):
         else:
             return self.forces
 
-    def write_input(self, inputname='pw.inp', calculation=None,
-                    overridekpts=None, overridekptshift=None,
-                    overridenbands=None, suppressforcecalc=False,
-                    usetetrahedra=False):
+    def write_input(
+        self,
+        inputname="pw.inp",
+        calculation=None,
+        overridekpts=None,
+        overridekptshift=None,
+        overridenbands=None,
+        suppressforcecalc=False,
+        usetetrahedra=False,
+    ):
 
         if self.atoms is None:
-            raise ValueError('no atoms defined')
+            raise ValueError("no atoms defined")
 
         fname = self.localtmp.joinpath(inputname)
 
-        finp = open(fname, 'w')
+        finp = open(fname, "w")
 
         # &CONTROL
         if calculation is None:
-            if self.calculation.lower() == 'hund':
-                print('&CONTROL\n  calculation=\'scf\',\n  prefix=\'calc\',', file=finp)
+            if self.calculation.lower() == "hund":
+                print("&CONTROL\n  calculation='scf',\n  prefix='calc',", file=finp)
             else:
-                print('&CONTROL\n  calculation=\'' + self.calculation + '\',\n  prefix=\'calc\',', file=finp)
-            ionssec = self.calculation not in ('scf', 'nscf', 'bands', 'hund')
+                print(
+                    "&CONTROL\n  calculation='"
+                    + self.calculation
+                    + "',\n  prefix='calc',",
+                    file=finp,
+                )
+            ionssec = self.calculation not in ("scf", "nscf", "bands", "hund")
         else:
-            print('&CONTROL\n  calculation=\'' + calculation + '\',\n  prefix=\'calc\',', file=finp)
-            ionssec = calculation not in ('scf', 'nscf', 'bands', 'hund')
+            print(
+                "&CONTROL\n  calculation='" + calculation + "',\n  prefix='calc',",
+                file=finp,
+            )
+            ionssec = calculation not in ("scf", "nscf", "bands", "hund")
 
         if self.nstep is not None:
-            print('  nstep=' + str(self.nstep) + ',', file=finp)
+            print("  nstep=" + str(self.nstep) + ",", file=finp)
 
-        if self.verbose != 'low':
-            print('  verbosity=\'' + self.verbose + '\',', file=finp)
+        if self.verbose != "low":
+            print("  verbosity='" + self.verbose + "',", file=finp)
 
-        print('  pseudo_dir=\'' + self.psppath + '\',', file=finp)
-        print('  outdir=\'.\',', file=finp)
-        efield = (self.field['status'] is True)
-        dipfield = (self.dipole['status'] is True)
+        print("  pseudo_dir='" + self.psppath + "',", file=finp)
+        print("  outdir='.',", file=finp)
+        efield = self.field["status"] is True
+        dipfield = self.dipole["status"] is True
         if efield or dipfield:
-            print('  tefield=.true.,', file=finp)
+            print("  tefield=.true.,", file=finp)
             if dipfield:
-                print('  dipfield=.true.,', file=finp)
+                print("  dipfield=.true.,", file=finp)
         if not self.dontcalcforces and not suppressforcecalc:
-            print('  tprnfor=.true.,', file=finp)
+            print("  tprnfor=.true.,", file=finp)
             if self.calcstress:
-                print('  tstress=.true.,', file=finp)
+                print("  tstress=.true.,", file=finp)
             if self.output is not None:
-                if 'avoidio' in list(self.output.keys()):
-                    if self.output['avoidio']:
-                        self.output['disk_io'] = 'none'
-                if 'disk_io' in list(self.output.keys()):
-                    if self.output['disk_io'] in ['high', 'low', 'none']:
-                        print('  disk_io=\'' + self.output['disk_io'] + '\',',
-                              file=finp)
+                if "avoidio" in list(self.output.keys()):
+                    if self.output["avoidio"]:
+                        self.output["disk_io"] = "none"
+                if "disk_io" in list(self.output.keys()):
+                    if self.output["disk_io"] in ["high", "low", "none"]:
+                        print("  disk_io='" + self.output["disk_io"] + "',", file=finp)
 
-                if 'wf_collect' in list(self.output.keys()):
-                    if self.output['wf_collect']:
-                        print('  wf_collect=.true.,', file=finp)
-        if self.ion_dynamics != 'ase3':
+                if "wf_collect" in list(self.output.keys()):
+                    if self.output["wf_collect"]:
+                        print("  wf_collect=.true.,", file=finp)
+        if self.ion_dynamics != "ase3":
             # we basically ignore convergence of total energy differences
             # between ionic steps and only consider fmax as in ase
-            print('  etot_conv_thr=1d0,', file=finp)
-            print('  forc_conv_thr=' + num2str(self.fmax / (Rydberg / Bohr)) +
-                  ',', file=finp)
+            print("  etot_conv_thr=1d0,", file=finp)
+            print(
+                "  forc_conv_thr=" + num2str(self.fmax / (Rydberg / Bohr)) + ",",
+                file=finp,
+            )
 
         # turn on fifo communication if espsite.py is set up that way
-        if hasattr(self.site, 'fifo'):
+        if hasattr(self.site, "fifo"):
             if self.site.fifo:
-                print('  ase_fifo=.true.,', file=finp)
+                print("  ase_fifo=.true.,", file=finp)
 
         # automatically generated parameters
         if self.iprint is not None:
-            print('  iprint=' + str(self.iprint) + ',', file=finp)
+            print("  iprint=" + str(self.iprint) + ",", file=finp)
         if self.tstress is not None:
-            print('  tstress=' + bool2str(self.tstress) + ',', file=finp)
+            print("  tstress=" + bool2str(self.tstress) + ",", file=finp)
         if self.tprnfor is not None:
-            print('  tprnfor=' + bool2str(self.tprnfor) + ',', file=finp)
+            print("  tprnfor=" + bool2str(self.tprnfor) + ",", file=finp)
         if self.dt is not None:
-            print('  dt='+num2str(self.dt)+',', file=finp)
+            print("  dt=" + num2str(self.dt) + ",", file=finp)
         if self.lkpoint_dir is not None:
-            print('  lkpoint_dir='+bool2str(self.lkpoint_dir)+',', file=finp)
+            print("  lkpoint_dir=" + bool2str(self.lkpoint_dir) + ",", file=finp)
         if self.max_seconds is not None:
-            print('  max_seconds='+num2str(self.max_seconds)+',', file=finp)
+            print("  max_seconds=" + num2str(self.max_seconds) + ",", file=finp)
         if self.etot_conv_thr is not None:
-            print('  etot_conv_thr='+num2str(self.etot_conv_thr)+',', file=finp)
+            print("  etot_conv_thr=" + num2str(self.etot_conv_thr) + ",", file=finp)
         if self.forc_conv_thr is not None:
-            print('  forc_conv_thr='+num2str(self.forc_conv_thr)+',', file=finp)
+            print("  forc_conv_thr=" + num2str(self.forc_conv_thr) + ",", file=finp)
         if self.tefield is not None:
-            print('  tefield='+bool2str(self.tefield)+',', file=finp)
+            print("  tefield=" + bool2str(self.tefield) + ",", file=finp)
         if self.dipfield is not None:
-            print('  dipfield='+bool2str(self.dipfield)+',', file=finp)
+            print("  dipfield=" + bool2str(self.dipfield) + ",", file=finp)
         if self.lelfield is not None:
-            print('  lelfield='+bool2str(self.lelfield)+',', file=finp)
+            print("  lelfield=" + bool2str(self.lelfield) + ",", file=finp)
         if self.nberrycyc is not None:
-            print('  nberrycyc='+str(self.nberrycyc)+',', file=finp)
+            print("  nberrycyc=" + str(self.nberrycyc) + ",", file=finp)
         if self.lorbm is not None:
-            print('  lorbm='+bool2str(self.lorbm)+',', file=finp)
+            print("  lorbm=" + bool2str(self.lorbm) + ",", file=finp)
         if self.lberry is not None:
-            print('  lberry='+bool2str(self.lberry)+',', file=finp)
+            print("  lberry=" + bool2str(self.lberry) + ",", file=finp)
         if self.gdir is not None:
-            print('  gdir='+str(self.gdir)+',', file=finp)
+            print("  gdir=" + str(self.gdir) + ",", file=finp)
         if self.nppstr is not None:
-            print('  nppstr='+str(self.nppstr)+',', file=finp)
-
+            print("  nppstr=" + str(self.nppstr) + ",", file=finp)
 
         ### &SYSTEM ###
-        print('/\n&SYSTEM\n  ibrav=0,\n  celldm(1)=1.8897261245650618d0,', file=finp)
-        print('  nat='+str(self.natoms)+',', file=finp)
+        print("/\n&SYSTEM\n  ibrav=0,\n  celldm(1)=1.8897261245650618d0,", file=finp)
+        print("  nat=" + str(self.natoms) + ",", file=finp)
         self.atoms2species()  # self.convertmag2species()
-        print('  ntyp='+str(self.nspecies)+',', file=finp)
+        print("  ntyp=" + str(self.nspecies) + ",", file=finp)
         if self.tot_charge is not None:
-            print('  tot_charge='+num2str(self.tot_charge)+',', file=finp)
-        if self.calculation != 'hund':
+            print("  tot_charge=" + num2str(self.tot_charge) + ",", file=finp)
+        if self.calculation != "hund":
             inimagscale = 1.0
         else:
             inimagscale = 0.9
         if self.fix_magmom:
             assert self.spinpol
             self.totmag = self.summed_magmoms
-            print('  tot_magnetization='+num2str(self.totmag*inimagscale)+',', file=finp)
+            print(
+                "  tot_magnetization=" + num2str(self.totmag * inimagscale) + ",",
+                file=finp,
+            )
         elif self.tot_magnetization != -1:
-            if self.tot_magnetization != 'hund':
+            if self.tot_magnetization != "hund":
                 self.totmag = self.tot_magnetization
             else:
                 from .atomic_configs import hundmag
-                self.totmag = sum([hundmag(x) for x in self.atoms.get_chemical_symbols()])
-            print('  tot_magnetization='+num2str(self.totmag*inimagscale)+',', file=finp)
-        print('  ecutwfc=' + num2str(self.pw / Rydberg) + ',', file=finp)
-        print('  ecutrho=' + num2str(self.dw / Rydberg) + ',', file=finp)
+
+                self.totmag = sum(
+                    [hundmag(x) for x in self.atoms.get_chemical_symbols()]
+                )
+            print(
+                "  tot_magnetization=" + num2str(self.totmag * inimagscale) + ",",
+                file=finp,
+            )
+        print("  ecutwfc=" + num2str(self.pw / Rydberg) + ",", file=finp)
+        print("  ecutrho=" + num2str(self.dw / Rydberg) + ",", file=finp)
         if self.fw is not None:
-            print('  ecutfock=' + num2str(self.fw / Rydberg) + ',', file=finp)
-        #temporarily (and optionally) change number of bands for nscf calc.
+            print("  ecutfock=" + num2str(self.fw / Rydberg) + ",", file=finp)
+        # temporarily (and optionally) change number of bands for nscf calc.
         if overridenbands is not None:
             if self.nbands is None:
                 nbandssave = None
@@ -1375,29 +1472,29 @@ class Espresso(FileIOCalculator, object):
             if self.nbands > 0:
                 self.nbnd = int(self.nbands)
             else:
-            # if self.nbands is negative create - self.nbands extra bands
+                # if self.nbands is negative create - self.nbands extra bands
                 if self.nvalence is None:
                     self.nvalence, self.nel = self.get_nvalence()
                 if self.noncollinear:
                     self.nbnd = int(np.sum(self.nvalence) - self.nbands * 2.0)
                 else:
                     self.nbnd = int(np.sum(self.nvalence) / 2.0 - self.nbands)
-            print('  nbnd=' + str(self.nbnd) + ',', file=finp)
+            print("  nbnd=" + str(self.nbnd) + ",", file=finp)
         if overridenbands is not None:
             self.nbands = nbandssave
         if usetetrahedra:
-            print('  occupations=\'tetrahedra\',', file=finp)
+            print("  occupations='tetrahedra',", file=finp)
         else:
             if abs(self.sigma) > 1e-13:
-                print('  occupations=\'' + self.occupations + '\',', file=finp)
-                print('  smearing=\'' + self.smearing + '\',', file=finp)
-                print('  degauss=' + num2str(self.sigma / Rydberg) + ',', file=finp)
+                print("  occupations='" + self.occupations + "',", file=finp)
+                print("  smearing='" + self.smearing + "',", file=finp)
+                print("  degauss=" + num2str(self.sigma / Rydberg) + ",", file=finp)
             else:
                 if self.spinpol:
                     assert self.fix_magmom
-                print('  occupations=\'fixed\',', file=finp)
+                print("  occupations='fixed',", file=finp)
         if self.spinpol:
-            print('  nspin=2,', file=finp)
+            print("  nspin=2,", file=finp)
             spcount = 1
             if self.nel is None:
                 self.nvalence, self.nel = self.get_nvalence()
@@ -1406,12 +1503,15 @@ class Espresso(FileIOCalculator, object):
                 el = spec.symbol
                 mag = spec.magmom / self.nel[el]
                 assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
-                print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
+                print(
+                    "  starting_magnetization(%d)=%s," % (spcount, num2str(float(mag))),
+                    file=finp,
+                )
                 spcount += 1
         elif self.noncollinear:
-            print('  noncolin=.true.,', file=finp)
+            print("  noncolin=.true.,", file=finp)
             if self.spinorbit:
-                print('  lspinorb=.true.', file=finp)
+                print("  lspinorb=.true.", file=finp)
             spcount = 1
             if self.nel is None:
                 self.nvalence, self.nel = self.get_nvalence()
@@ -1420,173 +1520,238 @@ class Espresso(FileIOCalculator, object):
                 el = spec.symbol
                 mag = spec.magmom / self.nel[el]
                 assert np.abs(mag) <= 1.0  # magnetization oversaturated!!!
-                print('  starting_magnetization(%d)=%s,' % (spcount, num2str(float(mag))), file=finp)
+                print(
+                    "  starting_magnetization(%d)=%s," % (spcount, num2str(float(mag))),
+                    file=finp,
+                )
                 spcount += 1
         if self.isolated is not None:
-            print('  assume_isolated=\'' + self.isolated + '\',', file=finp)
-        print('  input_dft=\'' + self.xc + '\',', file=finp)
+            print("  assume_isolated='" + self.isolated + "',", file=finp)
+        print("  input_dft='" + self.xc + "',", file=finp)
         if self.beefensemble:
-            print('  ensemble_energies=.true.,', file=finp)
+            print("  ensemble_energies=.true.,", file=finp)
             if self.printensemble:
-                print('  print_ensemble_energies=.true.,', file=finp)
+                print("  print_ensemble_energies=.true.,", file=finp)
             else:
-                print('  print_ensemble_energies=.false.,', file=finp)
+                print("  print_ensemble_energies=.false.,", file=finp)
         edir = 3
         if dipfield:
             try:
-                edir = self.dipole['edir']
+                edir = self.dipole["edir"]
             except:
                 pass
         elif efield:
             try:
-                edir = self.field['edir']
+                edir = self.field["edir"]
             except:
                 pass
         if dipfield or efield:
-            print('  edir=' + str(edir) + ',', file=finp)
+            print("  edir=" + str(edir) + ",", file=finp)
         if dipfield:
-            if 'emaxpos' in list(self.dipole.keys()):
-                emaxpos = self.dipole['emaxpos']
+            if "emaxpos" in list(self.dipole.keys()):
+                emaxpos = self.dipole["emaxpos"]
             else:
                 emaxpos = self.find_max_empty_space(edir)
-            if 'eopreg' in list(self.dipole.keys()):
-                eopreg = self.dipole['eopreg']
+            if "eopreg" in list(self.dipole.keys()):
+                eopreg = self.dipole["eopreg"]
             else:
                 eopreg = 0.025
-            if 'eamp' in list(self.dipole.keys()):
-                eamp = self.dipole['eamp']
+            if "eamp" in list(self.dipole.keys()):
+                eamp = self.dipole["eamp"]
             else:
                 eamp = 0.0
-            print('  emaxpos='+num2str(emaxpos)+',', file=finp)
-            print('  eopreg='+num2str(eopreg)+',', file=finp)
-            print('  eamp='+num2str(eamp)+',', file=finp)
+            print("  emaxpos=" + num2str(emaxpos) + ",", file=finp)
+            print("  eopreg=" + num2str(eopreg) + ",", file=finp)
+            print("  eamp=" + num2str(eamp) + ",", file=finp)
         if efield:
-            if 'emaxpos' in list(self.field.keys()):
-                emaxpos = self.field['emaxpos']
+            if "emaxpos" in list(self.field.keys()):
+                emaxpos = self.field["emaxpos"]
             else:
                 emaxpos = 0.0
-            if 'eopreg' in list(self.field.keys()):
-                eopreg = self.field['eopreg']
+            if "eopreg" in list(self.field.keys()):
+                eopreg = self.field["eopreg"]
             else:
                 eopreg = 0.0
-            if 'eamp' in list(self.field.keys()):
-                eamp = self.field['eamp']
+            if "eamp" in list(self.field.keys()):
+                eamp = self.field["eamp"]
             else:
                 eamp = 0.0
-            print('  emaxpos='+num2str(emaxpos)+',', file=finp)
-            print('  eopreg='+num2str(eopreg)+',', file=finp)
-            print('  eamp='+num2str(eamp)+',', file=finp)
+            print("  emaxpos=" + num2str(emaxpos) + ",", file=finp)
+            print("  eopreg=" + num2str(eopreg) + ",", file=finp)
+            print("  eamp=" + num2str(eamp) + ",", file=finp)
         if self.U is not None or self.J is not None or self.U_alpha is not None:
-            print('  lda_plus_u=.true.,', file=finp)
+            print("  lda_plus_u=.true.,", file=finp)
             if self.J is not None:
-                print('  lda_plus_u_kind=1,', file=finp)
+                print("  lda_plus_u_kind=1,", file=finp)
             else:
-                print('  lda_plus_u_kind=0,', file=finp)
-            print('  U_projection_type=\"%s\",' % (self.U_projection_type), file=finp)
+                print("  lda_plus_u_kind=0,", file=finp)
+            print('  U_projection_type="%s",' % (self.U_projection_type), file=finp)
             if self.U is not None:
                 for i, s in enumerate(self.species):
                     spec = self.specdict[s]
                     el = spec.symbol
                     Ui = spec.U
-                    print('  Hubbard_U('+str(i+1)+')='+num2str(Ui)+',', file=finp)
+                    print(
+                        "  Hubbard_U(" + str(i + 1) + ")=" + num2str(Ui) + ",",
+                        file=finp,
+                    )
             if self.J is not None:
                 for i, s in enumerate(self.species):
                     spec = self.specdict[s]
                     el = spec.symbol
                     Ji = spec.J
-                    print('  Hubbard_J(1,'+str(i+1)+')='+num2str(Ji)+',', file=finp)
+                    print(
+                        "  Hubbard_J(1," + str(i + 1) + ")=" + num2str(Ji) + ",",
+                        file=finp,
+                    )
             if self.U_alpha is not None:
                 for i, s in enumerate(self.species):
                     spec = self.specdict[s]
                     el = spec.symbol
                     U_alphai = spec.U_alpha
-                    print('  Hubbard_alpha('+str(i+1)+')='+num2str(U_alphai)+',', file=finp)
+                    print(
+                        "  Hubbard_alpha("
+                        + str(i + 1)
+                        + ")="
+                        + num2str(U_alphai)
+                        + ",",
+                        file=finp,
+                    )
 
-        sys_int_attrs = ['nqx1', 'nqx2', 'nqx3', 'nspin', 'lda_plus_u_kind', 'edir', 'report',
-                         'esm_nfit']
+        sys_int_attrs = [
+            "nqx1",
+            "nqx2",
+            "nqx3",
+            "nspin",
+            "lda_plus_u_kind",
+            "edir",
+            "report",
+            "esm_nfit",
+        ]
         for attr in sys_int_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:d},'.format(attr, value), file=finp)
+                print("  {0:s}={1:d},".format(attr, value), file=finp)
 
-        sys_float_attrs = ['exx_fraction', 'screening_parameter', 'ecutvcut', 'ecutfock',
-                           'degauss', 'ecfixed', 'qcutz', 'q2sigma', 'emaxpos', 'eopreg', 'eamp',
-                           'esm_w', 'esm_efield', 'london_s6', 'london_rcut', 'xdm_a1', 'xdm_a2']
+        sys_float_attrs = [
+            "exx_fraction",
+            "screening_parameter",
+            "ecutvcut",
+            "ecutfock",
+            "degauss",
+            "ecfixed",
+            "qcutz",
+            "q2sigma",
+            "emaxpos",
+            "eopreg",
+            "eamp",
+            "esm_w",
+            "esm_efield",
+            "london_s6",
+            "london_rcut",
+            "xdm_a1",
+            "xdm_a2",
+        ]
         for attr in sys_float_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:s},'.format(attr, num2str(value)), file=finp)
+                print("  {0:s}={1:s},".format(attr, num2str(value)), file=finp)
 
-        sys_str_attrs = ['exxdiv_treatment','vdw_corr']
+        sys_str_attrs = ["exxdiv_treatment", "vdw_corr"]
         for attr in sys_str_attrs:
             value = getattr(self, attr)
             if value is not None:
                 print("  {0:s}='{1:s}',".format(attr, value), file=finp)
 
-        sys_bool_attrs = ['nosym', 'noinv', 'nosym_evc', 'no_t_rev', 'force_symmorphic',
-                          'use_all_frac', 'one_atom_occupations', 'starting_spin_angle',
-                          'x_gamma_extrapolation', 'lda_plus_u', 'lspinorb', 'london', 'xdm']
+        sys_bool_attrs = [
+            "nosym",
+            "noinv",
+            "nosym_evc",
+            "no_t_rev",
+            "force_symmorphic",
+            "use_all_frac",
+            "one_atom_occupations",
+            "starting_spin_angle",
+            "x_gamma_extrapolation",
+            "lda_plus_u",
+            "lspinorb",
+            "london",
+            "xdm",
+        ]
         for attr in sys_bool_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:s},'.format(attr, bool2str(value)), file=finp)
+                print("  {0:s}={1:s},".format(attr, bool2str(value)), file=finp)
 
         if self.clambda is not None:
-            print('  lambda={0:s},'.format(num2str(self.clambda)), file=finp)
+            print("  lambda={0:s},".format(num2str(self.clambda)), file=finp)
 
-        if self.fft_grid is not None:  #RK
-            print('  nr1={0:d},'.format(self.fft_grid[0]), file=finp)
-            print('  nr2={0:d},'.format(self.fft_grid[1]), file=finp)
-            print('  nr3={0:d},'.format(self.fft_grid[2]), file=finp)
+        if self.fft_grid is not None:  # RK
+            print("  nr1={0:d},".format(self.fft_grid[0]), file=finp)
+            print("  nr2={0:d},".format(self.fft_grid[1]), file=finp)
+            print("  nr3={0:d},".format(self.fft_grid[2]), file=finp)
 
         ### &ELECTRONS ###
-        print('/\n&ELECTRONS', file=finp)
-        if 'diag' in list(self.convergence.keys()):
-            print("  diagonalization='{0:s}',".format(self.convergence['diag']), file=finp)
+        print("/\n&ELECTRONS", file=finp)
+        if "diag" in list(self.convergence.keys()):
+            print(
+                "  diagonalization='{0:s}',".format(self.convergence["diag"]), file=finp
+            )
 
-        if self.calculation != 'hund':
-            print('  conv_thr=' + num2str(self.conv_thr) + ',', file=finp)
+        if self.calculation != "hund":
+            print("  conv_thr=" + num2str(self.conv_thr) + ",", file=finp)
         else:
-            print('  conv_thr=' + num2str(self.conv_thr*500.) + ',', file=finp)
+            print("  conv_thr=" + num2str(self.conv_thr * 500.0) + ",", file=finp)
         for x in list(self.convergence.keys()):
-            if x == 'mixing':
-                print('  mixing_beta='+num2str(self.convergence[x])+',', file=finp)
-            elif x == 'maxsteps':
-                print('  electron_maxstep='+str(self.convergence[x])+',', file=finp)
-            elif x == 'nmix':
-                print('  mixing_ndim='+str(self.convergence[x])+',', file=finp)
-            elif x == 'mixing_mode':
-                print('  mixing_mode=\''+self.convergence[x]+'\',', file=finp)
-            elif x == 'diago_cg_maxiter':
-                print('  diago_cg_maxiter='+str(self.convergence[x])+',', file=finp)
-        if self.startingpot is not None and self.calculation != 'hund':
-            print('  startingpot=\''+self.startingpot+'\',', file=finp)
-        if self.startingwfc is not None and self.calculation != 'hund':
-            print('  startingwfc=\''+self.startingwfc+'\',', file=finp)
+            if x == "mixing":
+                print("  mixing_beta=" + num2str(self.convergence[x]) + ",", file=finp)
+            elif x == "maxsteps":
+                print("  electron_maxstep=" + str(self.convergence[x]) + ",", file=finp)
+            elif x == "nmix":
+                print("  mixing_ndim=" + str(self.convergence[x]) + ",", file=finp)
+            elif x == "mixing_mode":
+                print("  mixing_mode='" + self.convergence[x] + "',", file=finp)
+            elif x == "diago_cg_maxiter":
+                print("  diago_cg_maxiter=" + str(self.convergence[x]) + ",", file=finp)
+        if self.startingpot is not None and self.calculation != "hund":
+            print("  startingpot='" + self.startingpot + "',", file=finp)
+        if self.startingwfc is not None and self.calculation != "hund":
+            print("  startingwfc='" + self.startingwfc + "',", file=finp)
 
         # automatically generated parameters
-        el_int_attrs = ['electron_maxstep', 'mixing_ndim', 'mixing_fixed_ns',
-                        'ortho_para', 'diago_cg_maxiter', 'diago_david_ndim']
+        el_int_attrs = [
+            "electron_maxstep",
+            "mixing_ndim",
+            "mixing_fixed_ns",
+            "ortho_para",
+            "diago_cg_maxiter",
+            "diago_david_ndim",
+        ]
         for attr in el_int_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:d},'.format(attr, value), file=finp)
+                print("  {0:s}={1:d},".format(attr, value), file=finp)
 
-        el_float_attrs = ['conv_thr_init', 'conv_thr_multi', 'mixing_beta',
-                        'diago_thr_init', 'efield']
+        el_float_attrs = [
+            "conv_thr_init",
+            "conv_thr_multi",
+            "mixing_beta",
+            "diago_thr_init",
+            "efield",
+        ]
         for attr in el_float_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:s},'.format(attr, num2str(value)), file=finp)
+                print("  {0:s}={1:s},".format(attr, num2str(value)), file=finp)
 
-        el_bool_attrs = ['scf_must_converge', 'adaptive_thr', 'diago_full_acc', 'tqr']
+        el_bool_attrs = ["scf_must_converge", "adaptive_thr", "diago_full_acc", "tqr"]
         for attr in el_bool_attrs:
             value = getattr(self, attr)
             if value is not None:
-                print('  {0:s}={1:s},'.format(attr, bool2str(value)), file=finp)
+                print("  {0:s}={1:s},".format(attr, bool2str(value)), file=finp)
 
         ### &IONS ###
-        if self.ion_dynamics == 'ase3' or not ionssec:
+        if self.ion_dynamics == "ase3" or not ionssec:
             simpleconstr, otherconstr = [], []
         else:
             simpleconstr, otherconstr = convert_constraints(self.atoms)
@@ -1594,86 +1759,113 @@ class Espresso(FileIOCalculator, object):
         if self.ion_dynamics is None:
             self.optdamp = False
         else:
-            self.optdamp = (self.ion_dynamics.upper() == 'DAMP')
+            self.optdamp = self.ion_dynamics.upper() == "DAMP"
 
         if self.ion_dynamics is not None and ionssec:
             if len(otherconstr) != 0:
-                print('/\n&IONS\n  ion_dynamics=\'damp\',', file=finp)
+                print("/\n&IONS\n  ion_dynamics='damp',", file=finp)
                 self.optdamp = True
             else:
-                print('/\n&IONS\n  ion_dynamics=\'' + self.ion_dynamics + '\',', file=finp)
+                print(
+                    "/\n&IONS\n  ion_dynamics='" + self.ion_dynamics + "',", file=finp
+                )
             if self.ion_positions is not None:
-                print('  ion_positions=\''+self.ion_positions+'\',', file=finp)
+                print("  ion_positions='" + self.ion_positions + "',", file=finp)
         elif self.ion_positions is not None:
-            print('/\n&IONS\n  ion_positions=\''+self.ion_positions+'\',', file=finp)
+            print("/\n&IONS\n  ion_positions='" + self.ion_positions + "',", file=finp)
 
         # automatically generated parameters
         if self.remove_rigid_rot is not None:
-            print('  remove_rigid_rot='+bool2str(self.remove_rigid_rot)+',', file=finp)
+            print(
+                "  remove_rigid_rot=" + bool2str(self.remove_rigid_rot) + ",", file=finp
+            )
         if self.tempw is not None:
-            print('  tempw='+num2str(self.tempw)+',', file=finp)
+            print("  tempw=" + num2str(self.tempw) + ",", file=finp)
         if self.tolp is not None:
-            print('  tolp='+num2str(self.tolp)+',', file=finp)
+            print("  tolp=" + num2str(self.tolp) + ",", file=finp)
         if self.delta_t is not None:
-            print('  delta_t='+num2str(self.delta_t)+',', file=finp)
+            print("  delta_t=" + num2str(self.delta_t) + ",", file=finp)
         if self.nraise is not None:
-            print('  nraise='+str(self.nraise)+',', file=finp)
+            print("  nraise=" + str(self.nraise) + ",", file=finp)
         if self.refold_pos is not None:
-            print('  refold_pos='+bool2str(self.refold_pos)+',', file=finp)
+            print("  refold_pos=" + bool2str(self.refold_pos) + ",", file=finp)
         if self.upscale is not None:
-            print('  upscale='+num2str(self.upscale)+',', file=finp)
+            print("  upscale=" + num2str(self.upscale) + ",", file=finp)
         if self.bfgs_ndim is not None:
-            print('  bfgs_ndim='+str(self.bfgs_ndim)+',', file=finp)
+            print("  bfgs_ndim=" + str(self.bfgs_ndim) + ",", file=finp)
         if self.trust_radius_max is not None:
-            print('  trust_radius_max='+num2str(self.trust_radius_max)+',', file=finp)
+            print(
+                "  trust_radius_max=" + num2str(self.trust_radius_max) + ",", file=finp
+            )
         if self.trust_radius_min is not None:
-            print('  trust_radius_min='+num2str(self.trust_radius_min)+',', file=finp)
+            print(
+                "  trust_radius_min=" + num2str(self.trust_radius_min) + ",", file=finp
+            )
         if self.trust_radius_ini is not None:
-            print('  trust_radius_ini='+num2str(self.trust_radius_ini)+',', file=finp)
+            print(
+                "  trust_radius_ini=" + num2str(self.trust_radius_ini) + ",", file=finp
+            )
         if self.w_1 is not None:
-            print('  w_1='+num2str(self.w_1)+',', file=finp)
+            print("  w_1=" + num2str(self.w_1) + ",", file=finp)
         if self.w_2 is not None:
-            print('  w_2='+num2str(self.w_2)+',', file=finp)
+            print("  w_2=" + num2str(self.w_2) + ",", file=finp)
 
         ### &CELL ###
         if self.cell_dynamics is not None:
-            print('/\n&CELL\n  cell_dynamics=\''+self.cell_dynamics+'\',', file=finp)
+            print("/\n&CELL\n  cell_dynamics='" + self.cell_dynamics + "',", file=finp)
             if self.press is not None:
-                print('  press='+num2str(self.press)+',', file=finp)
+                print("  press=" + num2str(self.press) + ",", file=finp)
             if self.dpress is not None:
-                print('  press_conv_thr='+num2str(self.dpress)+',', file=finp)
+                print("  press_conv_thr=" + num2str(self.dpress) + ",", file=finp)
             if self.cell_factor is not None:
-                print('  cell_factor='+num2str(self.cell_factor)+',', file=finp)
+                print("  cell_factor=" + num2str(self.cell_factor) + ",", file=finp)
             if self.cell_dofree is not None:
-                print('  cell_dofree=\''+self.cell_dofree+'\',', file=finp)
+                print("  cell_dofree='" + self.cell_dofree + "',", file=finp)
 
         # automatically generated parameters
         if self.wmass is not None:
-            print('  wmass='+num2str(self.wmass)+',', file=finp)
+            print("  wmass=" + num2str(self.wmass) + ",", file=finp)
         if self.press_conv_thr is not None:
-            print('  press_conv_thr='+num2str(self.press_conv_thr)+',', file=finp)
-
+            print("  press_conv_thr=" + num2str(self.press_conv_thr) + ",", file=finp)
 
         ### CELL_PARAMETERS
-        print('/\nCELL_PARAMETERS alat', file=finp)
+        print("/\nCELL_PARAMETERS alat", file=finp)
         for i in range(3):
-            print('%21.15fd0 %21.15fd0 %21.15fd0' % tuple(self.atoms.cell[i]), file=finp)
+            print(
+                "%21.15fd0 %21.15fd0 %21.15fd0" % tuple(self.atoms.cell[i]), file=finp
+            )
 
-        print('ATOMIC_SPECIES', file=finp)
-        for species in self.species:   # PSP ORDERING FOLLOWS SPECIESINDEX
+        print("ATOMIC_SPECIES", file=finp)
+        for species in self.species:  # PSP ORDERING FOLLOWS SPECIESINDEX
             spec = self.specdict[species]
-            print(species, num2str(spec.mass), spec.symbol + '.UPF', file=finp)
+            print(species, num2str(spec.mass), spec.symbol + ".UPF", file=finp)
 
-        print('ATOMIC_POSITIONS {crystal}', file=finp)
+        print("ATOMIC_POSITIONS {crystal}", file=finp)
         if len(simpleconstr) == 0:
             for species, pos in self.specprops:
-                print('%-4s %21.15fd0 %21.15fd0 %21.15fd0' % (species, pos[0], pos[1], pos[2]), file=finp)
+                print(
+                    "%-4s %21.15fd0 %21.15fd0 %21.15fd0"
+                    % (species, pos[0], pos[1], pos[2]),
+                    file=finp,
+                )
         else:
             for i, (species, pos) in enumerate(self.specprops):
-                print('%-4s %21.15fd0 %21.15fd0 %21.15fd0   %d  %d  %d' % (species,pos[0],pos[1],pos[2],simpleconstr[i][0],simpleconstr[i][1],simpleconstr[i][2]), file=finp)
+                print(
+                    "%-4s %21.15fd0 %21.15fd0 %21.15fd0   %d  %d  %d"
+                    % (
+                        species,
+                        pos[0],
+                        pos[1],
+                        pos[2],
+                        simpleconstr[i][0],
+                        simpleconstr[i][1],
+                        simpleconstr[i][2],
+                    ),
+                    file=finp,
+                )
 
         if len(otherconstr) != 0:
-            print('CONSTRAINTS', file=finp)
+            print("CONSTRAINTS", file=finp)
             if self.constr_tol is None:
                 print(len(otherconstr), file=finp)
             else:
@@ -1686,39 +1878,42 @@ class Espresso(FileIOCalculator, object):
         else:
             kp = overridekpts
         if isinstance(kp, str):
-            if kp == 'gamma':
-                print('K_POINTS Gamma', file=finp)
+            if kp == "gamma":
+                print("K_POINTS Gamma", file=finp)
         else:
             if kp.ndim == 1:
-                print('K_POINTS automatic', file=finp)
-                print('{0:d} {1:d} {2:d} '.format(
-                            *kp), file=finp, end=' ')
+                print("K_POINTS automatic", file=finp)
+                print("{0:d} {1:d} {2:d} ".format(*kp), file=finp, end=" ")
                 if overridekptshift is None:
-                    print('{0:d} {1:d} {2:d} '.format(
-                            *self.kptshift), file=finp)
+                    print("{0:d} {1:d} {2:d} ".format(*self.kptshift), file=finp)
                 else:
-                    print('{0:d} {1:d} {2:d} '.format(
-                            *overridekptshift), file=finp)
+                    print("{0:d} {1:d} {2:d} ".format(*overridekptshift), file=finp)
             else:
-                print('K_POINTS crystal', file=finp)
+                print("K_POINTS crystal", file=finp)
                 nrows, ncols = kp.shape
                 print(newstr(nrows), file=finp)
                 w = 1.0 / nrows
                 for row in kp:
                     if ncols == 3:
-                        print('{0:24.15e} {1:24.15e} {2:24.15e} {w:24.15e}'.format(
-                            *row, w=w), file=finp)
+                        print(
+                            "{0:24.15e} {1:24.15e} {2:24.15e} {w:24.15e}".format(
+                                *row, w=w
+                            ),
+                            file=finp,
+                        )
                     else:
-                        print('{0:24.15e} {1:24.15e} {2:24.15e} {3:24.15e}'.format(
-                            *row), file=finp)
+                        print(
+                            "{0:24.15e} {1:24.15e} {2:24.15e} {3:24.15e}".format(*row),
+                            file=finp,
+                        )
 
         # closing PWscf input file
         finp.close()
-        if self.verbose == 'high':
-            print('\nPWscf input file {} written\n'.format(fname))
+        if self.verbose == "high":
+            print("\nPWscf input file {} written\n".format(fname))
 
     def read_forces(self, getall=False):
-        '''
+        """
         Read the forces from the PWSCF output file
 
         Args:
@@ -1729,15 +1924,17 @@ class Espresso(FileIOCalculator, object):
         Returns:
             forceslist (`array_like` or `list` of `array_like`) :
                 Forces
-        '''
+        """
 
         forceslist = []
 
-        with open(self.log, 'rU') as fout:
+        with open(self.log, "rU") as fout:
             lines = fout.readlines()
 
-        forcestart = re.compile(r'     Forces acting on atoms \((?:cartesian axes, )?Ry/au\):')
-        forceend = '     Total force = '
+        forcestart = re.compile(
+            r"     Forces acting on atoms \((?:cartesian axes, )?Ry/au\):"
+        )
+        forceend = "     Total force = "
 
         startlnos = [no for no, line in enumerate(lines) if forcestart.match(line)]
         endlnos = [no for no, line in enumerate(lines) if forceend in line]
@@ -1746,9 +1943,9 @@ class Espresso(FileIOCalculator, object):
 
         for start, end in forcelinenos:
             forces = np.zeros((self.natoms, 3), dtype=float)
-            for line in lines[start: end]:
+            for line in lines[start:end]:
                 linesplit = line.split()
-                if len(linesplit) > 0 and linesplit[0] == 'atom':
+                if len(linesplit) > 0 and linesplit[0] == "atom":
                     fxyz = [float(x) for x in linesplit[-3:]]
                     atom_number = int(linesplit[1]) - 1
                     forces[atom_number] = fxyz
@@ -1763,10 +1960,10 @@ class Espresso(FileIOCalculator, object):
             else:
                 return forceslist[-1]
         else:
-            raise ValueError('No forces found in pw log')
+            raise ValueError("No forces found in pw log")
 
     def read_energies(self, getall=False):
-        '''
+        """
         Read the energies from the PWSCF output file
 
         The method read total energies (zero point) and smearing contributions
@@ -1781,19 +1978,24 @@ class Espresso(FileIOCalculator, object):
         Returns:
             energylist (`tuple` or `list` of `tuple`) :
                 Energies
-        '''
+        """
 
-        with open(self.log, 'r', newline=None) as fout:
+        with open(self.log, "r", newline=None) as fout:
             lines = fout.readlines()
 
-        energylinenos = [no for no, line in enumerate(lines) if
-                         ('!' in line and 'total energy' in line)]
+        energylinenos = [
+            no
+            for no, line in enumerate(lines)
+            if ("!" in line and "total energy" in line)
+        ]
 
-        tslinenos = [no for no, line in enumerate(lines) if
-                     ('     smearing contrib. (-TS)' in line)]
+        tslinenos = [
+            no
+            for no, line in enumerate(lines)
+            if ("     smearing contrib. (-TS)" in line)
+        ]
 
-        free_energies = [float(lines[no].split()[-2]) * Rydberg
-                         for no in energylinenos]
+        free_energies = [float(lines[no].split()[-2]) * Rydberg for no in energylinenos]
         ts = [float(lines[no].split()[-2]) * Rydberg for no in tslinenos]
         energies = [fe - sm for fe, sm in zip(free_energies, ts)]
         del lines
@@ -1806,7 +2008,7 @@ class Espresso(FileIOCalculator, object):
             return energylist[-1]
 
     def read_cell(self, getall=False):
-        '''
+        """
         Read unit cell parameters from the PWSCF output file
 
         Args:
@@ -1818,28 +2020,34 @@ class Espresso(FileIOCalculator, object):
             celllist (`array_like` or `list` of `array_like`) :
                 Either a 3x3 array with unit cell parameters or list of such
                 arrays
-        '''
+        """
 
         celllist = []
 
-        with open(self.log, 'rU') as fout:
+        with open(self.log, "rU") as fout:
             lines = fout.readlines()
 
         # additional unit cell information
-        bli_lines = [line for line in lines if 'bravais-lattice index' in line]
-        brav_latt_indices = [int(line.split('=')[1].strip()) for line in bli_lines]
+        bli_lines = [line for line in lines if "bravais-lattice index" in line]
+        brav_latt_indices = [int(line.split("=")[1].strip()) for line in bli_lines]
 
-        lp_lines = [line for line in lines if 'lattice parameter (alat)' in line]
-        lattice_parameters = [float(line.strip().split('=')[1].strip().split()[0])*Bohr for line in lp_lines]
+        lp_lines = [line for line in lines if "lattice parameter (alat)" in line]
+        lattice_parameters = [
+            float(line.strip().split("=")[1].strip().split()[0]) * Bohr
+            for line in lp_lines
+        ]
 
-        ca_linenos = [no for no, line in enumerate(lines) if
-                      'crystal axes: (cart. coord. in units of alat)' in line]
+        ca_linenos = [
+            no
+            for no, line in enumerate(lines)
+            if "crystal axes: (cart. coord. in units of alat)" in line
+        ]
 
         for i, no in enumerate(ca_linenos):
             cell = np.zeros((3, 3), dtype=float)
 
-            for number, line in enumerate(lines[no + 1: no + 4]):
-                line = line.split('=')[1].strip()[1:-1]
+            for number, line in enumerate(lines[no + 1 : no + 4]):
+                line = line.split("=")[1].strip()[1:-1]
                 values = [float(value) for value in line.split()]
                 cell[number, :] = values
                 cell *= lattice_parameters[i]
@@ -1853,7 +2061,7 @@ class Espresso(FileIOCalculator, object):
             return celllist[-1]
 
     def read_positions(self, getall=False):
-        '''
+        """
         Read ion positions from the PWSCF output file
 
         Args:
@@ -1865,29 +2073,31 @@ class Espresso(FileIOCalculator, object):
         Returns:
             positionslist (`tuple` or `list` of `tuple`) :
                 A tuple contains list of symbols and an array of ion positions
-        '''
+        """
 
         positionslist = []
 
-        with open(self.log, 'rU') as fout:
+        with open(self.log, "rU") as fout:
             lines = fout.readlines()
 
-        carteslinenos = [no for no, line in enumerate(lines)
-                         if 'Cartesian axes' in line]
-        crystallinenos = [no for no, line in enumerate(lines)
-                          if 'ATOMIC_POSITIONS (crystal)' in line]
+        carteslinenos = [
+            no for no, line in enumerate(lines) if "Cartesian axes" in line
+        ]
+        crystallinenos = [
+            no for no, line in enumerate(lines) if "ATOMIC_POSITIONS (crystal)" in line
+        ]
 
         for no in carteslinenos:
             positions = np.zeros((self.natoms, 3), dtype=float)
             symbols = []
-            for line in lines[no + 3:]:
+            for line in lines[no + 3 :]:
                 words = line.split()
                 if len(words) == 0:
                     break
                 atom_number = int(words[0]) - 1
                 xyz = [float(x) for x in words[-4:-1]]
                 positions[atom_number] = xyz
-                symbols.append(words[1].strip('0123456789'))
+                symbols.append(words[1].strip("0123456789"))
 
             positionslist.append((symbols, positions))
 
@@ -1899,7 +2109,7 @@ class Espresso(FileIOCalculator, object):
             return positionslist[-1]
 
     def read_stress(self, getall=False):
-        '''
+        """
         Read the stress from the PWSCF output file
 
         Args:
@@ -1910,14 +2120,14 @@ class Espresso(FileIOCalculator, object):
         Returns:
             stresslist (`array_like` or `list` of `array_like`) :
                 Stress
-        '''
+        """
 
         stresslist = []
 
-        with open(self.log, 'rU') as fout:
+        with open(self.log, "rU") as fout:
             lines = fout.readlines()
 
-        stressstr = '          total   stress  (Ry/bohr**3) '
+        stressstr = "          total   stress  (Ry/bohr**3) "
         stresslnos = [no for no, line in enumerate(lines) if stressstr in line]
 
         if len(stresslnos) == 0:
@@ -1925,13 +2135,13 @@ class Espresso(FileIOCalculator, object):
 
         for lineno in stresslnos:
             stress = np.zeros((3, 3), dtype=float)
-            for nrow, line in enumerate(lines[lineno + 1: lineno + 4]):
+            for nrow, line in enumerate(lines[lineno + 1 : lineno + 4]):
                 linesplit = line.split()
                 stressrow = [float(x) for x in linesplit[:3]]
                 stress[nrow] = stressrow
             # ASE convention for the stress tensor appears to differ
             # from the PWscf one by a factor of -1
-            stress = -1.0 * stress * Rydberg / Bohr**3
+            stress = -1.0 * stress * Rydberg / Bohr ** 3
             stresslist.append(stress)
 
         del lines
@@ -1942,16 +2152,16 @@ class Espresso(FileIOCalculator, object):
             return stresslist[-1]
 
     def read_magnetizations(self, getall=False):
-        'Read the total and absolute magnetizations from the pw.x log file'
+        "Read the total and absolute magnetizations from the pw.x log file"
 
-        start = '!    total energy'
-        end = '     convergence has'
+        start = "!    total energy"
+        end = "     convergence has"
 
         mags = dict()
-        mags['total magnetization'] = []
-        mags['absolute magnetization'] = []
+        mags["total magnetization"] = []
+        mags["absolute magnetization"] = []
 
-        with open(self.log, 'rU') as fobj:
+        with open(self.log, "rU") as fobj:
             for line in fobj:
                 if start in line:
                     while end not in line:
@@ -1962,8 +2172,7 @@ class Espresso(FileIOCalculator, object):
         if getall:
             return mags
         else:
-            return [mags[k][-1] if mags[k] else 0.0 for k in
-                    sorted(mags.keys())]
+            return [mags[k][-1] if mags[k] else 0.0 for k in sorted(mags.keys())]
 
     def topath(self, filename):
         if os.path.isabs(filename):
@@ -1971,7 +2180,7 @@ class Espresso(FileIOCalculator, object):
         else:
             return os.path.join(self.site.submitdir, filename)
 
-    def save_output(self, filename='calc.tgz'):
+    def save_output(self, filename="calc.tgz"):
         """
         Save the contents of calc.save directory.
         """
@@ -1979,18 +2188,18 @@ class Espresso(FileIOCalculator, object):
         self.update(self.atoms)
         self.stop()
 
-        os.system('tar czf ' + filename + ' --directory=' + self.scratch + ' calc.save')
+        os.system("tar czf " + filename + " --directory=" + self.scratch + " calc.save")
 
-    def load_output(self, filename='calc.tgz'):
+    def load_output(self, filename="calc.tgz"):
         """
         Restore the contents of previously saved calc.save directory.
         """
         self.stop()
         file = self.topath(filename)
 
-        os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
+        os.system("tar xzf " + filename + " --directory=" + self.scratch)
 
-    def save_flev_output(self, filename='calc.tgz'):
+    def save_flev_output(self, filename="calc.tgz"):
         """
         Save the contents of calc.save directory + Fermi level
         & on-site density matrices (if present).
@@ -1999,12 +2208,18 @@ class Espresso(FileIOCalculator, object):
         self.update(self.atoms)
 
         ef = self.get_fermi_level()
-        with open(self.scratch + '/calc.save/fermilevel.txt', 'w') as ftxt:
-            ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
+        with open(self.scratch + "/calc.save/fermilevel.txt", "w") as ftxt:
+            ftxt.write("{0:.15e}\n#Fermi level in eV".format(ef))
 
-        os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save `find . -name "calc.occup*";find . -name "calc.paw"`')
+        os.system(
+            "tar czf "
+            + filename
+            + " --directory="
+            + self.scratch
+            + ' calc.save `find . -name "calc.occup*";find . -name "calc.paw"`'
+        )
 
-    def load_flev_output(self, filename='calc.tgz'):
+    def load_flev_output(self, filename="calc.tgz"):
         """
         Restore the contents of previously saved calc.save directory
         + Fermi level & on-site density matrices (if present).
@@ -2012,13 +2227,13 @@ class Espresso(FileIOCalculator, object):
         self.stop()
         file = self.topath(filename)
 
-        os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
+        os.system("tar xzf " + filename + " --directory=" + self.scratch)
 
         self.fermi_input = True
-        with open(self.scratch + '/calc.save/fermilevel.txt', 'r') as ftxt:
+        with open(self.scratch + "/calc.save/fermilevel.txt", "r") as ftxt:
             self.inputfermilevel = float(ftxt.readline())
 
-    def save_chg(self, filename='chg.tgz'):
+    def save_chg(self, filename="chg.tgz"):
         """
         Save charge density.
         """
@@ -2026,16 +2241,15 @@ class Espresso(FileIOCalculator, object):
         self.update(self.atoms)
         self.stop()
 
-        patterns = ["spin-polarization.*", "magnetization.*", "calc.occup*",
-                    "calc.paw"]
+        patterns = ["spin-polarization.*", "magnetization.*", "calc.occup*", "calc.paw"]
         files = [str(x) for patt in patterns for x in self.scratch.files(patt)]
 
         fpath = self.topath(filename)
-        with tarfile.open(fpath, mode='w:gz') as tgz:
+        with tarfile.open(fpath, mode="w:gz") as tgz:
             for f in files:
                 tgz.add(f)
 
-    def load_chg(self, filename='chg.tgz'):
+    def load_chg(self, filename="chg.tgz"):
         """
         Extract charge density.
         """
@@ -2044,12 +2258,12 @@ class Espresso(FileIOCalculator, object):
         fpath = self.topath(filename)
 
         if os.path.exists(fpath):
-            with tarfile.open(fpath, mode='r:gz') as tgz:
+            with tarfile.open(fpath, mode="r:gz") as tgz:
                 tgz.extractall(path=self.scratch)
         else:
-            raise OSError('File <{}> does not exist'.format(fpath))
+            raise OSError("File <{}> does not exist".format(fpath))
 
-    def save_wf(self, filename='wf.tgz'):
+    def save_wf(self, filename="wf.tgz"):
         """
         Save wave functions.
 
@@ -2062,11 +2276,11 @@ class Espresso(FileIOCalculator, object):
         files = [str(x) for x in self.scratch.files()]
 
         fpath = self.topath(filename)
-        with tarfile.open(fpath, mode='w:gz') as tgz:
+        with tarfile.open(fpath, mode="w:gz") as tgz:
             for f in files:
                 tgz.add(f)
 
-    def load_wf(self, filename='wf.tgz'):
+    def load_wf(self, filename="wf.tgz"):
         """
         Extract the wave functions.
         """
@@ -2075,12 +2289,12 @@ class Espresso(FileIOCalculator, object):
 
         fpath = self.topath(filename)
         if os.path.exists(fpath):
-            with tarfile.open(fpath, mode='r:gz') as tgz:
+            with tarfile.open(fpath, mode="r:gz") as tgz:
                 tgz.extractall(path=self.scratch)
         else:
-            raise OSError('File <{}> does not exist'.format(fpath))
+            raise OSError("File <{}> does not exist".format(fpath))
 
-    def save_flev_chg(self, filename='chg.tgz'):
+    def save_flev_chg(self, filename="chg.tgz"):
         """
         Save charge density and Fermi level.
         Useful for subsequent bandstructure or density of states
@@ -2090,12 +2304,20 @@ class Espresso(FileIOCalculator, object):
         self.update(self.atoms)
 
         ef = self.get_fermi_level()
-        with open(self.scratch + '/calc.save/fermilevel.txt', 'w') as ftxt:
-            ftxt.write('{0:.15e}\n#Fermi level in eV'.format(ef))
+        with open(self.scratch + "/calc.save/fermilevel.txt", "w") as ftxt:
+            ftxt.write("{0:.15e}\n#Fermi level in eV".format(ef))
 
-        os.system('tar czf '+filename+' --directory='+self.scratch+' calc.save/charge-density.dat calc.save/data-file.xml `cd '+self.scratch+';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"` calc.save/fermilevel.txt')
+        os.system(
+            "tar czf "
+            + filename
+            + " --directory="
+            + self.scratch
+            + " calc.save/charge-density.dat calc.save/data-file.xml `cd "
+            + self.scratch
+            + ';find calc.save -name "spin-polarization.*";find calc.save -name "magnetization.*";find . -name "calc.occup*";find . -name "calc.paw"` calc.save/fermilevel.txt'
+        )
 
-    def load_flev_chg(self, filename='efchg.tgz'):
+    def load_flev_chg(self, filename="efchg.tgz"):
         """
         Load charge density and Fermi level.
         Useful for subsequent bandstructure or density of states
@@ -2104,9 +2326,9 @@ class Espresso(FileIOCalculator, object):
         self.stop()
         file = self.topath(filename)
 
-        os.system('tar xzf ' + filename + ' --directory=' + self.scratch)
+        os.system("tar xzf " + filename + " --directory=" + self.scratch)
         self.fermi_input = True
-        with open(self.scratch + '/calc.save/fermilevel.txt', 'r') as ftxt:
+        with open(self.scratch + "/calc.save/fermilevel.txt", "r") as ftxt:
             self.inputfermilevel = float(ftxt.readline())
 
     def get_final_structure(self):
@@ -2118,54 +2340,54 @@ class Espresso(FileIOCalculator, object):
 
         self.stop()
 
-        p = os.popen('grep -n Giannozzi ' + self.log + '| tail -1', 'r')
-        n = int(p.readline().split()[0].strip(':'))
+        p = os.popen("grep -n Giannozzi " + self.log + "| tail -1", "r")
+        n = int(p.readline().split()[0].strip(":"))
         p.close()
 
-        s = open(self.log,'r')
-        #skip over previous runs in log in case the current log has been
-        #appended to old ones
+        s = open(self.log, "r")
+        # skip over previous runs in log in case the current log has been
+        # appended to old ones
         for i in range(n):
             s.readline()
 
         a = s.readline()
-        while a[:11] != '     celldm':
+        while a[:11] != "     celldm":
             a = s.readline()
-        alat = float(a.split()[1])/1.889726
+        alat = float(a.split()[1]) / 1.889726
         a = s.readline()
-        while a[:12] != '     crystal':
+        while a[:12] != "     crystal":
             a = s.readline()
         cell = []
         for i in range(3):
             cell.append([float(x) for x in s.readline().split()[3:6]])
         cell = np.array(cell)
         a = s.readline()
-        while a[:12] != '     site n.':
+        while a[:12] != "     site n.":
             a = s.readline()
         pos = []
-        syms = ''
+        syms = ""
         y = s.readline().split()
         while len(y) > 0:
             nf = len(y)
-            pos.append([float(x) for x in y[nf-4:nf-1]])
-            syms += y[1].strip('0123456789')
+            pos.append([float(x) for x in y[nf - 4 : nf - 1]])
+            syms += y[1].strip("0123456789")
             y = s.readline().split()
-        pos = np.array(pos)*alat
+        pos = np.array(pos) * alat
         natoms = len(pos)
 
-        #create atoms object with coordinates and unit cell
-        #as specified in the initial ionic step in log
-        atoms = Atoms(syms, pos, cell=cell*alat, pbc=(1, 1, 1))
+        # create atoms object with coordinates and unit cell
+        # as specified in the initial ionic step in log
+        atoms = Atoms(syms, pos, cell=cell * alat, pbc=(1, 1, 1))
 
-        coord = 'angstrom)'
+        coord = "angstrom)"
         a = s.readline()
-        while a != '':
-            while a[:7] != 'CELL_PA' and a[:7] != 'ATOMIC_' and a != '':
+        while a != "":
+            while a[:7] != "CELL_PA" and a[:7] != "ATOMIC_" and a != "":
                 a = s.readline()
-            if a == '':
+            if a == "":
                 break
-            if a[0] == 'A':
-                coord = a.split('(')[-1]
+            if a[0] == "A":
+                coord = a.split("(")[-1]
                 for i in range(natoms):
                     pos[i][:] = s.readline().split()[1:4]
             else:
@@ -2173,13 +2395,13 @@ class Espresso(FileIOCalculator, object):
                     cell[i][:] = s.readline().split()
             a = s.readline()
 
-        atoms.set_cell(cell*alat, scale_atoms=False)
+        atoms.set_cell(cell * alat, scale_atoms=False)
 
-        if coord == 'alat)':
-            atoms.set_positions(pos*alat)
-        elif coord == 'bohr)':
-            atoms.set_positions(pos*Bohr)
-        elif coord == 'angstrom)':
+        if coord == "alat)":
+            atoms.set_positions(pos * alat)
+        elif coord == "bohr)":
+            atoms.set_positions(pos * Bohr)
+        elif coord == "angstrom)":
             atoms.set_positions(pos)
         else:
             atoms.set_scaled_positions(pos)
@@ -2193,10 +2415,13 @@ class Espresso(FileIOCalculator, object):
         else:
             return self.energy_zero
 
-    def get_nonselfconsistent_energies(self, type='beefvdw'):
-        #assert self.xc is 'BEEF'
+    def get_nonselfconsistent_energies(self, type="beefvdw"):
+        # assert self.xc is 'BEEF'
         self.stop()
-        p = os.popen('grep -32 "BEEF-vdW xc energy contributions" '+self.log+' | tail -32','r')
+        p = os.popen(
+            'grep -32 "BEEF-vdW xc energy contributions" ' + self.log + " | tail -32",
+            "r",
+        )
         s = p.readlines()
         p.close()
         xc = np.array([])
@@ -2212,43 +2437,43 @@ class Espresso(FileIOCalculator, object):
     def get_stress(self, atoms=None):
 
         self.update(atoms)
-        return self.results['stress']
+        return self.results["stress"]
 
     def get_absolute_magnetization(self, atoms=None):
 
         self.update(atoms)
-        return self.results.get('absolute magnetization', None)
+        return self.results.get("absolute magnetization", None)
 
     def get_total_magnetization(self, atoms=None):
 
         self.update(atoms)
-        return self.results.get('total magnetization', None)
+        return self.results.get("total magnetization", None)
 
     def get_smearing_contribution(self):
         return self.ST
 
     def checkerror(self):
-        '''
+        """
         Check if any errors occured during the calculation
-        '''
+        """
 
-        with open(self.log, 'r') as flog:
+        with open(self.log, "r") as flog:
             loglines = flog.readlines()
 
-        gnos = [no for no, line in enumerate(loglines) if 'Giannozzi' in line]
+        gnos = [no for no, line in enumerate(loglines) if "Giannozzi" in line]
         if len(gnos) < 1:
             raise RuntimeError("Espresso executable doesn't seem to have been started.")
 
-        lnos = [no for no, line in enumerate(loglines) if '%' * 78 in line]
+        lnos = [no for no, line in enumerate(loglines) if "%" * 78 in line]
 
         if len(lnos) < 2:
             return
         else:
-            msg = ' '.join(loglines[lnos[-2] + 1: lnos[-1]])
-            if msg.lower().find('error') < 0:
+            msg = " ".join(loglines[lnos[-2] + 1 : lnos[-1]])
+            if msg.lower().find("error") < 0:
                 return
             else:
-                raise RuntimeError(msg.rstrip('\n'))
+                raise RuntimeError(msg.rstrip("\n"))
 
     def check_spinpol(self):
         mm = self.atoms.get_initial_magnetic_moments()
@@ -2256,24 +2481,29 @@ class Espresso(FileIOCalculator, object):
         self.summed_magmoms = np.sum(mm)
         if sp:
             if not self.spinpol and not self.noncollinear:
-                raise KeyError('Explicitly specify spinpol=True or noncollinear=True for spin-polarized systems')
+                raise KeyError(
+                    "Explicitly specify spinpol=True or noncollinear=True for spin-polarized systems"
+                )
             elif abs(self.sigma) <= self.sigma_small and not self.fix_magmom:
-                raise KeyError('Please use fix_magmom=True for sigma=0.0 eV and spinpol=True. Hopefully this is not an extended system...?')
+                raise KeyError(
+                    "Please use fix_magmom=True for sigma=0.0 eV and spinpol=True. Hopefully this is not an extended system...?"
+                )
         else:
             if self.spinpol and abs(self.sigma) <= self.sigma_small:
                 self.fix_magmom = True
         if abs(self.sigma) <= self.sigma_small:
-            self.occupations = 'fixed'
+            self.occupations = "fixed"
 
-    def relax_cell_and_atoms(self,
-            cell_dynamics='bfgs', # {'none', 'sd', 'damp-pr', 'damp-w', 'bfgs'}
-            ion_dynamics='bfgs', # {'bfgs', 'damp'}
-            cell_factor=1.2,
-            cell_dofree=None,
-            fmax=None,
-            press=None,
-            dpress=None
-            ):
+    def relax_cell_and_atoms(
+        self,
+        cell_dynamics="bfgs",  # {'none', 'sd', 'damp-pr', 'damp-w', 'bfgs'}
+        ion_dynamics="bfgs",  # {'bfgs', 'damp'}
+        cell_factor=1.2,
+        cell_dofree=None,
+        fmax=None,
+        press=None,
+        dpress=None,
+    ):
         """
         Simultaneously relax unit cell and atoms using Espresso's internal
         relaxation routines.
@@ -2305,7 +2535,7 @@ class Espresso(FileIOCalculator, object):
             self.press = press
         if dpress is not None:
             self.dpress = dpress
-        self.calculation = 'vc-relax'
+        self.calculation = "vc-relax"
         self.recalculate = True
         self.read(self.atoms)
         self.calculation = oldcalculation
@@ -2317,10 +2547,7 @@ class Espresso(FileIOCalculator, object):
         self.press = oldpress
         self.dpress = olddpress
 
-    def relax_atoms(self,
-            ion_dynamics='bfgs', # {'bfgs', 'damp'}
-            fmax=None
-            ):
+    def relax_atoms(self, ion_dynamics="bfgs", fmax=None):  # {'bfgs', 'damp'}
         """
         Relax atoms using Espresso's internal relaxation routines.
         fmax is the force convergence limit
@@ -2333,111 +2560,138 @@ class Espresso(FileIOCalculator, object):
         self.stop()
         oldcalculation = self.calculation
         oldalgo = self.ion_dynamics
-        self.ion_dynamics=ion_dynamics
+        self.ion_dynamics = ion_dynamics
         oldfmax = self.fmax
 
-        self.calculation='relax'
+        self.calculation = "relax"
         if fmax is not None:
             self.fmax = fmax
-        self.recalculate=True
+        self.recalculate = True
         self.read(self.atoms)
         self.calculation = oldcalculation
         self.ion_dynamics = oldalgo
         self.fmax = oldfmax
 
-    def run_espressox(self, binary, inp, log=None, piperead=False,
-                      parallel=True):
-        '''
+    def run_espressox(self, binary, inp, log=None, piperead=False, parallel=True):
+        """
         runs one of the .x binaries of the espresso suite
         inp is expected to be in self.localtmp
         log will be created in self.localtmp
-        '''
+        """
 
         if log is None:
-            ll = ''
+            ll = ""
         else:
-            ll = ' >>'+self.localtmp+'/'+log
+            ll = " >>" + self.localtmp + "/" + log
         if self.site.batchmode and parallel:
             cdir = os.getcwd()
             os.chdir(self.localtmp)
-            os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/'+inp+' '+self.scratch)
+            os.system(
+                self.site.perHostMpiExec
+                + " cp "
+                + self.localtmp
+                + "/"
+                + inp
+                + " "
+                + self.scratch
+            )
             if piperead:
-                p = self.site.do_perProcMpiExec_outputonly(self.scratch, binary+' '+self.parflags+' -in '+inp+ll)
+                p = self.site.do_perProcMpiExec_outputonly(
+                    self.scratch, binary + " " + self.parflags + " -in " + inp + ll
+                )
             else:
-                self.site.runonly_perProcMpiExec(self.scratch, binary+' '+self.parflags+' -in '+inp+ll)
+                self.site.runonly_perProcMpiExec(
+                    self.scratch, binary + " " + self.parflags + " -in " + inp + ll
+                )
             os.chdir(cdir)
         else:
-            os.system('cp '+self.localtmp+'/'+inp+' '+self.scratch)
+            os.system("cp " + self.localtmp + "/" + inp + " " + self.scratch)
             if piperead:
-                p = os.popen('cd '+self.scratch+' ; '+binary+' -in '+inp+ll)
+                p = os.popen("cd " + self.scratch + " ; " + binary + " -in " + inp + ll)
             else:
-                os.system('cd '+self.scratch+' ; '+binary+' -in '+inp+ll)
+                os.system("cd " + self.scratch + " ; " + binary + " -in " + inp + ll)
         if piperead:
             return p
 
-    def run_ppx(self, inp, log=None, inputpp=[], plot=[],
-        output_format=5, iflag=3, piperead=False, parallel=True):
-        if 'disk_io' in list(self.output.keys()):
-            if self.output['disk_io'] == 'none':
-                print("run_ppx requires output['disk_io'] to be at least 'low' and avoidio=False")
+    def run_ppx(
+        self,
+        inp,
+        log=None,
+        inputpp=[],
+        plot=[],
+        output_format=5,
+        iflag=3,
+        piperead=False,
+        parallel=True,
+    ):
+        if "disk_io" in list(self.output.keys()):
+            if self.output["disk_io"] == "none":
+                print(
+                    "run_ppx requires output['disk_io'] to be at least 'low' and avoidio=False"
+                )
         self.stop()
-        finp = open(self.localtmp+'/'+inp, 'w')
-        print('&INPUTPP\n  prefix=\'calc\',\n  outdir=\'.\',', file=finp)
-        for a,b in inputpp:
-            if type(b)==float:
+        finp = open(self.localtmp + "/" + inp, "w")
+        print("&INPUTPP\n  prefix='calc',\n  outdir='.',", file=finp)
+        for a, b in inputpp:
+            if type(b) == float:
                 c = num2str(b)
-            elif type(b)==str:
-                c = "'"+b+"'"
+            elif type(b) == str:
+                c = "'" + b + "'"
             else:
                 c = str(b)
-            print('  '+a+'='+c+',', file=finp)
-        print('/', file=finp)
-        print('&PLOT\n  iflag=%d,\n  output_format=%d,' % (iflag, output_format), file=finp)
-        for a,b in plot:
-            if type(b)==float:
+            print("  " + a + "=" + c + ",", file=finp)
+        print("/", file=finp)
+        print(
+            "&PLOT\n  iflag=%d,\n  output_format=%d," % (iflag, output_format),
+            file=finp,
+        )
+        for a, b in plot:
+            if type(b) == float:
                 c = num2str(b)
-            elif type(b)==str:
-                c = "'"+b+"'"
+            elif type(b) == str:
+                c = "'" + b + "'"
             else:
                 c = str(b)
-            print('  '+a+'='+c+',', file=finp)
-        print('/', file=finp)
+            print("  " + a + "=" + c + ",", file=finp)
+        print("/", file=finp)
         finp.close()
 
         if piperead:
-            return self.run_espressox('pp.x', inp, log=log,
-                piperead=piperead, parallel=parallel)
+            return self.run_espressox(
+                "pp.x", inp, log=log, piperead=piperead, parallel=parallel
+            )
         else:
-            self.run_espressox('pp.x', inp, log=log, parallel=parallel)
-
+            self.run_espressox("pp.x", inp, log=log, parallel=parallel)
 
     def get_fermi_level(self):
         if self.fermi_input:
             return self.inputfermilevel
         self.stop()
         try:
-            p = os.popen('grep Fermi '+self.log+'|tail -1', 'r')
+            p = os.popen("grep Fermi " + self.log + "|tail -1", "r")
             efermi = float(p.readline().split()[-2])
             p.close()
         except:
-            raise RuntimeError('get_fermi_level called before DFT calculation was run')
+            raise RuntimeError("get_fermi_level called before DFT calculation was run")
         return efermi
 
-    def calc_pdos(self,
-        Emin = None,
-        Emax = None,
-        DeltaE = None,
-        nscf = False,
-        tetrahedra = False,
-        slab = False,
-        kpts = None,
-        kptshift = None,
-        nbands = None,
-        ngauss = None,
-        sigma = None,
+    def calc_pdos(
+        self,
+        Emin=None,
+        Emax=None,
+        DeltaE=None,
+        nscf=False,
+        tetrahedra=False,
+        slab=False,
+        kpts=None,
+        kptshift=None,
+        nbands=None,
+        ngauss=None,
+        sigma=None,
         nscf_fermilevel=False,
         add_higher_channels=False,
-        get_overlap_integrals=False):
+        get_overlap_integrals=False,
+    ):
         """
         Calculate (projected) density of states.
 
@@ -2477,90 +2731,97 @@ class Espresso(FileIOCalculator, object):
 
         # run a nscf calculation with e.g. tetrahedra or more k-points etc.
         if nscf:
-            if not hasattr(self, 'natoms'):
+            if not hasattr(self, "natoms"):
                 self.atoms2species()
                 self.natoms = len(self.atoms)
-            self.write_input(filename='pwnscf.inp',
-                calculation='nscf', usetetrahedra=tetrahedra, overridekpts=kpts,
-                overridekptshift=kptshift, overridenbands=nbands,
-                suppressforcecalc=True)
-            self.run_espressox('pw.x', 'pwnscf.inp', 'pwnscf.log')
+            self.write_input(
+                filename="pwnscf.inp",
+                calculation="nscf",
+                usetetrahedra=tetrahedra,
+                overridekpts=kpts,
+                overridekptshift=kptshift,
+                overridenbands=nbands,
+                suppressforcecalc=True,
+            )
+            self.run_espressox("pw.x", "pwnscf.inp", "pwnscf.log")
             if nscf_fermilevel:
-                p = os.popen('grep Fermi '+self.localtmp+'/pwnscf.log|tail -1', 'r')
+                p = os.popen("grep Fermi " + self.localtmp + "/pwnscf.log|tail -1", "r")
                 efermi = float(p.readline().split()[-2])
                 p.close()
 
         # remove old wave function projections
-        os.system('rm -f '+self.scratch+'/*_wfc*')
+        os.system("rm -f " + self.scratch + "/*_wfc*")
         # create input for projwfc.x
-        fpdos = open(self.localtmp+'/pdos.inp', 'w')
-        print('&PROJWFC\n  prefix=\'calc\',\n  outdir=\'.\',', file=fpdos)
+        fpdos = open(self.localtmp + "/pdos.inp", "w")
+        print("&PROJWFC\n  prefix='calc',\n  outdir='.',", file=fpdos)
         if Emin is not None:
-            print('  Emin = '+num2str(Emin+efermi)+',', file=fpdos)
+            print("  Emin = " + num2str(Emin + efermi) + ",", file=fpdos)
         if Emax is not None:
-            print('  Emax = '+num2str(Emax+efermi)+',', file=fpdos)
+            print("  Emax = " + num2str(Emax + efermi) + ",", file=fpdos)
         if DeltaE is not None:
-            print('  DeltaE = '+num2str(DeltaE)+',', file=fpdos)
+            print("  DeltaE = " + num2str(DeltaE) + ",", file=fpdos)
         if slab:
-            print('  lslab = .true.,', file=fpdos)
+            print("  lslab = .true.,", file=fpdos)
         if ngauss is not None:
-            print('  ngauss = '+str(ngauss)+',', file=fpdos)
+            print("  ngauss = " + str(ngauss) + ",", file=fpdos)
         if sigma is not None:
-            print('  degauss = '+num2str(sigma/Rydberg)+',', file=fpdos)
-        print('/', file=fpdos)
+            print("  degauss = " + num2str(sigma / Rydberg) + ",", file=fpdos)
+        print("/", file=fpdos)
         fpdos.close()
         # run projwfc.x
-        self.run_espressox('projwfc.x', 'pdos.inp', 'pdos.log')
+        self.run_espressox("projwfc.x", "pdos.inp", "pdos.log")
 
         # read in total density of states
-        dos = np.loadtxt(self.scratch+'/calc.pdos_tot')
+        dos = np.loadtxt(self.scratch + "/calc.pdos_tot")
         if len(dos[0]) > 3:
             nspin = 2
-            self.dos_total = [dos[:,1],dos[:,2]]
+            self.dos_total = [dos[:, 1], dos[:, 2]]
         else:
             nspin = 1
-            self.dos_total = dos[:,1]
-        self.dos_energies = dos[:,0] - efermi
+            self.dos_total = dos[:, 1]
+        self.dos_energies = dos[:, 0] - efermi
         npoints = len(self.dos_energies)
 
-        channels = {'s':0, 'p':1, 'd':2, 'f':3}
+        channels = {"s": 0, "p": 1, "d": 2, "f": 3}
         # read in projections onto atomic orbitals
         self.pdos = [{} for i in range(self.natoms)]
-        p = os.popen('ls '+self.scratch+'/calc.pdos_atm*')
+        p = os.popen("ls " + self.scratch + "/calc.pdos_atm*")
         proj = p.readlines()
         p.close()
         proj.sort()
-        for i,inp in enumerate(proj):
+        for i, inp in enumerate(proj):
             inpfile = inp.strip()
             pdosinp = np.genfromtxt(inpfile)
-            spl = inpfile.split('#')
-            iatom = int(spl[1].split('(')[0])-1
-            channel = spl[2].split('(')[1].rstrip(')').replace('_j',',j=')
-            jpos = channel.find('j=')
-            if jpos<0:
-                #ncomponents = 2*l+1 +1  (latter for m summed up)
-                ncomponents = (2*channels[channel[0]]+2) * nspin
+            spl = inpfile.split("#")
+            iatom = int(spl[1].split("(")[0]) - 1
+            channel = spl[2].split("(")[1].rstrip(")").replace("_j", ",j=")
+            jpos = channel.find("j=")
+            if jpos < 0:
+                # ncomponents = 2*l+1 +1  (latter for m summed up)
+                ncomponents = (2 * channels[channel[0]] + 2) * nspin
             else:
-                #ncomponents = 2*j+1 +1  (latter for m summed up)
-                ncomponents = int(2.*float(channel[jpos+2:]))+2
+                # ncomponents = 2*j+1 +1  (latter for m summed up)
+                ncomponents = int(2.0 * float(channel[jpos + 2 :])) + 2
             if channel not in list(self.pdos[iatom].keys()):
-                self.pdos[iatom][channel] = np.zeros((ncomponents,npoints), np.float)
+                self.pdos[iatom][channel] = np.zeros((ncomponents, npoints), np.float)
                 first = True
             else:
                 first = False
             if add_higher_channels or first:
                 for j in range(ncomponents):
-                    self.pdos[iatom][channel][j] += pdosinp[:,(j+1)]
+                    self.pdos[iatom][channel][j] += pdosinp[:, (j + 1)]
 
         if get_overlap_integrals:
-            return self.dos_energies, self.dos_total, self.pdos, self.__get_atomic_projections__()
+            return (
+                self.dos_energies,
+                self.dos_total,
+                self.pdos,
+                self.__get_atomic_projections__(),
+            )
         else:
             return self.dos_energies, self.dos_total, self.pdos
 
-    def calc_bandstructure(self,
-        kptpath,
-        nbands = None,
-        atomic_projections = False):
+    def calc_bandstructure(self, kptpath, nbands=None, atomic_projections=False):
         """
         Calculate bandstructure along kptpath (= array of k-points).
         If nbands is not None, override number of bands set in calculator.
@@ -2575,79 +2836,84 @@ class Espresso(FileIOCalculator, object):
         efermi = self.get_fermi_level()
 
         # run a nscf calculation
-        if not hasattr(self, 'natoms'):
+        if not hasattr(self, "natoms"):
             self.atoms2species()
             self.natoms = len(self.atoms)
         oldnoinv = self.noinv
         oldnosym = self.nosym
         self.noinv = True
         self.nosym = True
-        self.write_input(filename='pwnscf.inp',
-            calculation='nscf', overridekpts=kptpath,
-            overridenbands=nbands, suppressforcecalc=True)
+        self.write_input(
+            filename="pwnscf.inp",
+            calculation="nscf",
+            overridekpts=kptpath,
+            overridenbands=nbands,
+            suppressforcecalc=True,
+        )
         self.noinv = oldnoinv
         self.nosym = oldnosym
-        self.run_espressox('pw.x', 'pwnscf.inp', 'pwnscf.log')
+        self.run_espressox("pw.x", "pwnscf.inp", "pwnscf.log")
 
         energies = self.get_eigenvalues(efermi=efermi)
 
         if not atomic_projections:
             return energies
         else:
-            #run pdos calculation with (tiny) E-range
-            #to trigger calculation of atomic_proj.xml
+            # run pdos calculation with (tiny) E-range
+            # to trigger calculation of atomic_proj.xml
 
             # create input for projwfc.x
-            fpdos = open(self.localtmp+'/pdos.inp', 'w')
-            print('&PROJWFC\n  prefix=\'calc\',\n  outdir=\'.\',', file=fpdos)
-            print('  filpdos = \'projtmp\',', file=fpdos)
-            print('  Emin = '+num2str(-0.3+efermi)+',', file=fpdos)
-            print('  Emax = '+num2str(-0.2+efermi)+',', file=fpdos)
-            print('  DeltaE = 0.1d0,', file=fpdos)
-            print('/', file=fpdos)
+            fpdos = open(self.localtmp + "/pdos.inp", "w")
+            print("&PROJWFC\n  prefix='calc',\n  outdir='.',", file=fpdos)
+            print("  filpdos = 'projtmp',", file=fpdos)
+            print("  Emin = " + num2str(-0.3 + efermi) + ",", file=fpdos)
+            print("  Emax = " + num2str(-0.2 + efermi) + ",", file=fpdos)
+            print("  DeltaE = 0.1d0,", file=fpdos)
+            print("/", file=fpdos)
             fpdos.close()
             # run projwfc.x
-            self.run_espressox('projwfc.x', 'pdos.inp', 'pdos.log')
-            #remove unneeded pdos files containing only a tiny E-range of two points
-            os.system('rm -f ' + self.scratch + '/projtmp*')
+            self.run_espressox("projwfc.x", "pdos.inp", "pdos.log")
+            # remove unneeded pdos files containing only a tiny E-range of two points
+            os.system("rm -f " + self.scratch + "/projtmp*")
 
             return energies, self.__get_atomic_projections__()
 
-
     def __get_atomic_projections__(self):
-        f = open(self.scratch+'/calc.save/atomic_proj.xml', 'r')
-        p = os.popen('grep -n Giannozzi '+self.localtmp+'/pdos.log|tail -1', 'r')
-        n = p.readline().split()[0].strip(':').strip()
+        f = open(self.scratch + "/calc.save/atomic_proj.xml", "r")
+        p = os.popen("grep -n Giannozzi " + self.localtmp + "/pdos.log|tail -1", "r")
+        n = p.readline().split()[0].strip(":").strip()
         p.close()
-        p = os.popen('tail -n +'+n+' '+self.localtmp+'/pdos.log|grep "state #"', 'r')
-        #identify states from projwfc.x's stdout
+        p = os.popen(
+            "tail -n +" + n + " " + self.localtmp + '/pdos.log|grep "state #"', "r"
+        )
+        # identify states from projwfc.x's stdout
         states = []
         for x in p.readlines():
-            y = x.split('atom')[1]
-            iatom = int(y.split()[0])-1
-            z = y.replace(')\n','').split('=')
-            if y.find('m_j')<0:
-                l = int(z[1].replace('m',''))
+            y = x.split("atom")[1]
+            iatom = int(y.split()[0]) - 1
+            z = y.replace(")\n", "").split("=")
+            if y.find("m_j") < 0:
+                l = int(z[1].replace("m", ""))
                 m = int(z[2])
-                states.append([iatom,l,m])
+                states.append([iatom, l, m])
             else:
-                j = float(z[1].replace('l',''))
-                l = int(z[2].replace('m_j',''))
+                j = float(z[1].replace("l", ""))
+                l = int(z[2].replace("m_j", ""))
                 mj = float(z[3])
-                states.append([iatom,j,l,mj])
+                states.append([iatom, j, l, mj])
         p.close()
 
-        #read in projections from atomic_proj.xml
+        # read in projections from atomic_proj.xml
         a = f.readline()
-        while a.find('<NUMBER_OF_B') < 0:
+        while a.find("<NUMBER_OF_B") < 0:
             a = f.readline()
         nbnd = int(f.readline().strip())
         a = f.readline()
-        while a.find('<NUMBER_OF_K') < 0:
+        while a.find("<NUMBER_OF_K") < 0:
             a = f.readline()
         nkp = int(f.readline().strip())
         a = f.readline()
-        while a.find('<NUMBER_OF_S') < 0:
+        while a.find("<NUMBER_OF_S") < 0:
             a = f.readline()
         spinpol = int(f.readline().strip()) == 2
 
@@ -2658,25 +2924,25 @@ class Espresso(FileIOCalculator, object):
         else:
             proj = []
 
-        while a.find('<ATM') < 0 and a != '':
+        while a.find("<ATM") < 0 and a != "":
             a = f.readline()
-        if a == '':
-            raise RuntimeError('no projections found')
+        if a == "":
+            raise RuntimeError("no projections found")
 
         while True:
-            while a.find('<ATM') < 0 and a != '':
-                if spinpol and a.find('<SP') >= 0:
-                    if a.find('N.1') > 0:
+            while a.find("<ATM") < 0 and a != "":
+                if spinpol and a.find("<SP") >= 0:
+                    if a.find("N.1") > 0:
                         proj = proj1
                     else:
                         proj = proj2
                 a = f.readline()
-            if a == '':
+            if a == "":
                 break
             pr = np.empty(nbnd, np.complex)
             for i in range(nbnd):
-                b = f.readline().split(',')
-                pr[i] = float(b[0]) + 1j*float(b[1])
+                b = f.readline().split(",")
+                pr[i] = float(b[0]) + 1j * float(b[1])
             proj.append(pr)
             a = f.readline()
 
@@ -2684,68 +2950,83 @@ class Espresso(FileIOCalculator, object):
 
         if spinpol:
             projections = np.array([proj1, proj2])
-            return states, np.reshape(projections, (2, nkp, len(proj1)/nkp, nbnd))
+            return states, np.reshape(projections, (2, nkp, len(proj1) / nkp, nbnd))
         else:
             projections = np.array(proj)
-            return states, np.reshape(projections, (nkp, len(proj)/nkp, nbnd))
+            return states, np.reshape(projections, (nkp, len(proj) / nkp, nbnd))
 
     def get_eigenvalues(self, kpt=None, spin=None, efermi=None):
         self.stop()
 
         if self.spinpol:
-            p = os.popen("grep eigenval1.xml "+self.scratch+"/calc.save/data-file.xml|tr '\"' ' '|awk '{print $(NF-1)}'", 'r')
+            p = os.popen(
+                "grep eigenval1.xml "
+                + self.scratch
+                + "/calc.save/data-file.xml|tr '\"' ' '|awk '{print $(NF-1)}'",
+                "r",
+            )
             kptdirs1 = [x.strip() for x in p.readlines()]
             p.close()
             kptdirs1.sort()
-            p = os.popen("grep eigenval2.xml "+self.scratch+"/calc.save/data-file.xml|tr '\"' ' '|awk '{print $(NF-1)}'", 'r')
+            p = os.popen(
+                "grep eigenval2.xml "
+                + self.scratch
+                + "/calc.save/data-file.xml|tr '\"' ' '|awk '{print $(NF-1)}'",
+                "r",
+            )
             kptdirs2 = [x.strip() for x in p.readlines()]
             p.close()
             kptdirs2.sort()
-            kptdirs = kptdirs1+kptdirs2
+            kptdirs = kptdirs1 + kptdirs2
         else:
-            p = os.popen("grep eigenval.xml "+self.scratch+"/calc.save/data-file.xml|tr '\"' ' '|awk '{print $(NF-1)}'", 'r')
+            p = os.popen(
+                "grep eigenval.xml "
+                + self.scratch
+                + "/calc.save/data-file.xml|tr '\"' ' '|awk '{print $(NF-1)}'",
+                "r",
+            )
             kptdirs = [x.strip() for x in p.readlines()]
             p.close()
             kptdirs.sort()
 
-        nkp2 = len(kptdirs)/2
-        if kpt is None: #get eigenvalues at all k-points
+        nkp2 = len(kptdirs) / 2
+        if kpt is None:  # get eigenvalues at all k-points
             if self.spinpol:
-                if spin == 'up' or spin == 0:
+                if spin == "up" or spin == 0:
                     kp = kptdirs[:nkp2]
-                if spin == 'down' or spin == 1:
+                if spin == "down" or spin == 1:
                     kp = kptdirs[nkp2:]
                 else:
                     kp = kptdirs
             else:
                 kp = kptdirs
-        else:           #get eigenvalues at specific k-point
+        else:  # get eigenvalues at specific k-point
             if self.spinpol:
-                if spin == 'up' or spin == 0:
+                if spin == "up" or spin == 0:
                     kp = [kptdirs[kpt]]
-                if spin == 'down' or spin == 1:
-                    kp = [kptdirs[kpt+nkp2]]
+                if spin == "down" or spin == 1:
+                    kp = [kptdirs[kpt + nkp2]]
                 else:
                     kp = [kptdirs[kpt], kptdirs[kpt + nkp]]
             else:
                 kp = [kptdirs[kpt]]
 
         if efermi is None:
-            ef = 0.
+            ef = 0.0
         else:
             ef = efermi
 
         eig = []
         for k in kp:
-            f = open(self.scratch + '/calc.save/' + k, 'r')
+            f = open(self.scratch + "/calc.save/" + k, "r")
             a = f.readline()
-            while a.upper().find('<EIG') < 0:
+            while a.upper().find("<EIG") < 0:
                 a = f.readline()
             nbnd = int(a.split('"')[-2])
-            eig.append(Hartree*np.fromfile(f, dtype=float, count=nbnd, sep=' ') - ef)
+            eig.append(Hartree * np.fromfile(f, dtype=float, count=nbnd, sep=" ") - ef)
             f.close()
 
-        spinall = spin not in ('up','down', 0, 1)
+        spinall = spin not in ("up", "down", 0, 1)
         if kpt is not None and spinall:
             return np.array(eig[0])
         elif kpt is None and spinall and self.spinpol:
@@ -2754,24 +3035,25 @@ class Espresso(FileIOCalculator, object):
             return np.array(eig)
 
     def read_3d_grid(self, stream, log):
-        f = open(self.localtmp+'/'+log, 'a')
+        f = open(self.localtmp + "/" + log, "a")
         x = stream.readline()
-        while x != '' and x[:11] != 'DATAGRID_3D':
+        while x != "" and x[:11] != "DATAGRID_3D":
             f.write(x)
             x = stream.readline()
-        if x == '':
-            raise RuntimeError('error reading 3D data grid')
+        if x == "":
+            raise RuntimeError("error reading 3D data grid")
         f.write(x)
         nx, ny, nz = [int(y) for y in stream.readline().split()]
         origin = np.array([float(y) for y in stream.readline().split()])
-        cell = np.empty((3,3), np.float)
+        cell = np.empty((3, 3), np.float)
         for i in range(3):
             cell[i][:] = [float(y) for y in stream.readline().split()]
-        data = np.reshape(np.fromfile(stream, count=nx*ny*nz, sep=' '),
-            (nx,ny,nz), order='F')
+        data = np.reshape(
+            np.fromfile(stream, count=nx * ny * nz, sep=" "), (nx, ny, nz), order="F"
+        )
 
         x = stream.readline()
-        while x != '':
+        while x != "":
             f.write(x)
             x = stream.readline()
 
@@ -2779,43 +3061,44 @@ class Espresso(FileIOCalculator, object):
         return (origin, cell, data)
 
     def read_2d_grid(self, stream, log):
-        f = open(self.localtmp+'/' + log, 'a')
+        f = open(self.localtmp + "/" + log, "a")
         x = stream.readline()
-        while x != '' and x[:11] != 'DATAGRID_2D':
+        while x != "" and x[:11] != "DATAGRID_2D":
             f.write(x)
             x = stream.readline()
-        if x == '':
-            raise RuntimeError('error reading 2D data grid')
+        if x == "":
+            raise RuntimeError("error reading 2D data grid")
         f.write(x)
         nx, ny = [int(y) for y in stream.readline().split()]
         origin = np.array([float(y) for y in stream.readline().split()])
-        cell = np.empty((3,3), np.float)
+        cell = np.empty((3, 3), np.float)
         for i in range(3):
             cell[i][:] = [float(y) for y in stream.readline().split()]
-        data = np.reshape(np.fromfile(stream, count=nx*ny, sep=' '),
-            (nx,ny), order='F')
+        data = np.reshape(
+            np.fromfile(stream, count=nx * ny, sep=" "), (nx, ny), order="F"
+        )
 
         x = stream.readline()
-        while x != '':
+        while x != "":
             f.write(x)
             x = stream.readline()
 
         f.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
-    def get_spin_component(self, spin='both'):
-        'Get the spin component as interger'
+    def get_spin_component(self, spin="both"):
+        "Get the spin component as interger"
 
-        if spin == 'both' or spin == 0:
+        if spin == "both" or spin == 0:
             s = 0
-        elif spin == 'up' or spin == 1:
+        elif spin == "up" or spin == 1:
             s = 1
-        elif spin == 'down' or spin == 2:
+        elif spin == "down" or spin == 2:
             s = 2
         else:
-            raise ValueError('unknown spin component {}'.format(spin))
+            raise ValueError("unknown spin component {}".format(spin))
 
-    def extract_charge_density(self, spin='both'):
+    def extract_charge_density(self, spin="both"):
         """
         Obtains the charge density as a numpy array after a DFT calculation.
         Returns (origin,cell,density).
@@ -2823,14 +3106,17 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        p = self.run_ppx('charge.inp',
-            inputpp=[['plot_num',0],['spin_component',s]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'charge.log')
+        p = self.run_ppx(
+            "charge.inp",
+            inputpp=[["plot_num", 0], ["spin_component", s]],
+            piperead=True,
+            parallel=False,
+        )
+        origin, cell, data = self.read_3d_grid(p, "charge.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
-    def xsf_charge_density(self, xsf, spin='both'):
+    def xsf_charge_density(self, xsf, spin="both"):
         """
         Writes the charge density from a DFT calculation
         to an input file for xcrysden.
@@ -2838,12 +3124,15 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        self.run_ppx('charge.inp',
-            inputpp=[['plot_num',0],['spin_component',s]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='charge.log')
+        self.run_ppx(
+            "charge.inp",
+            inputpp=[["plot_num", 0], ["spin_component", s]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="charge.log",
+        )
 
-    def extract_total_potential(self, spin='both'):
+    def extract_total_potential(self, spin="both"):
         """
         Obtains the total potential as a numpy array after a DFT calculation.
         Returns (origin,cell,potential).
@@ -2851,14 +3140,17 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        p = self.run_ppx('totalpot.inp',
-            inputpp=[['plot_num',1],['spin_component',s]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'totalpot.log')
+        p = self.run_ppx(
+            "totalpot.inp",
+            inputpp=[["plot_num", 1], ["spin_component", s]],
+            piperead=True,
+            parallel=False,
+        )
+        origin, cell, data = self.read_3d_grid(p, "totalpot.log")
         p.close()
-        return (origin,cell,data*Rydberg)
+        return (origin, cell, data * Rydberg)
 
-    def xsf_total_potential(self, xsf, spin='both'):
+    def xsf_total_potential(self, xsf, spin="both"):
         """
         Writes the total potential from a DFT calculation
         to an input file for xcrysden.
@@ -2866,244 +3158,276 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        self.run_ppx('totalpot.inp',
-            inputpp=[['plot_num',1],['spin_component',s]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='totalpot.log')
+        self.run_ppx(
+            "totalpot.inp",
+            inputpp=[["plot_num", 1], ["spin_component", s]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="totalpot.log",
+        )
 
     def extract_local_ionic_potential(self):
         """
         Obtains the local ionic potential as a numpy array after a DFT calculation.
         Returns (origin,cell,potential).
         """
-        p = self.run_ppx('vbare.inp',
-            inputpp=[['plot_num',2]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'vbare.log')
+        p = self.run_ppx(
+            "vbare.inp", inputpp=[["plot_num", 2]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "vbare.log")
         p.close()
-        return (origin,cell,data*Rydberg)
+        return (origin, cell, data * Rydberg)
 
     def xsf_local_ionic_potential(self, xsf):
         """
         Writes the local ionic potential from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('vbare.inp',
-            inputpp=[['plot_num',2]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='vbare.log')
+        self.run_ppx(
+            "vbare.inp",
+            inputpp=[["plot_num", 2]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="vbare.log",
+        )
 
     def extract_local_dos_at_efermi(self):
         """
         Obtains the local DOS at the Fermi level as a numpy array after a DFT calculation.
         Returns (origin,cell,ldos).
         """
-        p = self.run_ppx('ldosef.inp',
-            inputpp=[['plot_num',3]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'ldosef.log')
+        p = self.run_ppx(
+            "ldosef.inp", inputpp=[["plot_num", 3]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "ldosef.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_local_dos_at_efermi(self, xsf):
         """
         Writes the local DOS at the Fermi level from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('ldosef.inp',
-            inputpp=[['plot_num',3]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='ldosef.log')
+        self.run_ppx(
+            "ldosef.inp",
+            inputpp=[["plot_num", 3]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="ldosef.log",
+        )
 
     def extract_local_entropy_density(self):
         """
         Obtains the local entropy density as a numpy array after a DFT calculation.
         Returns (origin,cell,density).
         """
-        p = self.run_ppx('lentr.inp',
-            inputpp=[['plot_num',4]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'lentr.log')
+        p = self.run_ppx(
+            "lentr.inp", inputpp=[["plot_num", 4]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "lentr.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_local_entropy_density(self, xsf):
         """
         Writes the local entropy density from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('lentr.inp',
-            inputpp=[['plot_num',4]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='lentr.log')
+        self.run_ppx(
+            "lentr.inp",
+            inputpp=[["plot_num", 4]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="lentr.log",
+        )
 
     def extract_stm_data(self, bias):
         """
         Obtains STM data as a numpy array after a DFT calculation.
         Returns (origin,cell,stmdata).
         """
-        p = self.run_ppx('stm.inp',
-            inputpp=[['plot_num',5],['sample_bias',bias/Rydberg]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'stm.log')
+        p = self.run_ppx(
+            "stm.inp",
+            inputpp=[["plot_num", 5], ["sample_bias", bias / Rydberg]],
+            piperead=True,
+            parallel=False,
+        )
+        origin, cell, data = self.read_3d_grid(p, "stm.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_stm_data(self, xsf, bias):
         """
         Writes STM data from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('stm.inp',
-            inputpp=[['plot_num',5],['sample_bias',bias/Rydberg]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='stm.log')
-
+        self.run_ppx(
+            "stm.inp",
+            inputpp=[["plot_num", 5], ["sample_bias", bias / Rydberg]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="stm.log",
+        )
 
     def extract_magnetization_density(self):
         """
         Obtains the magnetization density as a numpy array after a DFT calculation.
         Returns (origin,cell,density).
         """
-        p = self.run_ppx('magdens.inp',
-            inputpp=[['plot_num',6]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'magdens.log')
+        p = self.run_ppx(
+            "magdens.inp", inputpp=[["plot_num", 6]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "magdens.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_magnetization_density(self, xsf):
         """
         Writes the magnetization density from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('magdens.inp',
-            inputpp=[['plot_num',6]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='magdens.log')
+        self.run_ppx(
+            "magdens.inp",
+            inputpp=[["plot_num", 6]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="magdens.log",
+        )
 
-    def extract_wavefunction_density(self, band, kpoint=0, spin='up',
-        gamma_with_sign=False):
+    def extract_wavefunction_density(
+        self, band, kpoint=0, spin="up", gamma_with_sign=False
+    ):
         """
         Obtains the amplitude of a given wave function as a numpy array after a DFT calculation.
         Returns (origin,cell,amplitude).
         """
-        if spin == 'up' or spin == 1:
+        if spin == "up" or spin == 1:
             s = 0
-        elif spin == 'down' or spin == 2:
+        elif spin == "down" or spin == 2:
             s = 1
-        elif spin == 'charge' or spin == 0:
+        elif spin == "charge" or spin == 0:
             s = 0
-        elif spin == 'x':
+        elif spin == "x":
             s = 1
-        elif spin == 'y':
+        elif spin == "y":
             s = 2
-        elif spin == 'z':
+        elif spin == "z":
             s = 3
         else:
-            raise ValueError('unknown spin component')
+            raise ValueError("unknown spin component")
         if self.spinpol:
-            p = os.popen('grep "number of k points=" '+self.log+'|tail -1|tr \'=\' \' \'', 'r')
+            p = os.popen(
+                'grep "number of k points=" ' + self.log + "|tail -1|tr '=' ' '", "r"
+            )
             nkp = int(p.readline().split()[4])
             p.close()
-            kp = kpoint+nkp/2*s
+            kp = kpoint + nkp / 2 * s
         else:
             kp = kpoint
-        inputpp = [['plot_num',7],['kpoint',kp],['kband',band]]
+        inputpp = [["plot_num", 7], ["kpoint", kp], ["kband", band]]
         if gamma_with_sign:
-            inputpp.append(['lsign','.true.'])
+            inputpp.append(["lsign", ".true."])
         if self.noncollinear:
-            inputpp.append(['spin_component',s])
-        p = self.run_ppx('wfdens.inp',
-            inputpp=inputpp,
-            piperead=True, parallel=True)
-        origin,cell,data = self.read_3d_grid(p, 'wfdens.log')
+            inputpp.append(["spin_component", s])
+        p = self.run_ppx("wfdens.inp", inputpp=inputpp, piperead=True, parallel=True)
+        origin, cell, data = self.read_3d_grid(p, "wfdens.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
-    def xsf_wavefunction_density(self, xsf, band, kpoint=0, spin='up',
-        gamma_with_sign=False):
+    def xsf_wavefunction_density(
+        self, xsf, band, kpoint=0, spin="up", gamma_with_sign=False
+    ):
         """
         Writes the amplitude of a given wave function from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin == 'up' or spin == 1:
+        if spin == "up" or spin == 1:
             s = 0
-        elif spin == 'down' or spin == 2:
+        elif spin == "down" or spin == 2:
             s = 1
-        elif spin == 'charge' or spin == 0:
+        elif spin == "charge" or spin == 0:
             s = 0
-        elif spin == 'x':
+        elif spin == "x":
             s = 1
-        elif spin == 'y':
+        elif spin == "y":
             s = 2
-        elif spin == 'z':
+        elif spin == "z":
             s = 3
         else:
-            raise ValueError('unknown spin component')
+            raise ValueError("unknown spin component")
         if self.spinpol:
-            p = os.popen('grep "number of k points=" '+self.log+'|tail -1|tr \'=\' \' \'', 'r')
+            p = os.popen(
+                'grep "number of k points=" ' + self.log + "|tail -1|tr '=' ' '", "r"
+            )
             nkp = int(p.readline().split()[4])
             p.close()
-            kp = kpoint+nkp/2*s
+            kp = kpoint + nkp / 2 * s
         else:
             kp = kpoint
-        inputpp = [['plot_num',7],['kpoint',kp],['kband',band]]
+        inputpp = [["plot_num", 7], ["kpoint", kp], ["kband", band]]
         if gamma_with_sign:
-            inputpp.append(['lsign','.true.'])
+            inputpp.append(["lsign", ".true."])
         if self.noncollinear:
-            inputpp.append(['spin_component',s])
-        self.run_ppx('wfdens.inp',
+            inputpp.append(["spin_component", s])
+        self.run_ppx(
+            "wfdens.inp",
             inputpp=inputpp,
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=True, log='wfdens.log')
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=True,
+            log="wfdens.log",
+        )
 
     def extract_electron_localization_function(self):
         """
         Obtains the ELF as a numpy array after a DFT calculation.
         Returns (origin,cell,elf).
         """
-        p = self.run_ppx('elf.inp',
-            inputpp=[['plot_num',8]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'elf.log')
+        p = self.run_ppx(
+            "elf.inp", inputpp=[["plot_num", 8]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "elf.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_electron_localization_function(self, xsf):
         """
         Writes the ELF from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('elf.inp',
-            inputpp=[['plot_num',8]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='elf.log')
-
+        self.run_ppx(
+            "elf.inp",
+            inputpp=[["plot_num", 8]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="elf.log",
+        )
 
     def extract_density_minus_atomic(self):
         """
         Obtains the charge density minus atomic charges as a numpy array after a DFT calculation.
         Returns (origin,cell,density).
         """
-        p = self.run_ppx('dens_wo_atm.inp',
-            inputpp=[['plot_num',9]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'dens_wo_atm.log')
+        p = self.run_ppx(
+            "dens_wo_atm.inp", inputpp=[["plot_num", 9]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "dens_wo_atm.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_density_minus_atomic(self, xsf):
         """
         Writes the charge density minus atomic charges from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('dens_wo_atm.inp',
-            inputpp=[['plot_num',9]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='dens_wo_atm.log')
+        self.run_ppx(
+            "dens_wo_atm.inp",
+            inputpp=[["plot_num", 9]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="dens_wo_atm.log",
+        )
 
-    def extract_int_local_dos(self, spin='both', emin=None, emax=None):
+    def extract_int_local_dos(self, spin="both", emin=None, emax=None):
         """
         Obtains the integrated ldos as a numpy array after a DFT calculation.
         Returns (origin,cell,ldos).
@@ -3111,21 +3435,19 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        inputpp=[['plot_num',10],['spin_component',s]]
+        inputpp = [["plot_num", 10], ["spin_component", s]]
         efermi = self.get_fermi_level()
         if emin is not None:
-            inputpp.append(['emin',emin-efermi])
+            inputpp.append(["emin", emin - efermi])
         if emax is not None:
-            inputpp.append(['emax',emax-efermi])
+            inputpp.append(["emax", emax - efermi])
 
-        p = self.run_ppx('ildos.inp',
-            inputpp=inputpp,
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'ildos.log')
+        p = self.run_ppx("ildos.inp", inputpp=inputpp, piperead=True, parallel=False)
+        origin, cell, data = self.read_3d_grid(p, "ildos.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
-    def xsf_int_local_dos(self, xsf, spin='both', emin=None, emax=None):
+    def xsf_int_local_dos(self, xsf, spin="both", emin=None, emax=None):
         """
         Writes the integrated ldos from a DFT calculation
         to an input file for xcrysden.
@@ -3133,108 +3455,119 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        inputpp=[['plot_num',10],['spin_component',s]]
+        inputpp = [["plot_num", 10], ["spin_component", s]]
         efermi = self.get_fermi_level()
         if emin is not None:
-            inputpp.append(['emin',emin-efermi])
+            inputpp.append(["emin", emin - efermi])
         if emax is not None:
-            inputpp.append(['emax',emax-efermi])
+            inputpp.append(["emax", emax - efermi])
 
-        self.run_ppx('ildos.inp',
+        self.run_ppx(
+            "ildos.inp",
             inputpp=inputpp,
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='ildos.log')
-
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="ildos.log",
+        )
 
     def extract_ionic_and_hartree_potential(self):
         """
         Obtains the sum of ionic and Hartree potential as a numpy array after a DFT calculation.
         Returns (origin,cell,potential).
         """
-        p = self.run_ppx('potih.inp',
-            inputpp=[['plot_num',11]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'potih.log')
+        p = self.run_ppx(
+            "potih.inp", inputpp=[["plot_num", 11]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "potih.log")
         p.close()
-        return (origin,cell,data*Rydberg)
+        return (origin, cell, data * Rydberg)
 
     def xsf_ionic_and_hartree_potential(self, xsf):
         """
         Writes the sum of ionic and Hartree potential from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('potih.inp',
-            inputpp=[['plot_num',11]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='potih.log')
-
+        self.run_ppx(
+            "potih.inp",
+            inputpp=[["plot_num", 11]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="potih.log",
+        )
 
     def extract_sawtooth_potential(self):
         """
         Obtains the saw tooth potential as a numpy array after a DFT calculation.
         Returns (origin,cell,potential).
         """
-        p = self.run_ppx('sawtooth.inp',
-            inputpp=[['plot_num',12]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'sawtooth.log')
+        p = self.run_ppx(
+            "sawtooth.inp", inputpp=[["plot_num", 12]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "sawtooth.log")
         p.close()
-        return (origin,cell,data*Rydberg)
+        return (origin, cell, data * Rydberg)
 
     def xsf_sawtooth_potential(self, xsf):
         """
         Writes the saw tooth potential from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('sawtooth.inp',
-            inputpp=[['plot_num',12]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='sawtooth.log')
+        self.run_ppx(
+            "sawtooth.inp",
+            inputpp=[["plot_num", 12]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="sawtooth.log",
+        )
 
-
-    def extract_noncollinear_magnetization(self, spin='all'):
+    def extract_noncollinear_magnetization(self, spin="all"):
         """
         Obtains the non-collinear magnetization as a numpy array after a DFT calculation.
         Returns (origin,cell,magnetization).
         """
-        if spin=='all' or spin=='charge' or spin==0:
+        if spin == "all" or spin == "charge" or spin == 0:
             s = 0
-        elif spin=='x':
+        elif spin == "x":
             s = 1
-        elif spin=='y':
+        elif spin == "y":
             s = 2
-        elif spin=='z':
+        elif spin == "z":
             s = 3
         else:
-            raise ValueError('unknown spin component')
-        p = self.run_ppx('noncollmag.inp',
-            inputpp=[['plot_num',13],['spin_component',s]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'noncollmag.log')
+            raise ValueError("unknown spin component")
+        p = self.run_ppx(
+            "noncollmag.inp",
+            inputpp=[["plot_num", 13], ["spin_component", s]],
+            piperead=True,
+            parallel=False,
+        )
+        origin, cell, data = self.read_3d_grid(p, "noncollmag.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
-    def xsf_noncollinear_magnetization(self, xsf, spin='all'):
+    def xsf_noncollinear_magnetization(self, xsf, spin="all"):
         """
         Writes the non-collinear magnetization as from a DFT calculation
         to an input file for xcrysden.
         """
-        if spin=='all' or spin=='charge' or spin==0:
+        if spin == "all" or spin == "charge" or spin == 0:
             s = 0
-        elif spin=='x':
+        elif spin == "x":
             s = 1
-        elif spin=='y':
+        elif spin == "y":
             s = 2
-        elif spin=='z':
+        elif spin == "z":
             s = 3
         else:
-            raise ValueError('unknown spin component')
-        self.run_ppx('noncollmag.inp',
-            inputpp=[['plot_num',13],['spin_component',s]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False)
+            raise ValueError("unknown spin component")
+        self.run_ppx(
+            "noncollmag.inp",
+            inputpp=[["plot_num", 13], ["spin_component", s]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+        )
 
-    def extract_ae_charge_density(self, spin='both'):
+    def extract_ae_charge_density(self, spin="both"):
         """
         Obtains the all-electron (PAW) charge density as a numpy array after a DFT calculation.
         Returns (origin,cell,density)
@@ -3242,14 +3575,17 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        p = self.run_ppx('aecharge.inp',
-            inputpp=[['plot_num',17],['spin_component',s]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'aecharge.log')
+        p = self.run_ppx(
+            "aecharge.inp",
+            inputpp=[["plot_num", 17], ["spin_component", s]],
+            piperead=True,
+            parallel=False,
+        )
+        origin, cell, data = self.read_3d_grid(p, "aecharge.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
-    def xsf_ae_charge_density(self, xsf, spin='both'):
+    def xsf_ae_charge_density(self, xsf, spin="both"):
         """
         Writes the all-electron (PAW) charge density from a DFT calculation
         to an input file for xcrysden.
@@ -3257,10 +3593,13 @@ class Espresso(FileIOCalculator, object):
 
         s = self.get_spin_component(spin=spin)
 
-        self.run_ppx('aecharge.inp',
-            inputpp=[['plot_num',17],['spin_component',s]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='aecharge.log')
+        self.run_ppx(
+            "aecharge.inp",
+            inputpp=[["plot_num", 17], ["spin_component", s]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="aecharge.log",
+        )
 
     def extract_noncollinear_xcmag(self):
         """
@@ -3268,67 +3607,75 @@ class Espresso(FileIOCalculator, object):
         array after a DFT calculation. Returns (origin,cell,field).
         """
 
-        p = self.run_ppx('ncxcmag.inp',
-            inputpp=[['plot_num',18]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'ncxcmag.log')
+        p = self.run_ppx(
+            "ncxcmag.inp", inputpp=[["plot_num", 18]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "ncxcmag.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_noncollinear_xcmag(self, xsf):
         """
         Writes the xc magnetic field for a non-collinear system from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('ncxcmag.inp',
-            inputpp=[['plot_num',18]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='ncxcmag.log')
+        self.run_ppx(
+            "ncxcmag.inp",
+            inputpp=[["plot_num", 18]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="ncxcmag.log",
+        )
 
     def extract_reduced_density_gradient(self):
         """
         Obtains the reduced density gradient as a numpy array after a DFT calculation.
         Returns (origin,cell,gradient).
         """
-        p = self.run_ppx('redgrad.inp',
-            inputpp=[['plot_num',19]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'redgrad.log')
+        p = self.run_ppx(
+            "redgrad.inp", inputpp=[["plot_num", 19]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "redgrad.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_reduced_density_gradient(self, xsf):
         """
         Writes the reduced density gradient from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('redgrad.inp',
-            inputpp=[['plot_num',19]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='redgrad.log')
+        self.run_ppx(
+            "redgrad.inp",
+            inputpp=[["plot_num", 19]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="redgrad.log",
+        )
 
     def extract_middle_density_hessian_eig(self):
         """
         Obtains the middle Hessian eigenvalue as a numpy array after a DFT calculation.
         Returns (origin,cell,density).
         """
-        p = self.run_ppx('mideig.inp',
-            inputpp=[['plot_num',20]],
-            piperead=True, parallel=False)
-        origin,cell,data = self.read_3d_grid(p, 'mideig.log')
+        p = self.run_ppx(
+            "mideig.inp", inputpp=[["plot_num", 20]], piperead=True, parallel=False
+        )
+        origin, cell, data = self.read_3d_grid(p, "mideig.log")
         p.close()
-        return (origin,cell,data)
+        return (origin, cell, data)
 
     def xsf_middle_density_hessian_eig(self, xsf):
         """
         Writes the middle Hessian eigenvalue from a DFT calculation
         to an input file for xcrysden.
         """
-        self.run_ppx('mideig.inp',
-            inputpp=[['plot_num',20]],
-            plot=[['fileout',self.topath(xsf)]],
-            parallel=False, log='mideig.log')
-
+        self.run_ppx(
+            "mideig.inp",
+            inputpp=[["plot_num", 20]],
+            plot=[["fileout", self.topath(xsf)]],
+            parallel=False,
+            log="mideig.log",
+        )
 
     def find_max_empty_space(self, edir=3):
         """
@@ -3336,16 +3683,23 @@ class Espresso(FileIOCalculator, object):
         continuous segment of free, unoccupied space and returns
         its midpoint in scaled coordinates (0 to 1) in the edir direction (default z).
         """
-        position_array = self.atoms.get_scaled_positions()[..., edir - 1]  # 0-indexed direction
+        position_array = self.atoms.get_scaled_positions()[
+            ..., edir - 1
+        ]  # 0-indexed direction
         position_array.sort()
         differences = np.diff(position_array)
-        differences = np.append(differences, position_array[0] + 1 - position_array[-1])  # through the PBC
+        differences = np.append(
+            differences, position_array[0] + 1 - position_array[-1]
+        )  # through the PBC
         max_diff_index = np.argmax(differences)
         if max_diff_index == len(position_array) - 1:
-            return (position_array[0] + 1 + position_array[-1]) / 2. % 1  # should be < 1 in cell units
+            return (
+                (position_array[0] + 1 + position_array[-1]) / 2.0 % 1
+            )  # should be < 1 in cell units
         else:
-            return (position_array[max_diff_index] + position_array[max_diff_index + 1]) / 2.
-
+            return (
+                position_array[max_diff_index] + position_array[max_diff_index + 1]
+            ) / 2.0
 
     def get_work_function(self, pot_filename="pot.xsf", edir=3):
         """
@@ -3354,33 +3708,46 @@ class Espresso(FileIOCalculator, object):
         direction by default) from the Fermi energy.
         Values used for average.x come from the espresso example for work function for a surface
         """
-        #TODO: Implement some sort of tuning for these parameters?
-        if pot_filename[0] != '/':
+        # TODO: Implement some sort of tuning for these parameters?
+        if pot_filename[0] != "/":
             file = os.path.join(self.site.submitdir, pot_filename)
         else:
             file = pot_filename
         self.update(self.atoms)
         self.stop()
-        self.run_ppx('wf_pp.in', log='wf_pp.log',
-            inputpp=[('plot_num', 11), ('filplot', self.topath('pot.xsf'))],
-            output_format=3, iflag=3, piperead=False, parallel=False)
+        self.run_ppx(
+            "wf_pp.in",
+            log="wf_pp.log",
+            inputpp=[("plot_num", 11), ("filplot", self.topath("pot.xsf"))],
+            output_format=3,
+            iflag=3,
+            piperead=False,
+            parallel=False,
+        )
 
-        favg = open(self.localtmp + '/avg.in', 'w')
-        print('1', file=favg)
+        favg = open(self.localtmp + "/avg.in", "w")
+        print("1", file=favg)
         print(os.path.join(self.site.submitdir, pot_filename), file=favg)
-        print('1.D0', file=favg)
-        print('1440', file=favg)
+        print("1.D0", file=favg)
+        print("1440", file=favg)
         print(str(edir), file=favg)
-        print('3.835000000', file=favg)
-        print('', file=favg)
+        print("3.835000000", file=favg)
+        print("", file=favg)
         favg.close()
-        os.system('cp ' + self.localtmp + '/avg.in ' + self.scratch)
-        os.system('cd ' + self.scratch + ' ; ' + 'average.x < avg.in >>' + self.localtmp + '/avg.out')
+        os.system("cp " + self.localtmp + "/avg.in " + self.scratch)
+        os.system(
+            "cd "
+            + self.scratch
+            + " ; "
+            + "average.x < avg.in >>"
+            + self.localtmp
+            + "/avg.out"
+        )
 
         # Pick a good place to sample vacuum level
         cell_length = self.atoms.cell[edir - 1][edir - 1] / Bohr
         vacuum_pos = self.find_max_empty_space(edir) * cell_length
-        avg_out = open(self.localtmp + '/avg.out', 'r')
+        avg_out = open(self.localtmp + "/avg.out", "r")
         record = False
         average_data = []
         lines = list(avg_out)
@@ -3392,26 +3759,31 @@ class Espresso(FileIOCalculator, object):
             if record == True:
                 average_data.append([float(i) for i in line.split()])
         # [1] is planar average [2] is macroscopic average
-        vacuum_energy = average_data[np.abs(np.array(average_data)[..., 0] - vacuum_pos).argmin()][1]
+        vacuum_energy = average_data[
+            np.abs(np.array(average_data)[..., 0] - vacuum_pos).argmin()
+        ][1]
 
         # Get the latest Fermi energy
-        fermi_data = os.popen('grep -n "Fermi" ' + self.log + ' | tail -1', 'r')
+        fermi_data = os.popen('grep -n "Fermi" ' + self.log + " | tail -1", "r")
         fermi_energy = float(fermi_data.readline().split()[-2])
         fermi_data.close()
 
         # if there's a dipole, we need to return 2 work functions - one for either direction away from the slab
-        if self.dipole['status']:
+        if self.dipole["status"]:
             eopreg = 0.025
-            if 'eopreg' in list(self.dipole.keys()):
-                eopreg = self.dipole['eopreg']
+            if "eopreg" in list(self.dipole.keys()):
+                eopreg = self.dipole["eopreg"]
             # we use cell_length*eopreg*2.5 here since the work functions seem to converge at that distance rather than *1 or *2
-            vac_pos1 = (vacuum_pos - cell_length*eopreg*2.5) % cell_length
-            vac_pos2 = (vacuum_pos + cell_length*eopreg*2.5) % cell_length
+            vac_pos1 = (vacuum_pos - cell_length * eopreg * 2.5) % cell_length
+            vac_pos2 = (vacuum_pos + cell_length * eopreg * 2.5) % cell_length
             vac_index1 = np.abs(np.array(average_data)[..., 0] - vac_pos1).argmin()
             vac_index2 = np.abs(np.array(average_data)[..., 0] - vac_pos2).argmin()
             vacuum_energy1 = average_data[vac_index1][1]
             vacuum_energy2 = average_data[vac_index2][1]
-            wf = [vacuum_energy1 * Rydberg - fermi_energy, vacuum_energy2 * Rydberg - fermi_energy]
+            wf = [
+                vacuum_energy1 * Rydberg - fermi_energy,
+                vacuum_energy2 * Rydberg - fermi_energy,
+            ]
         else:
             wf = vacuum_energy * Rydberg - fermi_energy
 
@@ -3426,42 +3798,51 @@ class Espresso(FileIOCalculator, object):
         """
         convsave = self.convergence.copy()
         occupationssave = self.occupations
-        self.occupations = 'fixed'
-        #avoid espresso performing diagonalization
-        self.convergence = {'maxsteps': -1,
-                            'diag': 'cg',
-                            'diago_cg_max_iter': -1,
-                            'energy': 1e80}
-        if not hasattr(self, 'natoms'):
+        self.occupations = "fixed"
+        # avoid espresso performing diagonalization
+        self.convergence = {
+            "maxsteps": -1,
+            "diag": "cg",
+            "diago_cg_max_iter": -1,
+            "energy": 1e80,
+        }
+        if not hasattr(self, "natoms"):
             self.atoms2species()
             self.natoms = len(self.atoms)
-        self.write_input(filename='nonsense.inp',
-                         calculation='nscf', overridekpts=(1, 1, 1),
-                         overridekptshift=(0, 0, 0), overridenbands=1,
-                         suppressforcecalc=True)
-        self.run_espressox('pw.x', 'nonsense.inp', 'nonsense.log',
-                           parallel=False)
+        self.write_input(
+            filename="nonsense.inp",
+            calculation="nscf",
+            overridekpts=(1, 1, 1),
+            overridekptshift=(0, 0, 0),
+            overridenbands=1,
+            suppressforcecalc=True,
+        )
+        self.run_espressox("pw.x", "nonsense.inp", "nonsense.log", parallel=False)
         self.occupations = occupationssave
         del self.convergence
         self.convergence = convsave
 
     def get_world(self):
         from .worldstub import world
+
         return world(self.site.nprocs)
 
     def get_output_header(self):
-        '''
+        """
         Return a string with information about the execution environment
-        '''
+        """
 
-        exedir = os.path.dirname(os.popen('which pw.x').readline())
+        exedir = os.path.dirname(os.popen("which pw.x").readline())
 
-        out = '\n'.join(['# python dir           : {}'.format(self.mypath),
-                         '# espresso dir         : {}'.format(exedir),
-                         '# pseudo dir           : {}'.format(self.psppath),
-                         '# ase-espresso version : {}'.format(self.get_version()),
-                         ])
-        return out + '\n\n\n'
+        out = "\n".join(
+            [
+                "# python dir           : {}".format(self.mypath),
+                "# espresso dir         : {}".format(exedir),
+                "# pseudo dir           : {}".format(self.psppath),
+                "# ase-espresso version : {}".format(self.get_version()),
+            ]
+        )
+        return out + "\n\n\n"
 
     def __del__(self):
         try:
@@ -3472,7 +3853,7 @@ class Espresso(FileIOCalculator, object):
 
 class iEspresso(Espresso):
 
-    '''
+    """
     Interactive Quantum Espresso calculator that requires a
     version of the QE binary that supports feeding new coordinates
     after each single point calcualtion.
@@ -3482,7 +3863,7 @@ class iEspresso(Espresso):
             Timeout for the pexpect.spawn method [in s] that will terminate
             the `expect` the full output in that time, otherwise an
             exception is thrown, defaults to 1800 s
-    '''
+    """
 
     def __init__(self, timeout=1800, *args, **kwargs):
 
@@ -3492,14 +3873,14 @@ class iEspresso(Espresso):
         self._spawned = False
 
     def initialize(self, atoms):
-        '''
+        """
         Create the scratch directories and pw.inp input file and
         prepare for writing the input file
-        '''
+        """
 
         if not self._initialized:
             self.create_outdir()
-            self.logfile = open(self.log, 'ab')
+            self.logfile = open(self.log, "ab")
             if self.site.usehostfile:
                 self.site.write_local_hostfile()
 
@@ -3517,92 +3898,135 @@ class iEspresso(Espresso):
         if self.site.batchmode:
             self.localtmp.chdir()
 
-            cmd = self.site.get_host_mpi_command('cp -u {0:s} {1:s}'.format(
-                str(self.localtmp.joinpath('pw.inp')), self.scratch))
+            cmd = self.site.get_host_mpi_command(
+                "cp -u {0:s} {1:s}".format(
+                    str(self.localtmp.joinpath("pw.inp")), self.scratch
+                )
+            )
             subprocess.call(cmd)
 
-            if self.calculation != 'hund':
+            if self.calculation != "hund":
 
-                command = self.site.get_proc_mpi_command(self.scratch,
-                                'pw.x ' + self.parflags + ' -in pw.inp', aslist=False)
+                command = self.site.get_proc_mpi_command(
+                    self.scratch, "pw.x " + self.parflags + " -in pw.inp", aslist=False
+                )
 
                 if not self._spawned:
                     self.child = pexpect.spawn(command)
                     self._spawned = True
                     self.child.logfile = self.logfile
-                    self.child.logfile.write(self.get_output_header().encode('utf-8'))
+                    self.child.logfile.write(self.get_output_header().encode("utf-8"))
 
                     try:
-                        i = self.child.expect(['!ASE\s*\n(.*\n){4}',
-                            '     convergence NOT', '     stopping'],
-                                              timeout=self.timeout)
+                        i = self.child.expect(
+                            [
+                                "!ASE\s*\n(.*\n){4}",
+                                "     convergence NOT",
+                                "     stopping",
+                            ],
+                            timeout=self.timeout,
+                        )
                         if i == 1:
                             raise SCFMaxIterationsError()
                         elif i == 2:
                             raise SCFConvergenceError()
                     except:
-                        print('# Exception was thrown by pexpect.expect')
+                        print("# Exception was thrown by pexpect.expect")
                         print(str(self.child))
 
                 else:  # QE process is already spawned
 
-                    self.child.send('C\n')
+                    self.child.send("C\n")
                     for atom in self.atoms:
-                        self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
+                        self.child.send(
+                            "{0:25.14e} {1:25.14e} {2:25.10e}\n".format(
+                                atom.x, atom.y, atom.z
+                            )
+                        )
 
                     try:
-                        i = self.child.expect(['!ASE\s*\n(.*\n){4}',
-                                               '     convergence NOT',
-                                               '     stopping'],
-                                              timeout=self.timeout)
+                        i = self.child.expect(
+                            [
+                                "!ASE\s*\n(.*\n){4}",
+                                "     convergence NOT",
+                                "     stopping",
+                            ],
+                            timeout=self.timeout,
+                        )
                         if i == 1:
                             raise SCFMaxIterationsError()
                         elif i == 2:
                             raise SCFConvergenceError()
                     except:
-                        print('# Exception was thrown by pexpect.expect')
+                        print("# Exception was thrown by pexpect.expect")
                         print(str(self.child))
                     self.child.logfile.flush()
 
             else:  # calculation == 'hund'
-                self.site.runonly_perProcMpiExec(self.scratch,' pw.x -in pw.inp >>'+self.log)
-                os.system("sed s/occupations.*/occupations=\\'fixed\\',/ <"+self.localtmp+"/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="+num2str(self.conv_thr)+",/ | sed s/tot_magnetization.*/tot_magnetization="+num2str(self.totmag)+",/ >"+self.localtmp+"/pw2.inp")
-                os.system(self.site.perHostMpiExec+' cp '+self.localtmp+'/pw2.inp '+self.scratch)
-                self.cinp, self.cout = self.site.do_perProcMpiExec(self.scratch,'pw.x '+self.parflags+' -in pw2.inp')
+                self.site.runonly_perProcMpiExec(
+                    self.scratch, " pw.x -in pw.inp >>" + self.log
+                )
+                os.system(
+                    "sed s/occupations.*/occupations=\\'fixed\\',/ <"
+                    + self.localtmp
+                    + "/pw.inp | sed s/ELECTRONS/ELECTRONS\\\\n\ \ startingwfc=\\'file\\',\\\\n\ \ startingpot=\\'file\\',/ | sed s/conv_thr.*/conv_thr="
+                    + num2str(self.conv_thr)
+                    + ",/ | sed s/tot_magnetization.*/tot_magnetization="
+                    + num2str(self.totmag)
+                    + ",/ >"
+                    + self.localtmp
+                    + "/pw2.inp"
+                )
+                os.system(
+                    self.site.perHostMpiExec
+                    + " cp "
+                    + self.localtmp
+                    + "/pw2.inp "
+                    + self.scratch
+                )
+                self.cinp, self.cout = self.site.do_perProcMpiExec(
+                    self.scratch, "pw.x " + self.parflags + " -in pw2.inp"
+                )
 
         else:  # interactive
             self.localtmp.chdir()
 
-            pwinp = self.localtmp.joinpath('pw.inp')
+            pwinp = self.localtmp.joinpath("pw.inp")
             Path.copy(pwinp, self.scratch)
-            command = ' '.join(['pw.x', '-in', 'pw.inp'])
+            command = " ".join(["pw.x", "-in", "pw.inp"])
 
             if not self._spawned:
                 self.child = pexpect.spawn(command)
                 self._spawned = True
                 self.child.logfile = self.logfile
-                self.child.logfile.write(self.get_output_header().encode('utf-8'))
+                self.child.logfile.write(self.get_output_header().encode("utf-8"))
                 try:
-                    i = self.child.expect(['!ASE', '     convergence NOT', '     stopping'],
-                                          timeout=self.timeout)
+                    i = self.child.expect(
+                        ["!ASE", "     convergence NOT", "     stopping"],
+                        timeout=self.timeout,
+                    )
                     if i == 1:
                         raise SCFMaxIterationsError()
                     elif i == 2:
                         raise SCFConvergenceError()
                 except:
-                    print('# Exception was thrown by pexpect.expect')
+                    print("# Exception was thrown by pexpect.expect")
                     print(str(self.child))
 
             else:  # QE process is already spawned
 
-                self.child.send('C\n')
+                self.child.send("C\n")
                 for atom in self.atoms:
-                    self.child.send('{0:25.14e} {1:25.14e} {2:25.10e}\n'.format(atom.x, atom.y, atom.z))
-                self.child.expect('!ASE', timeout=self.timeout)
+                    self.child.send(
+                        "{0:25.14e} {1:25.14e} {2:25.10e}\n".format(
+                            atom.x, atom.y, atom.z
+                        )
+                    )
+                self.child.expect("!ASE", timeout=self.timeout)
 
     def stop(self):
 
         if self._spawned:
-            self.child.send('Q\n')
+            self.child.send("Q\n")
 
         self.child.logfile.close()
