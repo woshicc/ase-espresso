@@ -36,7 +36,7 @@ from ase.units import Hartree, Rydberg, Bohr
 from .utils import speciestuple, num2str, bool2str, convert_constraints
 from .siteconfig import SiteConfig, preserve_cwd
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
