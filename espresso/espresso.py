@@ -1038,7 +1038,7 @@ class Espresso(FileIOCalculator, object):
 
             pwinp = self.localtmp.joinpath("pw.inp")
             Path.copy(pwinp, self.scratch)
-            command = ["pw.x", "-in", "pw.inp"]
+            command = ["mpirun", "pw.x", "-in", "pw.inp"]
             if self.calculation != "hund":
                 self.scratch.chdir()
                 with open(self.log, "ab") as flog:
